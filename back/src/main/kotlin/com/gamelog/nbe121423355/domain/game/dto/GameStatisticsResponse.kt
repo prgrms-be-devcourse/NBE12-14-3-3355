@@ -15,7 +15,7 @@ data class GameStatisticsResponse(
     @field:Schema(description = "별점 등록 수", example = "56") val ratingCount: Long,
     @field:Schema(description = "내용이 작성된 리뷰 수", example = "31") val reviewCount: Long,
     @field:Schema(description = "별점별 분포")
-    val ratingDistribution: MutableList<GameRatingDistributionResponse>,
+    val ratingDistribution: List<GameRatingDistributionResponse>,
     @field:Schema(description = "평균 플레이 시간", example = "42.5", nullable = true)
     val averagePlayTimeHours: BigDecimal?,
     @field:Schema(description = "플레이 시간 기록 사용자 수", example = "20") val playTimeUserCount: Long,

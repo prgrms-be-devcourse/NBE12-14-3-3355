@@ -8,5 +8,5 @@ data class GameRatingStatisticsResponse(
     val averageRating: BigDecimal?,
     val ratingCount: Long,
     val reviewCount: Long,
-    val ratingDistribution: MutableList<GameRatingDistributionResponse>,
+    val ratingDistribution: List<GameRatingDistributionResponse>,
 ) {}
