@@ -23,7 +23,7 @@ data class FollowPageResponseDto(
         ): FollowPageResponseDto {
             return FollowPageResponseDto(
                 users,
-                followPage.getNumber(),
+                followPage.number,
                 followPage.size,
                 followPage.totalElements,
                 followPage.totalPages,

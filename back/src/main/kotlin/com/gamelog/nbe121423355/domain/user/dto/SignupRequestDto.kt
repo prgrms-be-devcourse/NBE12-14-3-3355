@@ -24,4 +24,4 @@ data class SignupRequestDto(
         maxLength = 72,
     )
     val password: String?,
-) {}
+)

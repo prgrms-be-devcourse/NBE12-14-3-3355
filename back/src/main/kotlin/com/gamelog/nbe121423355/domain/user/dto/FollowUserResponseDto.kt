@@ -12,4 +12,4 @@ data class FollowUserResponseDto(
     @field:Schema(description = "팔로우 일시") val followedAt: LocalDateTime?,
     @field:Schema(description = "로그인 사용자의 팔로우 여부", example = "true") val followedByMe: Boolean,
     @field:Schema(description = "로그인 사용자 본인 여부", example = "false") val me: Boolean,
-) {}
+)

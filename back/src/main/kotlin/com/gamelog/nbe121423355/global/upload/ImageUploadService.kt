@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.io.IOException
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 
@@ -12,7 +13,7 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
 
     // 이미지 업로드메소드
     fun uploadImage(file: MultipartFile): String? {
-        if (file.isEmpty()) {
+        if (file.isEmpty) {
             throw ServiceException("400-4", "업로드할 파일이 없습니다.")
         }
         val contentType = file.contentType
@@ -22,7 +23,7 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
         try {
             val result: MutableMap<*, *> =
                 cloudinary.uploader().upload(file.bytes, ObjectUtils.emptyMap())
-            return result.get("secure_url") as String?
+            return result["secure_url"] as String?
         } catch (e: IOException) {
             throw ServiceException("500-2", "이미지 업로드에 실패했습니다.", e)
         } catch (e: RuntimeException) {
@@ -39,9 +40,9 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap())
         } catch (e: IOException) {
-            ImageUploadService.log.warn("이미지 삭제 실패: {}", imageUrl, e)
+            log.warn("이미지 삭제 실패: {}", imageUrl, e)
         } catch (e: RuntimeException) {
-            ImageUploadService.log.warn("이미지 삭제 실패: {}", imageUrl, e)
+            log.warn("이미지 삭제 실패: {}", imageUrl, e)
         }
     }
 
@@ -61,7 +62,6 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
     }
 
     companion object {
-        private val log: org.slf4j.Logger =
-            org.slf4j.LoggerFactory.getLogger(ImageUploadService::class.java)
+        private val log = LoggerFactory.getLogger(ImageUploadService::class.java)
     }
 }

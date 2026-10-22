@@ -9,6 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.UUID
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -20,8 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 // (다른 실패 경우는 DB 변경이 없어서 영향 없음)
 @Service
 @Transactional(noRollbackFor = [ServiceException::class])
-class TokenReissueService
-constructor(
+class TokenReissueService(
     private val jwtProvider: JwtProvider,
     private val refreshTokenRepository: RefreshTokenRepository,
 ) {
@@ -34,7 +34,7 @@ constructor(
         val accessToken: String,
         val refreshToken: String,
         val refreshTokenExpiryDate: LocalDateTime,
-    ) {}
+    )
 
     // /refresh API용 (비교할 accessToken이 없음)
     fun reissue(refreshToken: String?): ReissueResult {
@@ -58,7 +58,7 @@ constructor(
         // DB 조회 전에 먼저 비교 (불일치면 쿼리 없이 종료)
         if (
             expectedUserId != null &&
-                !expectedUserId.equals(java.lang.Long.parseLong(claims.getSubject()))
+                !expectedUserId.equals(java.lang.Long.parseLong(claims.subject))
         ) {
             throw ServiceException("401-2", "토큰의 사용자 정보가 일치하지 않습니다.")
         }
@@ -76,7 +76,7 @@ constructor(
         val session =
             refreshTokenRepository
                 .findByFamilyIdWithUser(familyId)
-                .orElseThrow({ ServiceException("401-2", "로그아웃된 토큰입니다.") })
+                .orElseThrow { ServiceException("401-2", "로그아웃된 토큰입니다.") }
         val user = session.user
         // 탈퇴 시 세션은 전부 삭제되지만 방어적으로 한 번 더 확인
         if (user.isDeleted) {
@@ -85,7 +85,7 @@ constructor(
         if (!rotated && !isWithinGracePeriod(session, jti, now)) {
             // 이미 교체된 refreshToken이 유예 시간 이후에 다시 사용됨 → 탈취 가능성, 세션 폐기
             refreshTokenRepository.deleteByFamilyId(familyId)
-            TokenReissueService.log.warn(
+            log.warn(
                 "refreshToken 재사용 감지 - 세션 폐기 userId={}, familyId={}",
                 user.id,
                 familyId,
@@ -115,12 +115,11 @@ constructor(
         now: LocalDateTime,
     ): Boolean {
         return jti.equals(session.prevJti) &&
-            session.rotatedAt?.isAfter(now.minus(TokenReissueService.GRACE_PERIOD)) == true
+            session.rotatedAt?.isAfter(now.minus(GRACE_PERIOD)) == true
     }
 
     companion object {
-        private val log: org.slf4j.Logger =
-            org.slf4j.LoggerFactory.getLogger(TokenReissueService::class.java)
+        private val log = LoggerFactory.getLogger(TokenReissueService::class.java)
 
         // 교체 직후 이전 refreshToken을 허용하는 시간 (동시 요청 / 응답 유실 대비)
         private val GRACE_PERIOD: Duration = Duration.ofSeconds(10)

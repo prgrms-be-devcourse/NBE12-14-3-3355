@@ -8,4 +8,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class CookieProperties(
     val sameSite: String?,
     val secure: Boolean,
-) {}
+)

@@ -26,4 +26,4 @@ data class ChangePasswordRequestDto(
         maxLength = 72,
     )
     val newPassword: String?,
-) {}
+)

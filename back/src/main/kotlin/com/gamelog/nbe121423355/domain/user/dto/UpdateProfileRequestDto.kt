@@ -15,5 +15,6 @@ data class UpdateProfileRequestDto(
         nullable = true,
     )
     val profileImageUrl: String?, // 프로필 사진 없어도됨
+    @field:Schema(description = "자기소개", example = "RPG와 전략 게임을 좋아합니다.", nullable = true)
     val bio: String?, // 자기소개 없어도됨
-) {}
+)

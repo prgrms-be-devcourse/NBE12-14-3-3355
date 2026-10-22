@@ -10,8 +10,7 @@ import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 
 @Service
-class UserPreferenceGenreService
-constructor(
+class UserPreferenceGenreService(
     private val userPreferenceGenreRepository: UserPreferenceGenreRepository,
     private val userRepository: UserRepository,
     private val genreRepository: GenreRepository,
@@ -28,7 +27,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         val genres = genreRepository.findAllById(genreIds)
         if (genres.size != genreIds.size) {
             throw ServiceException("400-11", "존재하지 않는 장르가 포함되어 있습니다.")
