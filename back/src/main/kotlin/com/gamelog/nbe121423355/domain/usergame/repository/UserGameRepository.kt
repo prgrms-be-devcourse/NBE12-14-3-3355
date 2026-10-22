@@ -21,8 +21,8 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
     fun findAllByUser_IdAndGame_IdInAndInLibraryTrue(
         userId: Long?,
-        gameIds: MutableList<Long>?,
-    ): MutableList<UserGame>
+        gameIds: List<Long>?,
+    ): List<UserGame>
 
     @Query(
         value =
@@ -48,9 +48,9 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
         @Param("status") status: String?,
         @Param("keyword") keyword: String?,
         @Param("filterPlatforms") filterPlatforms: Boolean,
-        @Param("platformIds") platformIds: MutableList<Long>,
+        @Param("platformIds") platformIds: List<Long>,
         @Param("filterGenres") filterGenres: Boolean,
-        @Param("genreIds") genreIds: MutableList<Long>,
+        @Param("genreIds") genreIds: List<Long>,
         @Param("sort") sort: String?,
         pageable: Pageable?,
     ): Page<UserGame>
@@ -59,7 +59,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
         "SELECT ug FROM UserGame ug WHERE ug.user.id = :userId AND ug.inLibrary = true AND " +
             UserGameRepository.PLAYED_GAME
     )
-    fun findPlayedGames(@Param("userId") userId: Long?): MutableList<UserGame>
+    fun findPlayedGames(@Param("userId") userId: Long?): List<UserGame>
 
     @Query(
         """
@@ -83,7 +83,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
 """
     )
-    fun findPlayedGameScatterData(@Param("userId") userId: Long?): MutableList<UserGameScatterDto>
+    fun findPlayedGameScatterData(@Param("userId") userId: Long?): List<UserGameScatterDto>
 
     @Query(
         """
@@ -108,7 +108,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
     """
     )
-    fun findGenreDistribution(@Param("userId") userId: Long?): MutableList<UserGameGenreDTO>
+    fun findGenreDistribution(@Param("userId") userId: Long?): List<UserGameGenreDTO>
 
     @Query(
         """
@@ -125,7 +125,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
     fun findRecentPlayedGames(
         @Param("userId") userId: Long?,
         pageable: Pageable?,
-    ): MutableList<UserGame>
+    ): List<UserGame>
 
     companion object {
         const val ACTIVE_REVIEW_JOIN: String =

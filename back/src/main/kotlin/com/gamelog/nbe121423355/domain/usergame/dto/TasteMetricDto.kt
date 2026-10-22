@@ -5,6 +5,6 @@ import java.math.BigDecimal
 @JvmRecord
 data class TasteMetricDto(
     val ratio: BigDecimal?,
-    val message: String?,
-    val description: String?,
+    val message: String,
+    val description: String,
 ) {}

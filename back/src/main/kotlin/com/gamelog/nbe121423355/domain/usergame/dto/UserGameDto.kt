@@ -8,9 +8,9 @@ import java.time.LocalDateTime
 
 @JvmRecord
 data class UserGameDto(
-    val id: Long?,
-    val userId: Long?,
-    val gameId: Long?,
+    val id: Long,
+    val userId: Long,
+    val gameId: Long,
     val platformId: Long?,
     val playStatus: PlayStatus?,
     val playing: Boolean,
@@ -28,9 +28,9 @@ data class UserGameDto(
     constructor(
         userGame: UserGame
     ) : this(
-        userGame.id,
-        userGame.user.id,
-        userGame.game.id,
+        checkNotNull(userGame.id) { "userGame.id must be present in a persisted response" },
+        checkNotNull(userGame.user.id) { "userGame.user.id must be present in a persisted response" },
+        checkNotNull(userGame.game.id) { "userGame.game.id must be present in a persisted response" },
         userGame.platform?.id,
         userGame.playStatus,
         userGame.isPlaying,

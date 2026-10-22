@@ -194,7 +194,7 @@ class UserGameController constructor(private val userGameService: UserGameServic
     @Operation(summary = "최근 플레이 게임 조회", security = [SecurityRequirement(name = "bearerAuth")])
     fun recentGameList(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
-    ): RsData<MutableList<UserGameListResponse>> {
+    ): RsData<List<UserGameListResponse>> {
         return RsData(
             "200-1",
             "최근 플레이한 게임을 불러왔습니다",
@@ -211,8 +211,8 @@ class UserGameController constructor(private val userGameService: UserGameServic
     fun updateFavoriteGames(
         @RequestBody request: UserFavoriteGameRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
-    ): RsData<MutableList<UserFavoriteGameResponse>> {
-        val response: MutableList<UserFavoriteGameResponse> =
+    ): RsData<List<UserFavoriteGameResponse>> {
+        val response: List<UserFavoriteGameResponse> =
             userGameService.updateFavoriteGames(user.id, requireNotNull(request.gameIds))
         return RsData("200-1", "인생게임을 수정했습니다.", response)
     }

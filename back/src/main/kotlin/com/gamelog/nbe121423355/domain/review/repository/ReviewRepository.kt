@@ -127,7 +127,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findAverageRating(@Param("userId") userId: Long?): BigDecimal?
+    fun findAverageRating(@Param("userId") userId: Long): BigDecimal
 
     @Query(
         """

@@ -7,27 +7,27 @@ import java.time.LocalDateTime
 
 @JvmRecord
 data class RecentReviewResponse(
-    val reviewId: Long?,
-    val gameId: Long?,
-    val gameTitle: String?,
+    val reviewId: Long,
+    val gameId: Long,
+    val gameTitle: String,
     val gameCoverImageUrl: String?,
     val playStatus: PlayStatus?,
     val platform: String?,
     val rating: BigDecimal?,
     val content: String?,
-    val lastModifiedDate: LocalDateTime?,
+    val lastModifiedDate: LocalDateTime,
 ) {
     constructor(
         review: Review
     ) : this(
-        review.id,
-        review.userGame.game.id,
-        review.userGame.game.title,
+        checkNotNull(review.id) { "review.id must be present in a persisted response" },
+        checkNotNull(review.userGame.game.id) { "review.userGame.game.id must be present in a persisted response" },
+        checkNotNull(review.userGame.game.title) { "review.userGame.game.title must be present in a persisted response" },
         review.userGame.game.coverImageUrl,
         review.userGame.playStatus,
         review.userGame.platform?.name,
         review.rating,
         review.content,
-        review.lastModifiedDate,
+        checkNotNull(review.lastModifiedDate) { "review.lastModifiedDate must be present in a persisted response" },
     )
 }
