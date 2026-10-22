@@ -37,7 +37,7 @@ constructor(
     @Transactional
     fun createReport(
         reporterId: Long,
-        reviewId: Long?,
+        reviewId: Long,
         request: ReviewReportCreateRequest,
     ): ReviewReportResponse {
         val review = getReview(reviewId)
@@ -103,7 +103,7 @@ constructor(
             throw ServiceException("400-5", "신고 처리 결과는 승인 또는 반려여야 합니다.")
         }
         val pendingReports: MutableList<ReviewReport> =
-            reviewReportRepository.findByReview_IdAndStatus(report.review.id, ReportStatus.PENDING)
+            reviewReportRepository.findByReview_IdAndStatus(checkNotNull(report.review.id), ReportStatus.PENDING)
         if (pendingReports.isEmpty()) {
             throw ServiceException("409-4", "이미 처리된 리뷰 신고입니다.")
         }
@@ -115,7 +115,7 @@ constructor(
         return ReviewReportResponse.from(pendingReports.get(0))
     }
 
-    private fun getReview(reviewId: Long?): Review {
+    private fun getReview(reviewId: Long): Review {
         return reviewRepository
             .findActiveById(reviewId)
             .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })

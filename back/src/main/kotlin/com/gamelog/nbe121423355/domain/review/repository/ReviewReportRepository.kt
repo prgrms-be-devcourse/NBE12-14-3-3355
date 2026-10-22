@@ -11,11 +11,11 @@ import org.springframework.data.repository.query.Param
 
 interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
     // 같은 사용자의 중복 신고 확인.
-    fun existsByReview_IdAndReporter_Id(reviewId: Long?, reporterId: Long?): Boolean
+    fun existsByReview_IdAndReporter_Id(reviewId: Long, reporterId: Long): Boolean
 
     // 처리 상태별 신고 목록 조회.
     @EntityGraph(attributePaths = ["reporter", "review.userGame.user"])
-    fun findByStatus(status: ReportStatus?, pageable: Pageable?): Page<ReviewReport>
+    fun findByStatus(status: ReportStatus, pageable: Pageable): Page<ReviewReport>
 
     // 관리자 목록에서 신고자와 리뷰 작성자 닉네임을 추가 쿼리 없이 조회.
     @EntityGraph(attributePaths = ["reporter", "review.userGame.user"])
@@ -42,7 +42,7 @@ interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
     )
     fun findReviewIdsGroupedByReview(
         @Param("status") status: ReportStatus?,
-        pageable: Pageable?,
+        pageable: Pageable,
     ): Page<Long>
 
     @EntityGraph(attributePaths = ["reporter", "review.userGame.user", "review.userGame.game"])
@@ -62,5 +62,5 @@ interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
     ): MutableList<ReviewReport>
 
     @EntityGraph(attributePaths = ["reporter", "review.userGame.user"])
-    fun findByReview_IdAndStatus(reviewId: Long?, status: ReportStatus?): MutableList<ReviewReport>
+    fun findByReview_IdAndStatus(reviewId: Long, status: ReportStatus): MutableList<ReviewReport>
 }

@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class CommunityReviewService constructor(private val repository: CommunityReviewRepository) {
-    fun following(viewerId: Long?, page: Int): CommunityFeedResponse {
+    fun following(viewerId: Long, page: Int): CommunityFeedResponse {
         if (page < 0 || page > 100000) {
             throw ServiceException("400-10", "페이지는 0 이상 100000 이하여야 합니다.")
         }
@@ -28,7 +28,7 @@ class CommunityReviewService constructor(private val repository: CommunityReview
         )
     }
 
-    fun popular(viewerId: Long?): CommunityFeedResponse {
+    fun popular(viewerId: Long): CommunityFeedResponse {
         // 기존 JPA 감사 필드와 동일한 서버 시간 기준으로 비교한다.
         val now = LocalDateTime.now()
         val reviews: MutableList<CommunityReviewProjection> =

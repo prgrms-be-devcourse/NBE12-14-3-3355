@@ -102,7 +102,7 @@ constructor(
             sort = ["createdDate"],
             direction = Sort.Direction.DESC,
         )
-        pageable: Pageable?,
+        pageable: Pageable,
     ): RsData<ReviewPageResponse> {
         val response = reviewService.getGameReviews(gameId, pageable)
         return RsData<ReviewPageResponse>("200-2", "게임 리뷰 목록 조회에 성공했습니다.", response)
@@ -117,7 +117,7 @@ constructor(
             sort = ["createdDate"],
             direction = Sort.Direction.DESC,
         )
-        pageable: Pageable?,
+        pageable: Pageable,
     ): RsData<ReviewPageResponse> {
         val response = reviewService.getUserReviews(userId, pageable)
         return RsData<ReviewPageResponse>("200-3", "사용자 리뷰 목록 조회에 성공했습니다.", response)
