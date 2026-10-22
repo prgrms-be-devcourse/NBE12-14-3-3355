@@ -13,6 +13,5 @@ data class RelatedGameResponse(
     val igdbRating: BigDecimal?,
     @field:Schema(description = "연관 추천 점수", example = "8.5") val recommendationScore: BigDecimal?,
     @field:Schema(description = "장르 목록")
-    val genres:
-        MutableList<com.gamelog.nbe121423355.domain.game.dto.GameDetailResponse.GenreResponse>?,
+    val genres: List<com.gamelog.nbe121423355.domain.game.dto.GameDetailResponse.GenreResponse>?,
 ) {}
