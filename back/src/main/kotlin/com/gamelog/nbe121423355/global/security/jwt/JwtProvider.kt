@@ -24,7 +24,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
     }
 
     // accesstoken 생성 메소드
-    fun generateAccessToken(userId: Long?, role: String?): String? {
+    fun generateAccessToken(userId: Long?, role: String?): String {
         val now = Date()
         val expiration = Date(now.getTime() + jwtProperties.accessTokenValidity)
 

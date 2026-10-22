@@ -12,18 +12,19 @@ class RefreshToken protected constructor() : BaseEntity() {
         protected set
 
     @jakarta.persistence.Column(unique = true, nullable = false, length = 36)
-    var familyId: String? = null
+    lateinit var familyId: String
         protected set
 
     @jakarta.persistence.Column(nullable = false, length = 36)
-    var currentJti: String? = null
+    lateinit var currentJti: String
         protected set
 
     @jakarta.persistence.Column(length = 36)
     var prevJti: String? = null
         protected set
 
-    val rotatedAt: LocalDateTime? = null
+    var rotatedAt: LocalDateTime? = null
+        protected set
 
     @jakarta.persistence.ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -31,16 +32,16 @@ class RefreshToken protected constructor() : BaseEntity() {
         protected set
 
     @jakarta.persistence.Column(nullable = false)
-    var expiryDate: LocalDateTime? = null
+    lateinit var expiryDate: LocalDateTime
         protected set
 
     companion object {
         @JvmStatic
         fun create(
             user: com.gamelog.nbe121423355.domain.user.entity.User,
-            familyId: String?,
-            jti: String?,
-            expiryDate: LocalDateTime?,
+            familyId: String,
+            jti: String,
+            expiryDate: LocalDateTime,
         ): RefreshToken {
             val token = RefreshToken()
             token.user = user
