@@ -25,8 +25,7 @@ import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
-class UserService
-constructor(
+class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtProvider: JwtProvider,
@@ -47,11 +46,11 @@ constructor(
         val accessToken: String,
         val refreshToken: String,
         val refreshTokenExpiryDate: LocalDateTime,
-    ) {}
+    )
 
     // 새로 만든 세션의 refreshToken과 만료 시각 (비밀번호 변경 시 Controller가 쿠키로 내려줌)
     @JvmRecord
-    data class IssuedSession(val refreshToken: String, val expiryDate: LocalDateTime) {}
+    data class IssuedSession(val refreshToken: String, val expiryDate: LocalDateTime)
 
     // 회원가입 메소드
     fun signUp(signUpDto: SignupRequestDto): UserDto {
@@ -117,7 +116,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         return UserDto(user)
     }
 
@@ -126,7 +125,7 @@ constructor(
         val user =
             userRepository
                 .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저입니다.") }
         return PublicUserDto(user)
     }
 
@@ -136,7 +135,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -147,7 +146,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -165,7 +164,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         if (
             !user.nickname.equals(updateProfileRequestDto.nickname) &&
                 userRepository.existsByNickname(updateProfileRequestDto.nickname)
@@ -195,7 +194,7 @@ constructor(
         val user =
             userRepository
                 .findById(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         if (!passwordEncoder.matches(requestDto.currentPassword, user.password)) {
             throw ServiceException("400-3", "현재 비밀번호가 일치하지 않습니다.")
         }
@@ -215,7 +214,7 @@ constructor(
         val user =
             userRepository
                 .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         user.promoteToAdmin()
         return UserDto(user)
     }
@@ -226,7 +225,7 @@ constructor(
         val user =
             userRepository
                 .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow({ ServiceException("404-1", "존재하지 않는 유저 입니다.") })
+                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         if ("ADMIN".equals(user.role)) {
             throw ServiceException("403-2", "관리자 계정은 탈퇴할 수 없습니다.")
         }

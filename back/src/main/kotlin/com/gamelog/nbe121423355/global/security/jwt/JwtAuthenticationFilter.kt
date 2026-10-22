@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import java.io.IOException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders.SET_COOKIE
 import org.springframework.http.ResponseCookie
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -40,9 +41,9 @@ class JwtAuthenticationFilter(
         } else if (token != null) {
             jwtProvider
                 .getExpiredAccessTokenClaims(token)
-                .ifPresent({ expiredClaims ->
+                .ifPresent { expiredClaims ->
                     tryAutoReissue(servletRequest, serveletResponse, expiredClaims)
-                })
+                }
         }
         filterChain.doFilter(servletRequest, serveletResponse)
     }
@@ -54,11 +55,12 @@ class JwtAuthenticationFilter(
             if (!jwtProvider.isAccessToken(claims)) {
                 return
             }
-            val userId = java.lang.Long.parseLong(claims.getSubject())
+            val userId = java.lang.Long.parseLong(claims.subject)
             val role = claims.get("role", String::class.java)
             setSecurityContext(userId, role)
-        } catch (e: Exception) {}
-        // 인증 정보 세팅 실패시 무시(필터는 예외를 던지지 않는다)
+        } catch (e: Exception) {
+            // 인증 정보 세팅 실패시 무시(필터는 예외를 던지지 않는다)
+        }
     }
 
     // accessToken이 만료된 경우 refreshToken 쿠키로 조용히 재발급 시도
@@ -73,7 +75,7 @@ class JwtAuthenticationFilter(
             return
         }
         try {
-            val expectedUserId: Long? = java.lang.Long.parseLong(expiredClaims.getSubject())
+            val expectedUserId: Long? = java.lang.Long.parseLong(expiredClaims.subject)
             val result: ReissueResult = tokenReissueService.reissue(refreshToken, expectedUserId)
             setSecurityContext(result.userId, result.role)
             response.setHeader("New-Access-Token", result.accessToken)
@@ -81,18 +83,21 @@ class JwtAuthenticationFilter(
             val cookie: ResponseCookie =
                 refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
             response.addHeader(SET_COOKIE, cookie.toString())
-        } catch (e: ServiceException) {} catch (e: Exception) {
-            JwtAuthenticationFilter.log.warn("자동 재발급 중 예외 발생", e)
+        } catch (e: ServiceException) {
+            // 무효/로그아웃된 refreshToken → 재발급 없이 미인증으로 진행 (정상적인 실패라 로그 안 남김)
+            // 재사용 감지(401-3)는 TokenReissueService에서 warn 로그를 남김
+        } catch (e: Exception) {
+            log.warn("자동 재발급 중 예외 발생", e)
         }
     }
 
     // SecurityContest에 인증 정보 세팅
     private fun setSecurityContext(userId: Long?, role: String?) {
-        val authorities = java.util.List.of(SimpleGrantedAuthority("ROLE_" + role))
+        val authorities = java.util.List.of(SimpleGrantedAuthority("ROLE_$role"))
         val securityUser = SecurityUser(requireNotNull(userId), authorities)
         val authentication: Authentication =
             UsernamePasswordAuthenticationToken(securityUser, null, securityUser.authorities)
-        SecurityContextHolder.getContext().setAuthentication(authentication)
+        SecurityContextHolder.getContext().authentication = authentication
     }
 
     // Authorization 헤더에서 accessToken 추출
@@ -119,7 +124,6 @@ class JwtAuthenticationFilter(
     }
 
     companion object {
-        private val log: org.slf4j.Logger =
-            org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
+        private val log = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
     }
 }

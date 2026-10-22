@@ -22,8 +22,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class UserFollowService
-constructor(
+class UserFollowService(
     private val userFollowRepository: UserFollowRepository,
     private val userRepository: UserRepository,
 ) {
@@ -72,7 +71,7 @@ constructor(
                 .toList()
         return FollowPageResponseDto(
             users,
-            result.getNumber(),
+            result.number,
             result.size,
             result.totalElements,
             result.totalPages,
@@ -204,7 +203,7 @@ constructor(
         if (page < 0) {
             throw ServiceException("400-7", "페이지 번호는 0 이상이어야 합니다.")
         }
-        if (size < 1 || size > UserFollowService.MAX_PAGE_SIZE) {
+        if (size < 1 || size > MAX_PAGE_SIZE) {
             throw ServiceException("400-8", "페이지 크기는 1 이상 50 이하여야 합니다.")
         }
     }
@@ -219,7 +218,7 @@ constructor(
     private fun getUser(userId: Long?): User {
         return userRepository
             .findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow({ ServiceException("404-1", "존재하지 않는 사용자입니다.") })
+            .orElseThrow { ServiceException("404-1", "존재하지 않는 사용자입니다.") }
     }
 
     companion object {

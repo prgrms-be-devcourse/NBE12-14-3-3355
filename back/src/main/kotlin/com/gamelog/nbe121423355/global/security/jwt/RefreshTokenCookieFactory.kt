@@ -13,7 +13,7 @@ class RefreshTokenCookieFactory constructor(private val cookieProperties: Cookie
     // expiryDate는 ZoneId.systemDefault() 기준으로 저장되므로 비교도 LocalDateTime.now()
     fun create(refreshToken: String?, expiryDate: LocalDateTime?): ResponseCookie {
         val maxAge = Duration.between(LocalDateTime.now(), expiryDate)
-        return build(refreshToken, if (maxAge.isNegative()) Duration.ZERO else maxAge)
+        return build(refreshToken, if (maxAge.isNegative) Duration.ZERO else maxAge)
     }
 
     // 쿠키 삭제용 (로그아웃)

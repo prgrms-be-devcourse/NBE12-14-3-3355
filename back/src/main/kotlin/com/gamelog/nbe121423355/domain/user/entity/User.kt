@@ -5,23 +5,23 @@ import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
-@jakarta.persistence.Entity
-@jakarta.persistence.Table(name = "users")
+@Entity
+@Table(name = "users")
 class User : BaseEntity {
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
         protected set
 
-    @jakarta.persistence.Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false)
     lateinit var email: String
         protected set
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     lateinit var password: String
         protected set
 
-    @jakarta.persistence.Column(unique = true)
+    @Column(unique = true)
     lateinit var nickname: String
         protected set
 
@@ -31,7 +31,7 @@ class User : BaseEntity {
     var bio: String? = null
         protected set
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     var onboardingCompleted: Boolean = false
         protected set
 
@@ -72,8 +72,8 @@ class User : BaseEntity {
     }
 
     fun withdraw(encodedRandomPassword: String?) {
-        this.email = "deleted_" + id + "@deleted.local"
-        this.nickname = "탈퇴한사용자_" + id
+        this.email = "deleted_$id@deleted.local"
+        this.nickname = "탈퇴한사용자_$id"
         this.password = javaNonNull(encodedRandomPassword, "password")
         this.profileImageUrl = null
         this.bio = null

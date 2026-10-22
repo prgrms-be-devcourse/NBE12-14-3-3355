@@ -4,41 +4,41 @@ import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
-@jakarta.persistence.Entity
+@Entity
 class RefreshToken protected constructor() : BaseEntity() {
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
         protected set
 
-    @jakarta.persistence.Column(unique = true, nullable = false, length = 36)
+    @Column(unique = true, nullable = false, length = 36)
     lateinit var familyId: String
         protected set
 
-    @jakarta.persistence.Column(nullable = false, length = 36)
+    @Column(nullable = false, length = 36)
     lateinit var currentJti: String
         protected set
 
-    @jakarta.persistence.Column(length = 36)
+    @Column(length = 36)
     var prevJti: String? = null
         protected set
 
     var rotatedAt: LocalDateTime? = null
         protected set
 
-    @jakarta.persistence.ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    lateinit var user: com.gamelog.nbe121423355.domain.user.entity.User
+    lateinit var user: User
         protected set
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     lateinit var expiryDate: LocalDateTime
         protected set
 
     companion object {
         @JvmStatic
         fun create(
-            user: com.gamelog.nbe121423355.domain.user.entity.User,
+            user: User,
             familyId: String,
             jti: String,
             expiryDate: LocalDateTime,
