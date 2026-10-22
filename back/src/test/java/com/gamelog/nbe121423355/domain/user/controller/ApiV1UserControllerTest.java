@@ -26,6 +26,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.aMapWithSize;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -607,5 +610,130 @@ class ApiV1UserControllerTest {
                                 {"nickname": "newNickname", "profileImageUrl": null, "bio": null}
                                 """))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("내 정보 응답 - 7개 키를 모두 내려주고 값이 없는 필드는 null로 유지")
+    void getMe_responseShape() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessTokenFor(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", aMapWithSize(7)))
+                .andExpect(jsonPath("$.data.id").value(user.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("nickname"))
+                .andExpect(jsonPath("$.data.email").value("test@test.com"))
+                .andExpect(jsonPath("$.data.onboardingCompleted").value(false))
+                .andExpect(jsonPath("$.data.role").value("USER"))
+                .andExpect(jsonPath("$.data", hasKey("profileImageUrl")))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(nullValue()))
+                .andExpect(jsonPath("$.data", hasKey("bio")))
+                .andExpect(jsonPath("$.data.bio").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("공개 정보 응답 - 4개 키만 내려주고 값이 없는 필드는 null로 유지")
+    void getPublicUser_responseShape() throws Exception {
+        User user = saveUser("profile@test.com", "프로필 사용자", "password123");
+
+        mockMvc.perform(get("/api/v1/users/{userId}", user.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", aMapWithSize(4)))
+                .andExpect(jsonPath("$.data.nickname").value("프로필 사용자"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(nullValue()))
+                .andExpect(jsonPath("$.data", hasKey("bio")))
+                .andExpect(jsonPath("$.data.bio").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("로그인 응답 - user와 accessToken을 함께 내려준다")
+    void login_responseShape() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(post("/api/v1/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "test@test.com", "password": "password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", aMapWithSize(2)))
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.user", aMapWithSize(7)))
+                .andExpect(jsonPath("$.data.user.id").value(user.getId()))
+                .andExpect(jsonPath("$.data.user.nickname").value("nickname"))
+                .andExpect(jsonPath("$.data.user.role").value("USER"));
+    }
+
+    @Test
+    @DisplayName("프로필 수정 - 보내지 않은 profileImageUrl, bio는 null로 저장")
+    void updateProfile_omittedFieldsBecomeNull() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessTokenFor(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"nickname": "newNickname"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("newNickname"))
+                .andExpect(jsonPath("$.data.profileImageUrl").value(nullValue()))
+                .andExpect(jsonPath("$.data.bio").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - password 필드가 없으면 400-1")
+    void login_fail_missingField() throws Exception {
+        mockMvc.perform(post("/api/v1/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "test@test.com"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-1"));
+    }
+
+    @Test
+    @DisplayName("프로필 수정 실패 - nickname 필드가 없으면 400-1")
+    void updateProfile_fail_missingField() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessTokenFor(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"bio": "안녕하세요"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-1"));
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 실패 - newPassword 필드가 없으면 400-1")
+    void changePassword_fail_missingField() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(patch("/api/v1/users/me/password")
+                        .header("Authorization", "Bearer " + accessTokenFor(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"currentPassword": "password123"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-1"));
+    }
+
+    @Test
+    @DisplayName("회원탈퇴 실패 - password 필드가 없으면 400-1")
+    void withdraw_fail_missingField() throws Exception {
+        User user = saveUser("test@test.com", "nickname", "password123");
+
+        mockMvc.perform(delete("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + accessTokenFor(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400-1"));
     }
 }
