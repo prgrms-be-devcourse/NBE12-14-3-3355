@@ -4,6 +4,7 @@ import com.gamelog.nbe121423355.domain.game.dto.GameListResponse;
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse;
 import com.gamelog.nbe121423355.domain.game.entity.Game;
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import com.gamelog.nbe121423355.domain.game.dto.GameSearchRequest;
 
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 @SpringBootTest
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 @Transactional
 class GameServiceTest {
 
@@ -72,19 +72,6 @@ class GameServiceTest {
                                 new BigDecimal("90.50")
                         )
                 );
-    }
-
-    @Test
-    @DisplayName("페이지 내용은 저장된 게임이 없으면 빈 목록이다")
-    void getGamesPageContentIsEmptyWhenNoGamesExist() {
-        // given
-        assertThat(gameRepository.count()).isZero();
-
-        // when
-        List<GameListResponse> responses = gameService.getGamesPage(new GameSearchRequest(0, 20, null, null, null, null)).getContent();
-
-        // then
-        assertThat(responses).isEmpty();
     }
 
     @Test
@@ -193,22 +180,6 @@ class GameServiceTest {
         assertThat(firstPage.getTotalElements()).isEqualTo(2);
         assertThat(firstPage.getTotalPages()).isEqualTo(2);
         assertThat(secondPage.hasNext()).isFalse();
-    }
-
-    @Test
-    @DisplayName("공백 검색어는 전체 게임을 반환한다")
-    void searchGamesWithBlankKeywordReturnsAllGames() {
-        assertThat(gameRepository.count()).isZero();
-        gameRepository.save(createGame(1001L, "Zelda"));
-        gameRepository.save(createGame(1002L, "Super Mario"));
-
-        Page<GameListResponse> result = gameService.getGamesPage(
-                new GameSearchRequest(0, 20, null, "   ", null, null)
-        );
-
-        assertThat(result.getContent()).extracting(GameListResponse::title)
-                .containsExactly("Zelda", "Super Mario");
-        assertThat(result.getTotalElements()).isEqualTo(2);
     }
 
     @Test

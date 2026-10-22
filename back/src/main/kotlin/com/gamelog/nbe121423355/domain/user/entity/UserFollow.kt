@@ -31,7 +31,7 @@ class UserFollow : BaseEntity {
         this.follower = javaNonNull(follower, "팔로우하는 사용자는 필수입니다.")
         this.followee = javaNonNull(followee, "팔로우 대상 사용자는 필수입니다.")
         val followerId: Long = javaNonNull(follower.id, "팔로우하는 사용자 ID는 필수입니다.")
-        val followeeId: Long? = javaNonNull(followee.id, "팔로우 대상 사용자 ID는 필수입니다.")
+        val followeeId: Long = javaNonNull(followee.id, "팔로우 대상 사용자 ID는 필수입니다.")
         kotlin.require(!followerId.equals(followeeId)) { "자기 자신은 팔로우할 수 없습니다." }
         this.id = UserFollowId(followerId, followeeId)
     }

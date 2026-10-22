@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.domain.game.client.DeepLClient
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.nio.charset.StandardCharsets
-import java.nio.charset.StandardCharsets.UTF_8
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.HexFormat
@@ -23,12 +22,7 @@ class GameTranslationService(
     @Value("\${game.translation.enabled:false}") private val enabled: Boolean,
     @Value("\${game.translation.max-games:10}") private val maxGames: Int,
 ) {
-    private val transaction: TransactionTemplate
-
-    init {
-
-        this.transaction = TransactionTemplate(manager)
-    }
+    private val transaction = TransactionTemplate(manager)
 
     @kotlin.jvm.Synchronized
     fun translatePending(): Int {
@@ -49,15 +43,12 @@ class GameTranslationService(
                 if (translated >= maxGames) break
                 // 원문 백업은 번역 요청 전에 커밋합니다. 외부 HTTP 호출에는 DB 트랜잭션을 유지하지 않습니다.
                 val source =
-                    transaction.execute<String?>(
-                        org.springframework.transaction.support.TransactionCallback {
-                            status: org.springframework.transaction.TransactionStatus ->
-                            repository
-                                .findById(requireNotNull(game.id))
-                                .orElseThrow()
-                                .prepareDescriptionTranslation()
-                        }
-                    )
+                    transaction.execute {
+                        repository
+                            .findById(requireNotNull(game.id))
+                            .orElseThrow()
+                            .prepareDescriptionTranslation()
+                    }
                 if (source == null || source.javaIsBlank()) continue
                 val hash = GameTranslationService.hash(source)
                 if (hash.equals(game.descriptionTranslatedHash)) continue
@@ -73,14 +64,12 @@ class GameTranslationService(
                     )
                     return translated
                 }
-                transaction.executeWithoutResult(
-                    java.util.function.Consumer { status ->
-                        repository
-                            .findById(requireNotNull(game.id))
-                            .orElseThrow()
-                            .applyDescriptionTranslation(source, korean, hash)
-                    }
-                )
+                transaction.executeWithoutResult {
+                    repository
+                        .findById(requireNotNull(game.id))
+                        .orElseThrow()
+                        .applyDescriptionTranslation(source, korean, hash)
+                }
                 translated++
                 GameTranslationService.log.info(
                     "한국어 설명 저장 완료: gameId={}, 이번 실행 {}개",

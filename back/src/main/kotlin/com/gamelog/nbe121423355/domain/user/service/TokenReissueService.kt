@@ -30,10 +30,10 @@ constructor(
     @JvmRecord
     data class ReissueResult(
         val userId: Long?,
-        val role: String?,
-        val accessToken: String?,
-        val refreshToken: String?,
-        val refreshTokenExpiryDate: LocalDateTime?,
+        val role: String,
+        val accessToken: String,
+        val refreshToken: String,
+        val refreshTokenExpiryDate: LocalDateTime,
     ) {}
 
     // /refresh API용 (비교할 accessToken이 없음)
@@ -95,8 +95,8 @@ constructor(
         // 교체 성공: currentJti = 방금 만든 jti
         // 유예 시간 내 요청: currentJti = 다른 요청이 교체한 jti → 같은 refreshToken을 다시 내려줘서 쿠키 복구
         val expiration =
-            Date.from(requireNotNull(session.expiryDate).atZone(ZoneId.systemDefault()).toInstant())
-        val newRefreshToken: String? =
+            Date.from(session.expiryDate.atZone(ZoneId.systemDefault()).toInstant())
+        val newRefreshToken =
             jwtProvider.generateRefreshToken(user.id, familyId, session.currentJti, expiration)
         val newAccessToken = jwtProvider.generateAccessToken(user.id, user.role)
         return ReissueResult(
@@ -115,8 +115,7 @@ constructor(
         now: LocalDateTime,
     ): Boolean {
         return jti.equals(session.prevJti) &&
-            session.rotatedAt != null &&
-            requireNotNull(session.rotatedAt).isAfter(now.minus(TokenReissueService.GRACE_PERIOD))
+            session.rotatedAt?.isAfter(now.minus(TokenReissueService.GRACE_PERIOD)) == true
     }
 
     companion object {
@@ -124,6 +123,6 @@ constructor(
             org.slf4j.LoggerFactory.getLogger(TokenReissueService::class.java)
 
         // 교체 직후 이전 refreshToken을 허용하는 시간 (동시 요청 / 응답 유실 대비)
-        private val GRACE_PERIOD: Duration? = Duration.ofSeconds(10)
+        private val GRACE_PERIOD: Duration = Duration.ofSeconds(10)
     }
 }
