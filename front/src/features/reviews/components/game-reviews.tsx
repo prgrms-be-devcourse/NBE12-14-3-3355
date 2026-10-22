@@ -2,27 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { createReviewReport, deleteReview, getLikeStatus, getMyDetailedReview, setReviewLike } from "@/features/reviews/api";
+import { createReviewReport, deleteReview, getLikeStatus, getMyDetailedReview, ReviewApiError, setReviewLike } from "@/features/reviews/api";
 import type { DetailedReview } from "@/features/reviews/types";
 import type { Review, ReviewPage } from "@/features/reviews/list-types";
+import { getPlayLabel } from "../play-label";
 import styles from "./game-reviews.module.css";
+import ReviewComments from "./review-comments";
+import CommentReturn from "./comment-return";
 
 type ReviewSort = "newest" | "rating";
 type ReviewResponse = { data?: ReviewPage; msg?: string };
 const pageSize = 5;
 const numberFormat = new Intl.NumberFormat("ko-KR");
-function getPlayLabel(review: Review) {
-  if (review.playing) return "플레이 중";
-  if (review.playStatus === "COMPLETED" || review.playStatus === "PLAYED") return "플레이 완료";
-  if (review.playStatus === "RETIRED" || review.playStatus === "DROPPED") return "플레이 중단";
-  if (review.playStatus === "SHELVED") return "보류";
-  if (review.backlog) return "플레이 예정";
-  if (review.wishlist) return "위시리스트";
-  return null;
-}
-
-
-
 function ReviewLikeCount({ reviewId, accessToken }: { reviewId: number; accessToken?: string }) {
   const [likeCount, setLikeCount] = useState<number | null>(null);
   const [liked, setLiked] = useState(false);
@@ -148,6 +139,7 @@ function ReviewCard({
         {!mine && accessToken && onReport && <button type="button" className={styles.reportButton} onClick={onReport}>신고</button>}
       </div>
     </div>
+    <ReviewComments reviewId={review.reviewId} locked={hidden} />
   </article>;
 }
 
@@ -174,8 +166,10 @@ export default function GameReviews({
   const [actionError, setActionError] = useState("");
   const [actionNotice, setActionNotice] = useState("");
   const [deletingReviewId, setDeletingReviewId] = useState<number | null>(null);
+  const [reportedReviewId, setReportedReviewId] = useState<number | null>(null);
   const [reportingReview, setReportingReview] = useState<Review | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [reportError, setReportError] = useState("");
   const [reporting, setReporting] = useState(false);
   const [retry, setRetry] = useState(0);
 
@@ -232,15 +226,16 @@ export default function GameReviews({
   }, [accessToken, gameId, page, refreshKey, sort, retry]);
 
   async function removeMyReview() {
-    const reviewId = myDetail?.review?.reviewId;
-    if (!accessToken || !reviewId || deletingReviewId != null) return;
+    const review = myDetail?.review;
+    if (!accessToken || !review || deletingReviewId != null) return;
+    const { reviewId, version } = review;
     if (!window.confirm("작성한 리뷰를 삭제할까요? 게임 기록은 그대로 유지됩니다.")) return;
 
     setDeletingReviewId(reviewId);
     setActionError("");
     setActionNotice("");
     try {
-      await deleteReview(reviewId, accessToken);
+      await deleteReview(reviewId, version, accessToken);
       setMyDetail((current) => current ? { ...current, review: null } : null);
       setResult((current) => current ? {
         ...current,
@@ -251,6 +246,9 @@ export default function GameReviews({
       setActionNotice("리뷰를 삭제했습니다. 게임 기록은 그대로 유지됩니다.");
       onDeleted?.();
     } catch (reason) {
+      if (reason instanceof ReviewApiError && reason.resultCode === "409-6") {
+        setRetry((value) => value + 1);
+      }
       setActionError(reason instanceof Error ? reason.message : "리뷰를 삭제하지 못했습니다.");
     } finally {
       setDeletingReviewId(null);
@@ -263,15 +261,15 @@ export default function GameReviews({
     if (!accessToken || !reportingReview || !reason || reporting) return;
 
     setReporting(true);
-    setActionError("");
+    setReportError("");
     setActionNotice("");
     try {
       await createReviewReport(reportingReview.reviewId, reason, accessToken);
       setReportingReview(null);
       setReportReason("");
-      setActionNotice("리뷰 신고가 접수되었습니다. 관리자가 내용을 확인할 예정입니다.");
+      setReportedReviewId(reportingReview.reviewId);
     } catch (reasonValue) {
-      setActionError(reasonValue instanceof Error ? reasonValue.message : "리뷰 신고를 접수하지 못했습니다.");
+      setReportError(reasonValue instanceof Error ? reasonValue.message : "리뷰 신고를 접수하지 못했습니다.");
     } finally {
       setReporting(false);
     }
@@ -302,6 +300,7 @@ export default function GameReviews({
       </div></div>
     </div>
 
+    <CommentReturn gameId={gameId} />
     {actionError && <p className={styles.actionError} role="alert">{actionError}</p>}
     {actionNotice && <p className={styles.actionNotice} role="status">{actionNotice}</p>}
 
@@ -309,8 +308,9 @@ export default function GameReviews({
       : error ? <div className={styles.emptyState} role="alert"><h3>리뷰를 불러오지 못했습니다.</h3><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>다시 시도 ↗</button></div>
       : !visibleReviews.length ? <div className={styles.emptyState}><h3>아직 등록된 리뷰가 없습니다.</h3><p>이 게임의 첫 번째 이야기를 기다리고 있습니다.</p></div>
       : <>
-        <div className={styles.list}>{visibleReviews.map(review => <ReviewCard
-          key={review.reviewId}
+        <div className={styles.list}>{visibleReviews.map(review => <div key={review.reviewId}>
+          {reportedReviewId === review.reviewId && <p className={styles.actionNotice} role="status">리뷰 신고가 접수되었습니다. 관리자가 내용을 확인할 예정입니다.</p>}
+          <ReviewCard
           review={review}
           accessToken={accessToken}
           mine={myReview?.reviewId === review.reviewId}
@@ -320,9 +320,11 @@ export default function GameReviews({
             setActionError("");
             setActionNotice("");
             setReportReason("");
+            setReportError("");
+            setReportedReviewId(null);
             setReportingReview(review);
           } : undefined}
-        />)}</div>
+        /></div>)}</div>
         {result && result.totalPages > 1 && <nav className={styles.pagination} aria-label="리뷰 페이지 이동">
           <button disabled={page === 0} onClick={() => setPage(value => value - 1)}>← 이전</button>
           <span>{page + 1} / {result.totalPages}</span>
@@ -347,6 +349,7 @@ export default function GameReviews({
           <textarea value={reportReason} onChange={(event) => setReportReason(event.target.value)} maxLength={255} rows={5} placeholder="욕설, 광고, 스포일러 미표시 등 신고 사유를 입력하세요." required />
           <small>{reportReason.length} / 255</small>
         </label>
+        {reportError && <p className={styles.actionError} role="alert">{reportError}</p>}
         <div className={styles.reportActions}>
           <button type="button" onClick={() => setReportingReview(null)} disabled={reporting}>취소</button>
           <button type="submit" className={styles.reportSubmit} disabled={reporting || !reportReason.trim()}>{reporting ? "접수 중…" : "신고 접수"}</button>

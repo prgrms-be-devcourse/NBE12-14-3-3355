@@ -1,9 +1,8 @@
 package com.gamelog.nbe121423355.global.security.jwt;
 
-import com.gamelog.nbe121423355.domain.user.entity.RefreshToken;
-import com.gamelog.nbe121423355.domain.user.entity.User;
-import com.gamelog.nbe121423355.domain.user.repository.RefreshTokenRepository;
-import com.gamelog.nbe121423355.domain.user.repository.UserRepository;
+import com.gamelog.nbe121423355.domain.user.service.TokenReissueService;
+import com.gamelog.nbe121423355.domain.user.service.TokenReissueService.ReissueResult;
+import com.gamelog.nbe121423355.global.exception.ServiceException;
 import com.gamelog.nbe121423355.global.security.SecurityUser;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -12,6 +11,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -22,20 +23,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final UserRepository userRepository;
+    private final TokenReissueService tokenReissueService;
+    private final RefreshTokenCookieFactory refreshTokenCookieFactory;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider, RefreshTokenRepository refreshTokenRepository, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtProvider jwtProvider, TokenReissueService tokenReissueService,
+                                   RefreshTokenCookieFactory refreshTokenCookieFactory) {
         this.jwtProvider = jwtProvider;
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.userRepository = userRepository;
+        this.tokenReissueService = tokenReissueService;
+        this.refreshTokenCookieFactory = refreshTokenCookieFactory;
     }
 
     // 필터는 spring mvc의 dispatcherservlet보다 앞단에서 실행
@@ -49,8 +50,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if(token != null && jwtProvider.validateToken(token)) {
             authenticate(token);
-        } else if(token != null && jwtProvider.isExpired(token)) {
-            tryAutoReissue(servletRequest, serveletResponse);
+        } else if(token != null) {
+            jwtProvider.getExpiredAccessTokenClaims(token)
+                    .ifPresent(expiredClaims -> tryAutoReissue(servletRequest, serveletResponse, expiredClaims));
         }
         filterChain.doFilter(servletRequest, serveletResponse);
     }
@@ -59,6 +61,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void authenticate(String token) {
         try {
             Claims claims = jwtProvider.parseClaims(token);
+            if(!jwtProvider.isAccessToken(claims)) {
+                return;
+            }
             Long userId = Long.parseLong(claims.getSubject());
             String role = claims.get("role", String.class);
             setSecurityContext(userId, role);
@@ -67,31 +72,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
-    // accessToken이 만룐된 경우 refreshToken 쿠키로 조용히 재발급 시도
-    private void tryAutoReissue(HttpServletRequest servletRequest, HttpServletResponse response) {
+    // accessToken이 만료된 경우 refreshToken 쿠키로 조용히 재발급 시도
+    // 만료된 accessToken과 refreshToken의 사용자가 같을 때만 재발급
+    private void tryAutoReissue(HttpServletRequest servletRequest, HttpServletResponse response, Claims expiredClaims) {
+        String refreshToken = resolveTokenFromCookie(servletRequest);
+        if (refreshToken == null) {
+            return;
+        }
         try {
-            String refreshToken = resolveTokenFromCookie(servletRequest);
-            if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
-                return;
-            }
-
-            String jti = jwtProvider.parseClaims(refreshToken).getId();
-            Optional<RefreshToken> savedToken = refreshTokenRepository.findByTokenId(jti);
-            if(savedToken.isEmpty()) {
-                return;
-            }
-
-            Long userId = jwtProvider.getUserId(refreshToken);
-            Optional<User> userOpt = userRepository.findById(userId);
-            if(userOpt.isEmpty()) {
-                return;
-            }
-
-            User user = userOpt.get();
-            String newAccessToken = jwtProvider.generateAccessToken(userId, user.getRole());
-
-            setSecurityContext(userId, user.getRole());
-            response.setHeader("New-Access-Token", newAccessToken);
+            Long expectedUserId = Long.parseLong(expiredClaims.getSubject());
+            ReissueResult result = tokenReissueService.reissue(refreshToken, expectedUserId);
+            setSecurityContext(result.userId(), result.role());
+            response.setHeader("New-Access-Token", result.accessToken());
+            // Rotation으로 교체된 refreshToken (프록시는 relayAuthHeaders로 Set-Cookie를 브라우저까지 전달)
+            ResponseCookie cookie = refreshTokenCookieFactory.create(result.refreshToken(), result.refreshTokenExpiryDate());
+            response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        } catch (ServiceException e) {
+            // 무효/로그아웃된 refreshToken → 재발급 없이 미인증으로 진행 (정상적인 실패라 로그 안 남김)
+            // 재사용 감지(401-3)는 TokenReissueService에서 warn 로그를 남김
         } catch (Exception e) {
             log.warn("자동 재발급 중 예외 발생", e);
         }

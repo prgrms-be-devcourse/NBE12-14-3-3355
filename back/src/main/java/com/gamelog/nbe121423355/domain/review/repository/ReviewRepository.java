@@ -5,57 +5,62 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
+    String ACTIVE_REVIEW = "(r.status IS NULL OR r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE)";
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Review r WHERE r.id = :id AND " + ACTIVE_REVIEW)
+    Optional<Review> findActiveForUpdate(@Param("id") Long id);
+
 
     @Query("""
-            SELECT review
-            FROM Review review
-            WHERE review.userGame.id = :userGameId
-              AND (review.status IS NULL OR review.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE)
+            SELECT r
+            FROM Review r
+            WHERE r.userGame.id = :userGameId
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     Optional<Review> findByUserGame_Id(@Param("userGameId") Long userGameId);
 
     @Query("""
-            SELECT review
-            FROM Review review
-            WHERE review.userGame.id = :userGameId
+            SELECT r
+            FROM Review r
+            WHERE r.userGame.id = :userGameId
             """)
     Optional<Review> findIncludingDeletedByUserGameId(@Param("userGameId") Long userGameId);
 
     @Query("""
-            SELECT review
-            FROM Review review
-            WHERE review.id = :reviewId
-              AND (
-                  review.status IS NULL
-                  OR review.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-              )
+            SELECT r
+            FROM Review r
+            WHERE r.id = :reviewId
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     Optional<Review> findActiveById(@Param("reviewId") Long reviewId);
 
     @EntityGraph(attributePaths = {"userGame.user", "userGame.game", "userGame.platform"})
     @Query("""
-            SELECT review
-            FROM Review review
-            WHERE review.userGame.game.id = :gameId
+            SELECT r
+            FROM Review r
+            WHERE r.userGame.game.id = :gameId
               AND (
-                  review.rating IS NOT NULL
+                  r.rating IS NOT NULL
                   OR (
-                      review.content IS NOT NULL
-                      AND TRIM(review.content) <> ''
+                      r.content IS NOT NULL
+                      AND TRIM(r.content) <> ''
                   )
               )
-              AND (
-                  review.status IS NULL
-                  OR review.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-              )
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     Page<Review> findByUserGame_Game_Id(
             @Param("gameId") Long gameId,
@@ -64,20 +69,18 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @EntityGraph(attributePaths = {"userGame.user", "userGame.game", "userGame.platform"})
     @Query("""
-            SELECT review
-            FROM Review review
-            WHERE review.userGame.user.id = :userId
+            SELECT r
+            FROM Review r
+            WHERE r.userGame.user.id = :userId
               AND (
-                  review.rating IS NOT NULL
+                  r.rating IS NOT NULL
                   OR (
-                      review.content IS NOT NULL
-                      AND TRIM(review.content) <> ''
+                      r.content IS NOT NULL
+                      AND TRIM(r.content) <> ''
                   )
               )
-              AND (
-                  review.status IS NULL
-                  OR review.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-              )
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     Page<Review> findByUserGame_User_Id(
             @Param("userId") Long userId,
@@ -91,14 +94,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             WHERE ug.user.id = :userId
               AND ug.inLibrary = true
               AND r.rating IS NOT NULL
-              AND (
-                  r.status IS NULL
-                  OR r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-              )
-              AND (
-                  ug.playStatus IS NOT NULL
-                  OR ug.playing = true
-              )
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     BigDecimal findAverageRating(@Param("userId") Long userId);
 
@@ -109,14 +106,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             WHERE ug.user.id = :userId
               AND ug.inLibrary = true
               AND r.rating IS NOT NULL
-              AND (
-                  r.status IS NULL
-                  OR r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-              )
-              AND (
-                  ug.playStatus IS NOT NULL
-                  OR ug.playing = true
-              )
+              AND """ + ACTIVE_REVIEW + """
+
             """)
     List<BigDecimal> findPlayedGameRatings(
             @Param("userId") Long userId
@@ -136,14 +127,24 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
               AND TRIM(r.content) <> ''
           )
       )
-      AND (
-          r.status IS NULL
-          OR r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-      )
+      AND """ + ACTIVE_REVIEW + """
+
     ORDER BY r.lastModifiedDate DESC
 """)
     List<Review> findRecentReviews(
             @Param("userId") Long userId,
             Pageable pageable
     );
+
+    // 회원탈퇴: 활성 리뷰만 숨김 (UPDATE에는 JOIN을 못 써서 user_game은 서브쿼리)
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            UPDATE Review r
+            SET r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.DELETED_BY_USER,
+                r.deletedAt = :now
+            WHERE r.userGame.id IN (SELECT ug.id FROM UserGame ug WHERE ug.user.id = :userId)
+              AND """ + ACTIVE_REVIEW + """
+
+            """)
+    int hideAllByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 }

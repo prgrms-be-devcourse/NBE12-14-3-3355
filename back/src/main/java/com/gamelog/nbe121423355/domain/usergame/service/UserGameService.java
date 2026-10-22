@@ -5,6 +5,7 @@ import com.gamelog.nbe121423355.domain.game.entity.Platform;
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository;
 import com.gamelog.nbe121423355.domain.game.repository.PlatformRepository;
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository;
+import com.gamelog.nbe121423355.domain.review.entity.Review;
 import com.gamelog.nbe121423355.domain.user.entity.User;
 import com.gamelog.nbe121423355.domain.user.entity.UserFavoriteGame;
 import com.gamelog.nbe121423355.domain.user.repository.UserFavoriteGameRepository;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -96,7 +98,7 @@ public class UserGameService {
                 request.getSize()
         );
 
-        if (!userRepository.existsById(userId)) {
+        if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             throw new ServiceException("404-1", "존재하지 않는 유저입니다.");
         }
         return getUserGameList(userId, request);
@@ -109,6 +111,18 @@ public class UserGameService {
         Long gameId,
         UserGameReqBody reqBody
     ){
+        UserGameSaveResult result = saveGameRecord(userId, gameId, reqBody);
+        synchronizeLibraryState(result.userGame());
+        return result;
+    }
+
+    // 상세 저장에서는 리뷰까지 저장한 뒤 최종 라이브러리/인생 게임 상태를 판단한다.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public UserGameSaveResult prepareGameRecordForReview(Long userId, Long gameId, UserGameReqBody reqBody) {
+        return saveGameRecord(userId, gameId, reqBody);
+    }
+
+    private UserGameSaveResult saveGameRecord(Long userId, Long gameId, UserGameReqBody reqBody) {
         log.info(
                 "게임 기록 저장 요청 - userId={}, gameId={}",
                 userId,
@@ -154,6 +168,7 @@ public class UserGameService {
         Platform platform = findPlatform(reqBody.platformId());
 
         applyPlayRecord(userGame, reqBody, platform);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "게임 플레이 기록 수정 완료 - userId={}, gameId={}",
@@ -212,6 +227,27 @@ public class UserGameService {
                 reqBody.completedAt(),
                 reqBody.lastPlayedAt()
         );
+    }
+
+    @Transactional
+    public void synchronizeLibraryState(UserGame userGame) {
+        boolean hasActiveReview = userGame.getId() != null
+                && reviewRepository.findByUserGame_Id(userGame.getId())
+                .filter(Review::hasVisibleContent)
+                .isPresent();
+        userGame.updateLibraryStatus(hasActiveReview);
+        if (!userGame.isInLibrary()) {
+            userFavoriteGameRepository.deleteByUser_IdAndGame_Id(
+                    userGame.getUser().getId(), userGame.getGame().getId()
+            );
+        }
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void synchronizeLibraryState(Long userGameId) {
+        UserGame userGame = userGameRepository.findById(userGameId)
+                .orElseThrow(() -> new ServiceException("404-2", "게임 기록을 찾을 수 없습니다."));
+        synchronizeLibraryState(userGame);
     }
 
     private void validatePlayDates(UserGameReqBody reqBody) {
@@ -359,6 +395,7 @@ public class UserGameService {
         if (playStatus == null) {
             UserGame userGame = findUserGame(userId, gameId);
             userGame.clearPlayStatus();
+            synchronizeLibraryState(userGame);
 
             log.info(
                     "플레이 상태 해제 - userId={}, gameId={}",
@@ -371,6 +408,7 @@ public class UserGameService {
 
         UserGame userGame = getOrCreateUserGame(userId, gameId);
         userGame.changePlayStatus(playStatus);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "플레이 상태 변경 - userId={}, gameId={}, playStatus={}",
@@ -390,6 +428,7 @@ public class UserGameService {
         );
 
         userGame.changePlaying(playing);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "플레이 중 상태 변경 - userId={}, gameId={}, playing={}",
@@ -409,6 +448,7 @@ public class UserGameService {
         );
 
         userGame.changeWishlist(wishlist);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "위시리스트 상태 변경 - userId={}, gameId={}, wishlist={}",
@@ -428,6 +468,7 @@ public class UserGameService {
         );
 
         userGame.changeBacklog(backlog);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "백로그 상태 변경 - userId={}, gameId={}, backlog={}",
@@ -447,6 +488,7 @@ public class UserGameService {
         );
 
         userGame.changeLiked(liked);
+        synchronizeLibraryState(userGame);
 
         log.info(
                 "좋아요 상태 변경 - userId={}, gameId={}, liked={}",
@@ -467,7 +509,7 @@ public class UserGameService {
                 currentUserId
         );
 
-        if (!userRepository.existsById(targetUserId)) {
+        if (!userRepository.existsByIdAndDeletedAtIsNull(targetUserId)) {
             throw new ServiceException("404-1", "존재하지 않는 유저입니다.");
         }
         List<UserGame> playedGames =
@@ -485,7 +527,7 @@ public class UserGameService {
         BigDecimal averageRating = reviewRepository.findAverageRating(targetUserId);
         BigDecimal totalPlayTime = playedGames.stream()
                 .map(UserGame::getPlayTimeHours)
-                .filter(Objects::nonNull)
+                .filter(time -> time != null && time.signum() > 0)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 산점도
@@ -570,15 +612,16 @@ public class UserGameService {
 
         // 3. 사용자의 UserGame 조회
         List<UserGame> userGames =
-                userGameRepository.findAllByUserIdAndGameIdIn(
+                userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(
                         userId,
                         gameIds
                 );
 
         // 4. 모든 게임이 사용자의 라이브러리에 있는지 검증
         if (userGames.size() != gameIds.size()) {
-            throw new IllegalArgumentException(
-                    "내 라이브러리에 등록된 게임만 인생게임으로 선택할 수 있습니다."
+            throw new ServiceException(
+                    "400-11",
+                    "라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요."
             );
         }
 
@@ -625,7 +668,7 @@ public class UserGameService {
 
         List<BigDecimal> playTimes = playedGames.stream()
                 .map(UserGame::getPlayTimeHours)
-                .filter(Objects::nonNull)
+                .filter(time -> time != null && time.signum() > 0)
                 .toList();
 
         if (playTimes.size() < MIN_DATA_COUNT) {

@@ -1,3 +1,4 @@
+import { acceptRefreshedToken } from "@/features/auth/api";
 import type {
   ApiResponse,
   DetailedReview,
@@ -34,6 +35,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers,
     cache: "no-store",
   });
+  acceptRefreshedToken(response);
   const payload = (await response.json()) as ApiResponse<T>;
 
   if (!response.ok) {
@@ -87,8 +89,9 @@ export function saveDetailedReview(
   });
 }
 
-export function deleteReview(reviewId: number, accessToken: string) {
-  return request<null>(`reviews/${reviewId}`, {
+export function deleteReview(reviewId: number, version: number, accessToken: string) {
+  const query = new URLSearchParams({ version: String(version) });
+  return request<null>(`reviews/${reviewId}?${query}`, {
     method: "DELETE",
     accessToken,
   });

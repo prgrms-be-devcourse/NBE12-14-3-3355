@@ -7,6 +7,7 @@ import com.gamelog.nbe121423355.domain.user.repository.UserRepository;
 import com.gamelog.nbe121423355.domain.usergame.dto.UserFavoriteGameResponse;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository;
+import com.gamelog.nbe121423355.global.exception.ServiceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +60,7 @@ class UserGameServiceFavoriteTest {
         given(userGame1.getGame()).willReturn(game1);
         given(userGame2.getGame()).willReturn(game2);
 
-        given(userGameRepository.findAllByUserIdAndGameIdIn(
+        given(userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(
                 userId,
                 List.of(10L, 20L)
         )).willReturn(List.of(userGame1, userGame2));
@@ -138,7 +139,7 @@ class UserGameServiceFavoriteTest {
         given(userRepository.findById(userId))
                 .willReturn(Optional.of(user));
 
-        given(userGameRepository.findAllByUserIdAndGameIdIn(
+        given(userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(
                 userId,
                 List.of(10L, 20L)
         )).willReturn(List.of());
@@ -149,7 +150,10 @@ class UserGameServiceFavoriteTest {
                         List.of(10L, 20L)
                 )
         )
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOfSatisfying(ServiceException.class, error -> {
+                    assertThat(error.getResultCode()).isEqualTo("400-11");
+                    assertThat(error.getMsg()).isEqualTo("라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요.");
+                });
 
         verify(userFavoriteGameRepository, never())
                 .deleteAllByUserId(userId);
