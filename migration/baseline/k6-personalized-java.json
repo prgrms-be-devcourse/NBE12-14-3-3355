@@ -1,0 +1,164 @@
+{
+  "measurement": "Java personalized recommendation baseline",
+  "recorded_at": "2026-10-22T12:24:32.133555+09:00",
+  "runtime_configuration_confirmation": "User confirmed latest Java build and all three recommendation flags true",
+  "command": "bash k6/recommendations/run.sh personalized --summary-export <local-summary.json>",
+  "warmup": "SMOKE=true once immediately before measured run",
+  "stage_duration_seconds": 15,
+  "stage_total_seconds": 105,
+  "max_vus": 10,
+  "sleep_seconds": 1,
+  "metrics": {
+    "data_sent": {
+      "count": 234346,
+      "rate": 2205.4272901737036
+    },
+    "http_req_duration{scenario:record}": {
+      "avg": 28.787626623376617,
+      "med": 29.2955,
+      "p(95)": 36.1125,
+      "p(99)": 38.985229999999994,
+      "max": 45.106,
+      "thresholds": {
+        "p(99)<60000": false
+      }
+    },
+    "checks{scenario:record}": {
+      "passes": 616,
+      "fails": 0,
+      "thresholds": {
+        "rate>0.99": false
+      },
+      "value": 1
+    },
+    "vus_max": {
+      "value": 10,
+      "min": 10,
+      "max": 10
+    },
+    "http_req_failed": {
+      "passes": 0,
+      "fails": 656,
+      "value": 0
+    },
+    "vus": {
+      "min": 0,
+      "max": 10,
+      "value": 6
+    },
+    "http_req_failed{scenario:record}": {
+      "passes": 0,
+      "fails": 308,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "http_req_duration{expected_response:true}": {
+      "avg": 28.464489329268286,
+      "med": 28.764000000000003,
+      "p(95)": 37.70625,
+      "p(99)": 80.7679,
+      "max": 118.608
+    },
+    "http_req_waiting": {
+      "avg": 28.351967987804915,
+      "med": 28.6575,
+      "p(95)": 37.6145,
+      "p(99)": 80.7041,
+      "max": 118.48
+    },
+    "http_req_connecting": {
+      "max": 0.617,
+      "avg": 0.007051829268292682,
+      "med": 0,
+      "p(95)": 0,
+      "p(99)": 0.35599999999999965
+    },
+    "http_req_sending": {
+      "avg": 0.027736280487804885,
+      "med": 0.02,
+      "p(95)": 0.05224999999999997,
+      "p(99)": 0.10714999999999995,
+      "max": 1.524
+    },
+    "http_req_failed{scenario:onboarding}": {
+      "passes": 0,
+      "fails": 308,
+      "thresholds": {
+        "rate<0.01": false
+      },
+      "value": 0
+    },
+    "http_reqs": {
+      "count": 656,
+      "rate": 6.173607837786647
+    },
+    "http_req_receiving": {
+      "avg": 0.08478506097560976,
+      "med": 0.066,
+      "p(95)": 0.171,
+      "p(99)": 0.3042499999999995,
+      "max": 1.993
+    },
+    "http_req_blocked": {
+      "avg": 0.0187454268292683,
+      "med": 0.006,
+      "p(95)": 0.017,
+      "p(99)": 0.44964999999999955,
+      "max": 2.141
+    },
+    "http_req_tls_handshaking": {
+      "p(99)": 0,
+      "max": 0,
+      "avg": 0,
+      "med": 0,
+      "p(95)": 0
+    },
+    "http_req_duration": {
+      "avg": 28.464489329268286,
+      "med": 28.764000000000003,
+      "p(95)": 37.70625,
+      "p(99)": 80.7679,
+      "max": 118.608
+    },
+    "data_received": {
+      "count": 1320074,
+      "rate": 12423.19998911337
+    },
+    "iteration_duration": {
+      "avg": 1029.4866730340912,
+      "med": 1029.833271,
+      "p(95)": 1037.51698975,
+      "p(99)": 1040.6984269,
+      "max": 1049.572584
+    },
+    "iterations": {
+      "count": 616,
+      "rate": 5.797168335482583
+    },
+    "checks": {
+      "passes": 1232,
+      "fails": 0,
+      "value": 1
+    },
+    "http_req_duration{scenario:onboarding}": {
+      "med": 28.605,
+      "p(95)": 37.42679999999999,
+      "p(99)": 38.933,
+      "max": 48.311,
+      "avg": 28.125428571428593,
+      "thresholds": {
+        "p(99)<60000": false
+      }
+    },
+    "checks{scenario:onboarding}": {
+      "fails": 0,
+      "passes": 616,
+      "thresholds": {
+        "rate>0.99": false
+      },
+      "value": 1
+    }
+  }
+}
