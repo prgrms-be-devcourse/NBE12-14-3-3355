@@ -7,17 +7,17 @@ import com.gamelog.nbe121423355.domain.review.entity.*;
 import com.gamelog.nbe121423355.domain.user.entity.*;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
 import com.gamelog.nbe121423355.global.exception.ServiceException;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 @Transactional
 class IgdbSyncTest {
     @Autowired IgdbSyncStore store;

@@ -3,6 +3,7 @@ package com.gamelog.nbe121423355.domain.game.controller;
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse;
 import com.gamelog.nbe121423355.domain.game.entity.Game;
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -10,7 +11,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 @Transactional
 class GameControllerTest {
 
