@@ -24,9 +24,9 @@
 - 기존 Java 테스트 실패 시 Kotlin 구현의 호환성 문제를 우선 확인한다. 테스트 삭제·비활성화·기대값 변경으로 통과시키지 않으며, 최소 호출 수정은 이유와 함께 기록한다. (Q15)
 - DB 구조·데이터를 변경하지 않고, 전환 PR의 코드·빌드 설정을 되돌려 Java 버전으로 복구할 수 있게 유지한다. 실제 운영 중 새로 생성된 데이터를 과거로 되돌린다는 의미는 아니다. 복구 절차와 검증 결과는 구현 시 기록한다. (Q16)
 
-## 현재 협의할 내용
+## 협의 당시 기준
 
-2026-10-22 코드 확인 기준으로 백엔드 운영 Java 232개, 테스트 Java 72개이며 Kotlin 소스는 없다. 프론트엔드는 TypeScript/TSX이다. `build.gradle.kts`는 이미 Kotlin DSL이지만 Kotlin 소스 컴파일 플러그인은 아직 없고, 현재 Java toolchain은 25이다.
+전환 전 2026-10-22 코드 확인 기준으로 백엔드 운영 Java 232개, 테스트 Java 72개이며 Kotlin 소스는 없다. 프론트엔드는 TypeScript/TSX이다. `build.gradle.kts`는 이미 Kotlin DSL이지만 Kotlin 소스 컴파일 플러그인은 아직 없고, 현재 Java toolchain은 25이다.
 
 | 항목 | 제안 | 상태 |
 |---|---|---|
@@ -34,21 +34,18 @@
 | 동작 보존 | API 경로·인증·응답·오류·추천 정책과 DB 테이블·컬럼·저장 데이터 유지 | 확정 |
 | 변경 범위 | 비즈니스 로직 유지, 마이그레이션만 진행. 관리자 신규 기능 제외 | 확정 |
 
-## 이후 구체화할 내용
+## 구현과 검증 기록
 
-- Kotlin·JVM·Spring 빌드 구성과 호환 버전
-- Kotlin 코드 스타일, null 허용 기준, Java/Lombok 표현의 대체 방식
-- JPA 엔티티 생성자·프록시·동등성·연관관계 처리
-- Jackson 직렬화와 요청 검증 애너테이션의 적용 위치
-- 기존 Java 호출 방식 및 수동 사전 계산 명령의 유지
-- 검증할 주요 API·CLI 시나리오와 복구 절차의 구체화
-- 확정된 커밋·병합·병행 수정 원칙에 따른 실행 순서
-
-실제 코드와 호환성 자료를 확인한 뒤 구체적인 선택을 기록한다. 위 항목은 아직 구현 방식이 확정되었다는 뜻이 아니다.
+확정한 빌드 구성, DTO·JPA·null 처리와 실행 진입점의 구현은 [IMPLEMENTATION.md](IMPLEMENTATION.md)에 기록한다. Java 기준 결과는 [BASELINE.md](BASELINE.md), 전환 후 최종 확인은 [VALIDATION.md](VALIDATION.md)에서 확인한다.
 
 ## Java 테스트 호출 변경 기록
 
-아직 변경한 테스트는 없다. 실제 전환 시 호출 호환성 때문에 수정한 항목만 아래에 기록한다. 검증 내용·기대값의 변경은 최소 호출 수정에 포함하지 않는다.
+Java 테스트는 그대로 유지한다. 아래 변경은 Kotlin 호출·생성자 호환성을 위한 준비 코드 수정이며 테스트 시나리오·검증문·기대값은 변경하지 않았다.
 
 | 테스트 파일·위치 | 기존 호출 | 변경 호출 | 변경 이유 |
 |---|---|---|---|
+| `IgdbSyncTest` | `state.leaseUntil = 0` | `state.setLeaseUntil(0)` | Kotlin 프로퍼티의 Java setter로 같은 상태 설정 |
+| `IgdbSyncTest` | `state.runId` | `state.getRunId()` | Kotlin 프로퍼티의 Java getter로 같은 값 확인 |
+| `UserGameServiceRecentTest` | 일부 의존성만 `@Mock` | 누락된 생성자 의존성 mock 5개 추가 | Kotlin의 필수 생성자 인자에 Mockito가 null을 전달하지 않도록 보완 |
+| `UserGameServiceFavoriteTest` | 일부 의존성만 `@Mock` | 누락된 생성자 의존성 mock 4개 추가 | 동일한 생성자 호환성 보완 |
+| `UserGameServiceLibraryTest` | 일부 의존성만 `@Mock` | 누락된 생성자 의존성 mock 1개 추가 | 동일한 생성자 호환성 보완 |

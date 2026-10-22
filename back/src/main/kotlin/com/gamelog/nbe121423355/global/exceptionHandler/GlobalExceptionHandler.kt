@@ -1,0 +1,121 @@
+package com.gamelog.nbe121423355.global.exceptionHandler
+
+import com.gamelog.nbe121423355.global.dto.RsData
+import com.gamelog.nbe121423355.global.exception.ServiceException
+import java.util.Comparator
+import java.util.NoSuchElementException
+import java.util.stream.Collectors
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.orm.ObjectOptimisticLockingFailureException
+import org.springframework.validation.FieldError
+import org.springframework.web.ErrorResponse
+import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.annotation.ControllerAdvice
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.multipart.MaxUploadSizeExceededException
+
+@ControllerAdvice
+class GlobalExceptionHandler {
+    @ExceptionHandler(NoSuchElementException::class)
+    @ResponseBody
+    fun noSuchElementException(): RsData<Void> {
+        return RsData<Void>("404-1", "존재하지 않는 데이터입니다.")
+    }
+
+    // DTO 검증 실패(@Valid)
+    @ExceptionHandler(MethodArgumentNotValidException::class)
+    @ResponseBody
+    fun methodArgumentNotValidException(e: MethodArgumentNotValidException): RsData<Void> {
+        val message =
+            e.getBindingResult()
+                .getAllErrors()
+                .stream()
+                .filter({ error -> error is FieldError })
+                .map({ error -> error as FieldError? })
+                .map({ error ->
+                    requireNotNull(error).getField() +
+                        "-" +
+                        requireNotNull(error).code +
+                        "-" +
+                        requireNotNull(error).getDefaultMessage()
+                })
+                .sorted(Comparator.comparing(String::toString))
+                .collect(Collectors.joining("\n"))
+        return RsData<Void>("400-1", message)
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    @ResponseBody
+    fun handleException(e: HttpMessageNotReadableException?): RsData<Void> {
+        return RsData<Void>("400-2", "잘못된 형식의 요청 데이터입니다.")
+    }
+
+    // PathVariable/RequestParam 타입 불일치 (예: /games/abc)
+    // ErrorResponse를 구현하지 않는 예외라 아래 Exception 핸들러의 4xx 분기에 걸리지 않아 별도 처리
+    @ExceptionHandler(MethodArgumentTypeMismatchException::class)
+    @ResponseBody
+    fun handleException(e: MethodArgumentTypeMismatchException?): RsData<Void> {
+        return RsData<Void>("400-0", "잘못된 요청입니다.")
+    }
+
+    // 이미지 파일 크기 초과시 예외사항
+    @ExceptionHandler(MaxUploadSizeExceededException::class)
+    @ResponseBody
+    fun handleException(e: MaxUploadSizeExceededException?): RsData<Void> {
+        return RsData<Void>("400-3", "파일 크기가 너무 큽니다. 5MB 이하 파일만 업로드할 수 있습니다.")
+    }
+
+    // 동시 요청으로 인한 DB 유니크 제약조건 위반 (중복확인 직후 동시 가입 경합)
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    @ResponseBody
+    fun handleException(e: DataIntegrityViolationException?): RsData<Void> {
+        GlobalExceptionHandler.log.warn("DB 제약조건 위반", e)
+        return RsData<Void>("409-3", "이미 존재하거나 처리 중인 데이터입니다. 잠시 후 다시 시도해 주세요.")
+    }
+
+    @ExceptionHandler(ServiceException::class)
+    @ResponseBody
+    fun handleException(e: ServiceException): RsData<Void> {
+        if (e.resultCode.startsWith("500")) {
+            GlobalExceptionHandler.log.error("서비스 오류 발생: resultCode={}", e.resultCode, e)
+        }
+        return RsData<Void>(e.resultCode, e.msg)
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException::class)
+    @ResponseBody
+    fun handleException(e: ObjectOptimisticLockingFailureException?): RsData<Void> {
+        GlobalExceptionHandler.log.warn("동시에 변경된 데이터로 인한 낙관적 락 충돌", e)
+        return RsData<Void>("409-6", "다른 곳에서 리뷰가 변경되었습니다. 최신 내용을 다시 불러온 후 시도해 주세요.")
+    }
+
+    // 위에서 처리하지 못한 나머지 모든 예외 (500)
+    // 단, Spring MVC가 던지는 클라이언트 오류(없는 경로, 타입 불일치, 지원하지 않는 메서드 등)는
+    // 예외에 담긴 원래 4xx 상태로 응답하고 로그는 남기지 않음
+    @ExceptionHandler(Exception::class)
+    @ResponseBody
+    fun handleException(e: Exception?): RsData<Void> {
+        if (e is ErrorResponse && e.statusCode.is4xxClientError()) {
+            val status = e.statusCode.value()
+            return RsData<Void>(status.toString() + "-0", clientErrorMessage(status))
+        }
+        GlobalExceptionHandler.log.error("처리되지 않은 예외 발생", e)
+        return RsData<Void>("500-1", "서버 내부 오류가 발생했습니다.")
+    }
+
+    private fun clientErrorMessage(status: Int): String {
+        return when (status) {
+            404 -> "요청한 경로를 찾을 수 없습니다."
+            405 -> "허용되지 않은 요청 방식입니다."
+            else -> "잘못된 요청입니다."
+        }
+    }
+
+    companion object {
+        private val log: org.slf4j.Logger =
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+    }
+}

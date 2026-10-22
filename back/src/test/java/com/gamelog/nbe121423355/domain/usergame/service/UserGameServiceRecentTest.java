@@ -27,6 +27,16 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class UserGameServiceRecentTest {
+    @Mock
+    private com.gamelog.nbe121423355.domain.user.repository.UserRepository userRepository;
+    @Mock
+    private com.gamelog.nbe121423355.domain.game.repository.GameRepository gameRepository;
+    @Mock
+    private com.gamelog.nbe121423355.domain.game.repository.PlatformRepository platformRepository;
+    @Mock
+    private com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository userFollowRepository;
+    @Mock
+    private com.gamelog.nbe121423355.domain.user.repository.UserFavoriteGameRepository userFavoriteGameRepository;
 
     @InjectMocks
     private UserGameService userGameService;
