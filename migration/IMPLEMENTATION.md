@@ -1,5 +1,30 @@
 # Kotlin 전환 구현 기록
 
+## 담당 기능의 후속 Kotlin 정리 (2026-10-22)
+
+문창원 담당 기능에 한해 기존 API와 기능 동작을 유지하는 개선을 진행했다.
+
+- `GameSearchRequest`: 이미 기본값이 적용된 non-null `page`·`size`의 불필요한 safe call을
+  제거했다. 생성자 null 입력, 기본값, Java 접근자, equals/hashCode 계산 순서는 유지한다.
+- `GameFilteredQueryRepository`: private `OrderPlan`의 세 필수 문자열을 non-null로
+  표현하고 COUNT 콜백을 SAM 람다로 간소화했다. SQL·파라미터·COUNT 지연 실행은 유지한다.
+- `GameService`: 페이지 매핑의 명시적 Function 래퍼를 생성자 참조로, COUNT 래퍼를
+  SAM 람다로 정리했다. 불필요한 문자열 변환을 제거하고 고정 날짜·시간대 상수를
+  non-null로 표현했다. 검색 분기와 공백·특수문자 처리, 정렬·페이징은 유지한다.
+- `GameTranslationService`: TransactionTemplate 초기화와 콜백 표기를 간소화했다.
+  원문 백업 트랜잭션 → 외부 번역 호출 → 번역 저장 트랜잭션의 순서와 경계는 유지한다.
+- `ReviewCommentService`: 내부 `Item`·`Page`·`Body` 참조의 전체 패키지명을 짧은
+  타입명으로 정리했다. 반환 타입·JSON·인증·오류·잠금·삭제 순서는 변경하지 않는다.
+
+Java의 공백 판정·예외 종류를 보존하는 interop 함수, stream 결과의 수정 불가 특성,
+DB 스키마와 외부 DTO의 nullable 계약은 유지한다. 테스트 삭제·기대값 수정은 하지 않는다.
+이 변경은 되돌리기 쉬운 코드 표현 정리이므로 별도 ADR이나 도메인 용어를 추가하지 않는다.
+
+검증 범위는 담당 MySQL 통합테스트 15개 클래스다. 번역 엔티티 저장·재조회는 검증하지만,
+실제 DeepL 호출과 `translatePending`의 외부 연동·커밋 경계는 이 테스트의 검증 범위에 없다.
+Kotlin·Java 테스트 컴파일 및 81건 실행에 성공했다(실패·오류·건너뜀 0).
+기존 로컬 Byte Buddy agent 로딩 메시지는 출력되었으나 이번 실행의 실패는 없었다.
+
 전체 운영 코드 전환을 하나의 PR로 반영한다. 작업 중 커밋은 빌드 지원·전환·호환성 보완·검증 결과로 구분할 수 있다. Java 테스트는 유지하고 검증 내용·기대값은 변경하지 않는다.
 
 ## 1. Kotlin 빌드 지원
