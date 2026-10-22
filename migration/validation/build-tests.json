@@ -1,0 +1,15 @@
+{
+  "recorded_date": "2026-10-22",
+  "command": "./gradlew clean build --no-daemon",
+  "success": true,
+  "gradle_duration": "1m 18s",
+  "test_classes": 69,
+  "tests": 515,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "main_java_files": 0,
+  "main_kotlin_files": 234,
+  "test_java_files": 72,
+  "test_kotlin_files": 0
+}

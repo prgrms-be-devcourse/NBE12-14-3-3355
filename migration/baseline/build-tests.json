@@ -1,0 +1,20 @@
+{
+  "command": "./gradlew clean build --no-daemon",
+  "result": "BUILD SUCCESSFUL",
+  "gradle_reported_duration_seconds": 81,
+  "test_classes": 69,
+  "tests": 515,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "cli_help": {
+    "command": "./gradlew recommendationPrecompute --args='--help'",
+    "result": "BUILD SUCCESSFUL",
+    "database_connection_required": false
+  },
+  "k6_script_sha256": {
+    "k6/recommendations/personalized-recommendations.js": "97b68b40f3f2be3f2caef744c7385ca285604c89adcecb6fe769b14548cd22a3",
+    "k6/recommendations/related-recommendations.js": "2818d38df6196c09a9d1258108103726d08b42781715c3169b6686ed6d8db994",
+    "k6/recommendations/run.sh": "1a26ad2f654e0fe1e85faaf77440b0c33e7e4206027f03af044c3176030749a9"
+  }
+}

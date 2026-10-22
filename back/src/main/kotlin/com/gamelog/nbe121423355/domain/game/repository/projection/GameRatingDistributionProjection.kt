@@ -1,0 +1,10 @@
+package com.gamelog.nbe121423355.domain.game.repository.projection
+
+import java.math.BigDecimal
+
+// 평점별 리뷰 수 집계 결과를 매핑
+interface GameRatingDistributionProjection {
+    val rating: BigDecimal
+
+    val count: Long
+}

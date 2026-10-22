@@ -1,0 +1,198 @@
+{
+  "recorded_at": "2026-10-22T13:44:13.574145+09:00",
+  "base_url": "http://localhost:18080",
+  "database": "gamelog",
+  "schema_validation": "validate",
+  "connection_read_only": true,
+  "sql_initialization": "never",
+  "recommendation_flags": "all true",
+  "responses": [
+    {
+      "path": "/actuator/health",
+      "http_status": 200,
+      "response_keys": [
+        "groups",
+        "status"
+      ],
+      "resultCode": null,
+      "canonical_sha256": "f5d81755935209a3ae596d4553d269cbbe8d08a27dd95b05fe0b7c544eb7ed71",
+      "matches_java_baseline_hash": true
+    },
+    {
+      "path": "/api/v1/games/page?page=0&size=5",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "canonical_sha256": "49fea14ab7331251bfc2baa07c85ce8025b1375e1c342e756bdb19a5418a8acb",
+      "matches_java_baseline_hash": true,
+      "data_keys": [
+        "content",
+        "empty",
+        "first",
+        "last",
+        "number",
+        "numberOfElements",
+        "pageable",
+        "size",
+        "sort",
+        "totalElements",
+        "totalPages"
+      ],
+      "game_ids": [
+        47808,
+        198812,
+        226137,
+        232879,
+        237711
+      ],
+      "total_elements": 287478
+    },
+    {
+      "path": "/api/v1/games/page?page=0&size=5&keyword=Elden",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "canonical_sha256": "4d052fcd2df6536628253466d29df08416df709272d4e36e6ef3cc9b0dc5e1e3",
+      "matches_java_baseline_hash": true,
+      "data_keys": [
+        "content",
+        "empty",
+        "first",
+        "last",
+        "number",
+        "numberOfElements",
+        "pageable",
+        "size",
+        "sort",
+        "totalElements",
+        "totalPages"
+      ],
+      "game_ids": [
+        201812,
+        85739,
+        168251,
+        228562,
+        70907
+      ],
+      "total_elements": 29
+    },
+    {
+      "path": "/api/v1/games/suggestions?keyword=Elden",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "canonical_sha256": "a2c820df402b4956ae56dc52d9db15877d4b02cd144f5f34e58a7d770aa77c44",
+      "matches_java_baseline_hash": true,
+      "count": 6,
+      "game_ids": [
+        200535,
+        205720,
+        85739,
+        147039,
+        228562,
+        262511
+      ],
+      "item_keys": [
+        "coverImageUrl",
+        "id",
+        "igdbRating",
+        "releaseDate",
+        "title"
+      ]
+    },
+    {
+      "path": "/api/v1/games/47808",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "canonical_sha256": "6c3e8db3f2d00b6dd6088d0320a5ab1192e846bd5e8ded33223882e1d36809c7",
+      "matches_java_baseline_hash": true,
+      "data_keys": [
+        "coverImageUrl",
+        "description",
+        "developer",
+        "genres",
+        "id",
+        "igdbId",
+        "igdbRating",
+        "platforms",
+        "releaseDate",
+        "series",
+        "statistics",
+        "title"
+      ],
+      "game_id": 47808
+    },
+    {
+      "path": "/api/v1/games/47808/related",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "canonical_sha256": "3286b45dfe530283d15ba7ca658ae529df84e3c8b2bb166e2df302659a434f0c",
+      "matches_java_baseline_hash": true,
+      "count": 5,
+      "game_ids": [
+        196353,
+        179011,
+        201812,
+        1614,
+        9961
+      ],
+      "item_keys": [
+        "coverImageUrl",
+        "genres",
+        "id",
+        "igdbRating",
+        "recommendationScore",
+        "title"
+      ]
+    },
+    {
+      "path": "/api/v1/games/9223372036854775807",
+      "http_status": 404,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "404-1",
+      "canonical_sha256": "ec374356489557bcf9748b090b60315ddc4d569bf4f701b773e85f4994862ce9",
+      "matches_java_baseline_hash": true
+    },
+    {
+      "path": "/api/v1/games/recommendations/personalized",
+      "http_status": 401,
+      "resultCode": "401-1"
+    },
+    {
+      "path": "/api/v1/games/page?page=-1",
+      "http_status": 400,
+      "resultCode": "400-1"
+    },
+    {
+      "path": "/v3/api-docs",
+      "http_status": 200,
+      "resultCode": null
+    }
+  ]
+}

@@ -65,8 +65,8 @@ class IgdbSyncTest {
     void expiredLeaseCanBeResumedAfterServerRestart() {
         var state = store.claim(1);
         store.savePage(state.getRunId(), List.of(game(10, 0L)));
-        state.leaseUntil = 0;
-        String oldRun = state.runId;
+        state.setLeaseUntil(0);
+        String oldRun = state.getRunId();
         var resumed = store.claim(2);
         assertThat(resumed.getRunId()).isNotEqualTo(oldRun);
         assertThat(resumed.getCursorId()).isEqualTo(10);
