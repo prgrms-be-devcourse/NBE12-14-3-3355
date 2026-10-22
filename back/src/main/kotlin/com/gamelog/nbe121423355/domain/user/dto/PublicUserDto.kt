@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JvmRecord
 data class PublicUserDto(
     @field:Schema(description = "사용자 ID", example = "2") val id: Long?,
-    @field:Schema(description = "닉네임", example = "게임친구") val nickname: String?,
+    @field:Schema(description = "닉네임", example = "게임친구") val nickname: String,
     @field:Schema(description = "프로필 이미지 URL", nullable = true) val profileImageUrl: String?,
     @field:Schema(description = "자기소개", nullable = true) val bio: String?,
 ) {

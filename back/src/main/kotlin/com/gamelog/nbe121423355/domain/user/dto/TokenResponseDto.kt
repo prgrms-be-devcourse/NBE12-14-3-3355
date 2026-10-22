@@ -6,5 +6,5 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JvmRecord
 data class TokenResponseDto(
     @field:Schema(description = "새로 발급한 JWT accessToken", example = "eyJhbGciOiJIUzI1NiJ9...")
-    val accessToken: String?
+    val accessToken: String
 ) {}

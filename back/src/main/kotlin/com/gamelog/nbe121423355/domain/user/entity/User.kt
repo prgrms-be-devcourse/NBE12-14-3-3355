@@ -14,15 +14,15 @@ class User : BaseEntity {
         protected set
 
     @jakarta.persistence.Column(unique = true, nullable = false)
-    var email: String? = null
+    lateinit var email: String
         protected set
 
     @jakarta.persistence.Column(nullable = false)
-    var password: String? = null
+    lateinit var password: String
         protected set
 
     @jakarta.persistence.Column(unique = true)
-    var nickname: String? = null
+    lateinit var nickname: String
         protected set
 
     var profileImageUrl: String? = null
@@ -35,7 +35,7 @@ class User : BaseEntity {
     var onboardingCompleted: Boolean = false
         protected set
 
-    var role: String? = null
+    lateinit var role: String
         protected set
 
     // 회원탈퇴 시각 (null이면 활성 회원)
@@ -85,13 +85,13 @@ class User : BaseEntity {
 
     constructor(
         id: Long?,
-        email: String?,
-        password: String?,
-        nickname: String?,
+        email: String,
+        password: String,
+        nickname: String,
         profileImageUrl: String?,
         bio: String?,
         onboardingCompleted: Boolean,
-        role: String?,
+        role: String,
         deletedAt: LocalDateTime?,
     ) {
         this.id = id
