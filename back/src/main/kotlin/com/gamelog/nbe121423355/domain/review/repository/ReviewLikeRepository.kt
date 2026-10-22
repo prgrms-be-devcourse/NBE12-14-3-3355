@@ -25,7 +25,7 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
     )
     fun findLikeCountsByReviewIds(
         @Param("reviewIds") reviewIds: Collection<Long>
-    ): MutableList<ReviewLikeCountProjection>
+    ): List<ReviewLikeCountProjection>
 
     @Query(
         """
@@ -72,7 +72,7 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
 
             """
     )
-    fun findPopularReviews(pageable: Pageable): MutableList<PopularReviewProjection>
+    fun findPopularReviews(pageable: Pageable): List<PopularReviewProjection>
 
     @Query(
         """

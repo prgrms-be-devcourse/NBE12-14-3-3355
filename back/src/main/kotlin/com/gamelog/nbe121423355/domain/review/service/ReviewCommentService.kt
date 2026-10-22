@@ -6,8 +6,6 @@ import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.time.LocalDateTime
-import java.util.function.Function
-import java.util.stream.Collectors
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -44,7 +42,7 @@ constructor(
     @JvmRecord
     data class Page(
         val comments:
-            MutableList<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item>,
+            List<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item>,
         val nextCursor: Long?,
         val totalCount: Long,
     ) {}
@@ -105,7 +103,7 @@ constructor(
         )
             throw ServiceException("400-20", "원댓글의 답글만 조회할 수 있습니다.")
         val size = if (parentId == null) 20 else 10
-        val rows: MutableList<ReviewComment> =
+        val rows: List<ReviewComment> =
             comments.list(reviewId, parentId, after, PageRequest.of(0, size + 1))
         val more = rows.size > size
         val visible = rows.subList(0, Math.min(size, rows.size))
@@ -127,7 +125,7 @@ constructor(
         viewer: Long?,
     ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item {
         val review: Review = review(reviewId, false)
-        return items(review, java.util.List.of(comment(reviewId, id, false)), viewer).first()
+        return items(review, listOf(comment(reviewId, id, false)), viewer).first()
     }
 
     @Transactional
@@ -149,7 +147,7 @@ constructor(
             users.findById(userId).orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
         val c: ReviewComment =
             comments.saveAndFlush(ReviewComment(review, user, body.content, body.spoiler, parent))
-        return items(review, java.util.List.of(c), userId).first()
+        return items(review, listOf(c), userId).first()
     }
 
     @Transactional
@@ -164,7 +162,7 @@ constructor(
         owner(c, userId)
         validate(body)
         c.edit(body.content, body.spoiler)
-        return items(review, java.util.List.of(c), userId).first()
+        return items(review, listOf(c), userId).first()
     }
 
     @Transactional
@@ -199,7 +197,7 @@ constructor(
             likes.save(ReviewCommentLike(c, user))
         } else if (!value) likes.deleteById(key)
         likes.flush()
-        return items(review, java.util.List.of(c), userId).first()
+        return items(review, listOf(c), userId).first()
     }
 
     @Transactional
@@ -211,25 +209,22 @@ constructor(
 
     private fun items(
         review: Review,
-        rows: MutableList<ReviewComment>,
+        rows: List<ReviewComment>,
         viewer: Long?,
-    ): MutableList<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item> {
-        if (rows.isEmpty()) return java.util.List.of()
-        val ids = rows.map { requireNotNull(it.id) }.toMutableList()
+    ): List<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item> {
+        if (rows.isEmpty()) return emptyList()
+        val ids = rows.map { requireNotNull(it.id) }
         val counts =
             likes
                 .counts(ids, viewer)
-                .stream()
-                .collect(Collectors.toMap({ it.commentId }, Function.identity()))
+                .associateBy { it.commentId }
         val replies =
             comments
                 .replyCounts(ids)
-                .stream()
-                .collect(Collectors.toMap({ it.parentId }, { it.count }))
+                .associate { it.parentId to it.count }
         val author: Long? = review.userGame.user.id
         return rows
-            .stream()
-            .map({ c ->
+            .map { c ->
                 val l = counts.get(c.id)
                 val deleted: Boolean = c.isDeleted
                 com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item(
@@ -249,7 +244,6 @@ constructor(
                     replies.getOrDefault(c.id, 0L),
                     c.createdDate,
                 )
-            })
-            .toList()
+            }
     }
 }

@@ -37,7 +37,7 @@ interface CommunityReviewRepository : Repository<Review, Long> {
         @Param("since") since: LocalDateTime,
         @Param("now") now: LocalDateTime,
         pageable: Pageable,
-    ): MutableList<CommunityReviewProjection>
+    ): List<CommunityReviewProjection>
 
     @Query("SELECT COUNT(f) > 0 FROM UserFollow f WHERE f.follower.id = :viewerId")
     fun hasFollowing(@Param("viewerId") viewerId: Long): Boolean

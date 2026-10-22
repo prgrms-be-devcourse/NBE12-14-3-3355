@@ -5,7 +5,6 @@ import com.gamelog.nbe121423355.domain.review.dto.response.DetailedReviewRespons
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewPageResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewResponse
 import com.gamelog.nbe121423355.domain.review.entity.Review
-import com.gamelog.nbe121423355.domain.review.repository.ReviewLikeCountProjection
 import com.gamelog.nbe121423355.domain.review.repository.ReviewLikeRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameDto
@@ -14,7 +13,6 @@ import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
 import java.util.Objects
-import java.util.stream.Collectors
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -144,20 +142,13 @@ constructor(
         reviews: Page<Review>,
         totalLikes: Long,
     ): ReviewPageResponse {
-        val reviewIds: MutableList<Long> =
-            reviews.content.map { requireNotNull(it.id) }.toMutableList()
-        val likeCounts: MutableMap<Long, Long> =
-            if (reviewIds.isEmpty()) java.util.Map.of()
+        val reviewIds = reviews.content.map { requireNotNull(it.id) }
+        val likeCounts: Map<Long, Long> =
+            if (reviewIds.isEmpty()) emptyMap()
             else
                 reviewLikeRepository
                     .findLikeCountsByReviewIds(reviewIds)
-                    .stream()
-                    .collect(
-                        Collectors.toMap(
-                            { obj: ReviewLikeCountProjection -> obj.reviewId },
-                            { obj: ReviewLikeCountProjection -> obj.likeCount },
-                        )
-                    )
+                    .associate { checkNotNull(it.reviewId) to it.likeCount }
         return ReviewPageResponse.from(reviews, likeCounts, totalLikes)
     }
 

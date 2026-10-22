@@ -23,7 +23,7 @@ interface ReviewCommentLikeRepository : JpaRepository<ReviewCommentLike, ReviewC
     fun counts(
         @Param("ids") ids: Collection<Long>,
         @Param("viewerId") viewerId: Long?,
-    ): MutableList<Likes>
+    ): List<Likes>
 
     @Modifying
     @org.springframework.data.jpa.repository.Query(

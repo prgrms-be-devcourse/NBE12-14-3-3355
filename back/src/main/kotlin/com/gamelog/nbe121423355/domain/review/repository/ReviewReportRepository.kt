@@ -57,10 +57,10 @@ interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
             """
     )
     fun findAllByReviewIdsAndStatus(
-        @Param("reviewIds") reviewIds: MutableList<Long>,
+        @Param("reviewIds") reviewIds: List<Long>,
         @Param("status") status: ReportStatus?,
-    ): MutableList<ReviewReport>
+    ): List<ReviewReport>
 
     @EntityGraph(attributePaths = ["reporter", "review.userGame.user"])
-    fun findByReview_IdAndStatus(reviewId: Long, status: ReportStatus): MutableList<ReviewReport>
+    fun findByReview_IdAndStatus(reviewId: Long, status: ReportStatus): List<ReviewReport>
 }

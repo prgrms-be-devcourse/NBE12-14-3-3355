@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page
 
 @JvmRecord
 data class ReviewPageResponse(
-    val reviews: MutableList<ReviewResponse>,
+    val reviews: List<ReviewResponse>,
     val page: Int,
     val size: Int,
     val totalElements: Long,
@@ -18,19 +18,12 @@ data class ReviewPageResponse(
         @JvmStatic
         fun from(
             reviewPage: Page<Review>,
-            likeCounts: MutableMap<Long, Long>,
+            likeCounts: Map<Long, Long>,
             totalLikes: Long,
         ): ReviewPageResponse {
-            val reviews: MutableList<ReviewResponse> =
-                reviewPage.content
-                    .stream()
-                    .map({ review ->
-                        ReviewResponse.from(
-                            review,
-                            likeCounts.getOrDefault(review.id, 0L),
-                        )
-                    })
-                    .toList()
+            val reviews = reviewPage.content.map { review ->
+                ReviewResponse.from(review, likeCounts[review.id] ?: 0L)
+            }
 
             return ReviewPageResponse(
                 reviews,

@@ -24,7 +24,7 @@ interface ReviewCommentRepository : JpaRepository<ReviewComment, Long> {
         @Param("parentId") parentId: Long?,
         @Param("afterId") afterId: Long?,
         pageable: Pageable,
-    ): MutableList<ReviewComment>
+    ): List<ReviewComment>
 
     fun countByReview_IdAndDeletedFalse(reviewId: Long): Long
 
@@ -36,7 +36,7 @@ interface ReviewCommentRepository : JpaRepository<ReviewComment, Long> {
     @org.springframework.data.jpa.repository.Query(
         "SELECT c.parent.id AS parentId, COUNT(c) AS count FROM ReviewComment c WHERE c.parent.id IN :ids AND c.deleted = false GROUP BY c.parent.id"
     )
-    fun replyCounts(@Param("ids") ids: Collection<Long>): MutableList<ReplyCount>
+    fun replyCounts(@Param("ids") ids: Collection<Long>): List<ReplyCount>
 
     @Modifying
     @org.springframework.data.jpa.repository.Query(

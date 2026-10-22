@@ -16,9 +16,7 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import java.util.LinkedHashMap
 import java.util.Objects
-import java.util.stream.Collectors
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -64,29 +62,14 @@ constructor(
         val reviewIdPage: Page<Long> =
             reviewReportRepository.findReviewIdsGroupedByReview(status, groupPageable)
         if (reviewIdPage.isEmpty()) {
-            return ReviewReportPageResponse.from(reviewIdPage, java.util.List.of())
+            return ReviewReportPageResponse.from(reviewIdPage, emptyList())
         }
-        val reports: MutableList<ReviewReport> =
+        val reports: List<ReviewReport> =
             reviewReportRepository.findAllByReviewIdsAndStatus(reviewIdPage.content, status)
-        val reportsByReviewId: MutableMap<Long, MutableList<ReviewReport>> =
-            reports
-                .stream()
-                .collect(
-                    Collectors.groupingBy(
-                        { report -> report.review.id },
-                        { LinkedHashMap() },
-                        Collectors.toList(),
-                    )
-                )
-        val groups: MutableList<ReviewReportGroupResponse> =
-            reviewIdPage.content
-                .stream()
-                .map(reportsByReviewId::get)
-                .filter(Objects::nonNull)
-                .map({ source: MutableList<ReviewReport>? ->
-                    ReviewReportGroupResponse.from(requireNotNull(source))
-                })
-                .toList()
+        val reportsByReviewId = reports.groupBy { checkNotNull(it.review.id) }
+        val groups = reviewIdPage.content.mapNotNull { reviewId ->
+            reportsByReviewId[reviewId]?.let { ReviewReportGroupResponse.from(it) }
+        }
         return ReviewReportPageResponse.from(reviewIdPage, groups)
     }
 
@@ -102,7 +85,7 @@ constructor(
         if (request.status == ReportStatus.PENDING) {
             throw ServiceException("400-5", "신고 처리 결과는 승인 또는 반려여야 합니다.")
         }
-        val pendingReports: MutableList<ReviewReport> =
+        val pendingReports: List<ReviewReport> =
             reviewReportRepository.findByReview_IdAndStatus(checkNotNull(report.review.id), ReportStatus.PENDING)
         if (pendingReports.isEmpty()) {
             throw ServiceException("409-4", "이미 처리된 리뷰 신고입니다.")
