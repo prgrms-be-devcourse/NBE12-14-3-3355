@@ -22,7 +22,7 @@ data class GameDetailResponse(
     val genres: List<GenreResponse>,
     @field:Schema(description = "지원 플랫폼 목록") val platforms: List<PlatformResponse>,
     @field:Schema(description = "시리즈 목록") val series: List<SeriesResponse>,
-    @field:Schema(description = "GameLog 사용자 기록 통계") val statistics: GameStatisticsResponse?,
+    @field:Schema(description = "GameLog 사용자 기록 통계") val statistics: GameStatisticsResponse,
 ) {
     @Schema(description = "게임 장르")
     @JvmRecord
