@@ -31,6 +31,7 @@ class ChangedRelatedGamePrecomputeTest {
     private static final AtomicLong IDS = new AtomicLong(4_900_000);
     @Autowired RelatedGamePrecomputeBatchService batch;
     @Autowired RelatedGameChangePreparation preparation;
+    @Autowired RelatedGameChangeQueryService query;
     @Autowired RelatedGameChangeExpansion expansion;
     @Autowired RelatedGameChangeRecorder recorder;
     @Autowired RelatedGameInputChangeRepository changes;
@@ -149,6 +150,55 @@ class ChangedRelatedGamePrecomputeTest {
         assertThat(candidates.findByIdSourceGameIdOrderByRelatedRankAsc(source))
                 .extracting(row -> row.getId().getCandidateGameId()).containsExactly(previous);
         assertThat(targets.findByGameId(source).getAppliedVersion()).isZero();
+    }
+
+    @Test
+    void previewIncludesOldAndCurrentGenresAndPendingTargetsWithoutConsumingChanges() {
+        // given: 이전·현재 장르 영향 게임과 중복 대기, 별도 대기, 무관한 게임을 준비한다.
+        long oldGenre = genre(), currentGenre = genre();
+        long source = game(), oldBase = game(), currentBase = game(), pending = game(), unrelated = game();
+        link(source, currentGenre); link(oldBase, oldGenre); link(currentBase, currentGenre);
+        tx(() -> changes.record(source, List.of(oldGenre), Set.of(RelatedGameChangeReason.REVIEW), LocalDateTime.now()));
+        tx(() -> { targets.request(oldBase, Set.of(RelatedGameChangeReason.REVIEW), LocalDateTime.now());
+            targets.request(pending, Set.of(RelatedGameChangeReason.REVIEW), LocalDateTime.now()); return null; });
+        var before = changes.findByGameId(source);
+
+        // when: 두 페이지로 변경 영향 게임의 ID와 이름을 미리 조회한다.
+        var first = query.preview(0, 2);
+        var second = query.preview(1, 2);
+
+        // then: 중복 없이 ID 순서로 이름을 반환하고 변경·대기 버전을 소비하지 않는다.
+        assertThat(first.totalElements()).isEqualTo(4);
+        assertThat(first.totalPages()).isEqualTo(2);
+        assertThat(first.content()).extracting(RelatedGamePreviewTarget::gameId)
+                .containsExactly(Long.toString(source), Long.toString(oldBase));
+        assertThat(second.content()).extracting(RelatedGamePreviewTarget::gameId)
+                .containsExactly(Long.toString(currentBase), Long.toString(pending));
+        assertThat(first.content()).allSatisfy(row -> assertThat(row.title()).startsWith("Changed "));
+        assertThat(changes.findByGameId(source).getChangeVersion()).isEqualTo(before.getChangeVersion());
+        assertThat(changes.findByGameId(source).getExpandedVersion()).isEqualTo(before.getExpandedVersion());
+        assertThat(targets.countPending(Long.MAX_VALUE)).isEqualTo(2);
+        assertThat(targets.findByGameId(source)).isNull();
+        assertThat(targets.findByGameId(unrelated)).isNull();
+    }
+
+    @Test
+    void previewRetainsDeletedSourceGenreImpactAndValidatesPagination() {
+        // given: 삭제된 원천의 이전 장르를 공유하는 게임과 완료된 대기를 준비한다.
+        long oldGenre = genre(), source = game(), affected = game(), completed = game();
+        link(affected, oldGenre);
+        tx(() -> changes.record(source, List.of(oldGenre), Set.of(RelatedGameChangeReason.GAME_DELETED), LocalDateTime.now()));
+        jdbc.update("DELETE FROM games WHERE id = ?", source);
+        tx(() -> { targets.request(completed, Set.of(RelatedGameChangeReason.REVIEW), LocalDateTime.now());
+            targets.markApplied(completed, 1); return null; });
+
+        // when: 삭제된 게임의 영향과 잘못된 페이지 범위를 조회한다.
+        var result = query.preview(0, 20);
+
+        // then: 삭제된 자신과 완료된 대기는 제외하고 남은 영향 게임만 반환한다.
+        assertThat(result.content()).extracting(RelatedGamePreviewTarget::gameId).containsExactly(Long.toString(affected));
+        assertThatThrownBy(() -> query.preview(-1, 20)).isInstanceOf(com.gamelog.nbe121423355.global.exception.ServiceException.class);
+        assertThatThrownBy(() -> query.preview(0, 101)).isInstanceOf(com.gamelog.nbe121423355.global.exception.ServiceException.class);
     }
 
     private <T> T tx(Supplier<T> action) {

@@ -65,9 +65,24 @@ class AdminRelatedGamePrecomputeControllerTest {
     }
 
     @Test
+    void adminCanPreviewGameIdsAndNamesWithoutStartingRun() throws Exception {
+        // given: 관리자 미리보기의 게임 ID와 이름 응답을 준비한다.
+        when(changeQuery.preview(1, 20)).thenReturn(new AdminRelatedGamePrecomputePage<>(
+                List.of(new com.gamelog.nbe121423355.domain.game.repository.RelatedGamePreviewTarget("9007199254740993", "미리보기 게임")), 1, 20, 21, 2));
+
+        // when: 관리자 인증으로 두 번째 미리보기 페이지를 조회한다.
+        var result = mvc.perform(get(BASE + "/changes/preview?page=1&size=20").with(user(admin())));
+
+        // then: 큰 ID도 문자열로 정확히 반환하고 실행 서비스를 호출하지 않는다.
+        result.andExpect(status().isOk()).andExpect(jsonPath("$.data.content[0].gameId").value("9007199254740993"))
+                .andExpect(jsonPath("$.data.content[0].title").value("미리보기 게임"));
+        verifyNoInteractions(service);
+    }
+
+    @Test
     void anonymousAndOrdinaryUsersCannotUseAnyEndpoint() throws Exception {
         // given: 조회·실행 경로와 일반 사용자 인증 정보를 준비한다.
-        var paths = List.of("/status", "/runs", "/runs/unknown", "/runs/unknown/failures", "/changes", "/changes/targets");
+        var paths = List.of("/status", "/runs", "/runs/unknown", "/runs/unknown/failures", "/changes", "/changes/targets", "/changes/preview");
 
         // when: 인증 없이 또는 일반 사용자로 관리자 API를 호출한다.
         var anonymous = mvc.perform(post(BASE + "/runs").contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"ALL\"}")).andReturn();

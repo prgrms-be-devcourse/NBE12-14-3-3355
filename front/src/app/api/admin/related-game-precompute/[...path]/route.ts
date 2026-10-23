@@ -6,7 +6,7 @@ type Context = { params: Promise<{ path: string[] }> };
 async function proxy(request: NextRequest, context: Context) {
   const { path } = await context.params;
   const isRuns = path.length === 1 && path[0] === "runs";
-  const isChanges = path[0] === "changes" && (path.length === 1 || (path.length === 2 && path[1] === "targets"));
+  const isChanges = path[0] === "changes" && (path.length === 1 || (path.length === 2 && ["targets", "preview"].includes(path[1])));
   const isStatus = path.length === 1 && path[0] === "status";
   const isDetail = path[0] === "runs" && /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(path[1] || "")
     && (path.length === 2 || (path.length === 3 && path[2] === "failures"));

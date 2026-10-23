@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-context";
+import SelectDropdown from "@/components/ui/select-dropdown";
+import ChangePreviewDialog from "@/features/admin-recommendations/change-preview-dialog";
 import {
   isActive, normalizeGameIds, request, statusLabels, targetLabels, changeReasonLabels,
   type ChangeSummary, type PendingTarget, type ExecutionStatus, type Failure, type Page, type Run, type StartRequest, type TargetType,
@@ -65,8 +67,9 @@ export default function RecommendationsAdminPage() {
   const token = auth.accessToken;
   const isAdmin = auth.status === "authenticated" && auth.user?.role === "ADMIN";
   const [scope, setScope] = useState<"ALL" | "PARTIAL">("PARTIAL");
-  const [partialType, setPartialType] = useState<Exclude<TargetType, "ALL">>("IDS");
+  const [partialType, setPartialType] = useState<Exclude<TargetType, "ALL">>("CHANGED");
   const [initializeBaseline, setInitializeBaseline] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [changes, setChanges] = useState<ChangeSummary | null>(null);
   const [pending, setPending] = useState<Page<PendingTarget> | null>(null);
   const [pendingPage, setPendingPage] = useState(0);
@@ -212,21 +215,33 @@ export default function RecommendationsAdminPage() {
         <label className={styles.baseline}><input type="checkbox" checked={initializeBaseline} onChange={(event) => setInitializeBaseline(event.target.checked)} />초기 기준선 설정</label>
         <p>변경 추적 도입 후 처음 실행하거나 초기 대기 등록이 중단된 경우 선택하세요. 전체 대기를 등록한 뒤 계산하며, 자동으로 실행하지 않습니다.</p>
       </> : <>
-        <label className={styles.field}>부분 갱신 대상
-          <select value={partialType} onChange={(event) => setPartialType(event.target.value as Exclude<TargetType, "ALL">)}>
-            <option value="CHANGED">변경 영향 게임</option><option value="IDS">지정 ID</option><option value="FAILED">실패 게임</option><option value="UNREADY">최초 계산 미완료 게임</option>
-          </select>
-        </label>
+        <div className={styles.field}>부분 갱신 대상
+          <SelectDropdown<Exclude<TargetType, "ALL">>
+            ariaLabel="부분 갱신 대상"
+            className={styles.targetSelect}
+            value={partialType}
+            onChange={setPartialType}
+            options={[
+              { value: "CHANGED", label: "변경 영향 게임" },
+              { value: "IDS", label: "지정 ID" },
+              { value: "FAILED", label: "실패 게임" },
+              { value: "UNREADY", label: "최초 계산 미완료 게임" },
+            ]}
+          />
+        </div>
         {partialType === "IDS" ? <label className={styles.field}>기준 게임 ID
           <textarea value={ids} onChange={(event) => setIds(event.target.value)} maxLength={30000} rows={4} placeholder="예: 1, 2, 3" aria-describedby="ids-help" />
           <span id="ids-help">쉼표·공백·줄바꿈으로 구분하며 중복 제외 최대 1,000개입니다. 잘못된 ID나 없는 게임이 있으면 요청 전체가 거절됩니다.</span>
         </label> : <p>{partialType === "CHANGED" ? "미처리 변경 게임 자신과 변경 전·후 장르를 공유하는 기준 게임을 갱신합니다. 1,000개 수동 입력 상한을 적용하지 않으며 전체 갱신으로 자동 전환하지 않습니다." : partialType === "FAILED" ? "마지막 계산 시도가 실패한 게임을 대상으로 합니다. 이전 성공 이력이 있는 게임도 포함됩니다." : "최초 성공 이력이 없는 게임을 대상으로 합니다. 아직 계산 상태가 없는 게임도 포함됩니다."} 실제 대상은 실행 시점에 선정합니다.</p>}
       </>}
       <p>게임별로 후보를 교체하며, 갱신 실패 시 이전 정상 후보와 마지막 성공 이력을 보존합니다. 창을 닫아도 서버에서 계속 실행됩니다.</p>
+      {scope === "PARTIAL" && partialType === "CHANGED" && <button className={styles.previewButton} type="button" onClick={() => setPreviewOpen(true)}>변경 영향 게임 미리보기</button>}
       <button className={styles.primary} type="button" onClick={() => void start()} disabled={blocked}>{sending ? "요청 중…" : busy ? "다른 추천 작업 진행 중" : `${scope === "ALL" ? "전체" : "부분"} 갱신 요청`}</button>
       <p role="status">{notice}</p>
       {submitError && <p role="alert" className={styles.error}>{submitError}</p>}
     </section>
+
+    {previewOpen && token && <ChangePreviewDialog token={token} onClose={() => setPreviewOpen(false)} />}
 
     <section className={styles.panel} aria-labelledby="changes-title">
       <h2 id="changes-title">변경과 갱신 대기</h2>

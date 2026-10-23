@@ -32,6 +32,12 @@ class AdminRelatedGamePrecomputeController(
         @RequestParam(defaultValue = "20") size: Int,
     ) = RsData("200-1", "갱신 대기 기준 게임", changes.pending(page, size))
 
+    @GetMapping("/changes/preview")
+    fun previewTargets(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ) = RsData("200-1", "변경 영향 게임 미리보기", changes.preview(page, size))
+
     @GetMapping("/status")
     fun status(): RsData<AdminRelatedGamePrecomputeStatusResponse> =
         RsData("200-1", "추천 갱신 실행 상태", service.status())
