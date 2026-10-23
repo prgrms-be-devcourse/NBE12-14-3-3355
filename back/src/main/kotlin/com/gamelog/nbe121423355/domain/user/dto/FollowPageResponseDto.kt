@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page
 @Schema(description = "팔로우 사용자 페이지")
 @JvmRecord
 data class FollowPageResponseDto(
-    @field:Schema(description = "사용자 목록") val users: MutableList<FollowUserResponseDto>,
+    @field:Schema(description = "사용자 목록") val users: List<FollowUserResponseDto>,
     @field:Schema(description = "현재 페이지 번호", example = "0") val page: Int,
     @field:Schema(description = "페이지 크기", example = "10") val size: Int,
     @field:Schema(description = "전체 사용자 수", example = "24") val totalElements: Long,
@@ -19,7 +19,7 @@ data class FollowPageResponseDto(
         @JvmStatic
         fun from(
             followPage: Page<UserFollow>,
-            users: MutableList<FollowUserResponseDto>,
+            users: List<FollowUserResponseDto>,
         ): FollowPageResponseDto {
             return FollowPageResponseDto(
                 users,

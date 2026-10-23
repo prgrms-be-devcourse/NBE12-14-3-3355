@@ -28,7 +28,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
         val expiration = Date(now.time + jwtProperties.accessTokenValidity)
 
         return Jwts.builder()
-            .subject(java.lang.String.valueOf(userId))
+            .subject(userId.toString())
             .claim(TOKEN_TYPE, ACCESS)
             .claim("role", role)
             .issuedAt(now)
@@ -46,7 +46,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
         expiration: Date?,
     ): String {
         return Jwts.builder()
-            .subject(java.lang.String.valueOf(userId))
+            .subject(userId.toString())
             .id(jti)
             .claim(TOKEN_TYPE, REFRESH)
             .claim(FAMILY_ID, familyId)
@@ -68,7 +68,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 클레임에서 userId 추출
     fun getUserId(token: String?): Long {
-        return java.lang.Long.parseLong(parseClaims(token).subject)
+        return parseClaims(token).subject.toLong()
     }
 
     // 토큰의 클레임 전체 파싱 (서명 검증 포함)
@@ -108,11 +108,11 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 토큰 종류 판별 (token_type 클레임이 없는 기존 토큰은 false)
     fun isAccessToken(claims: Claims): Boolean {
-        return ACCESS.equals(claims.get(TOKEN_TYPE, String::class.java))
+        return claims.get(TOKEN_TYPE, String::class.java) == ACCESS
     }
 
     fun isRefreshToken(claims: Claims): Boolean {
-        return REFRESH.equals(claims.get(TOKEN_TYPE, String::class.java))
+        return claims.get(TOKEN_TYPE, String::class.java) == REFRESH
     }
 
     companion object {

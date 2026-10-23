@@ -8,5 +8,5 @@ import jakarta.validation.constraints.NotEmpty
 data class PreferredGameRequestDto(
     @field:NotEmpty
     @field:Schema(description = "선호 게임 ID 목록", example = "[6, 9, 12]")
-    val gameIds: MutableList<Long>?
+    val gameIds: List<Long>?
 )

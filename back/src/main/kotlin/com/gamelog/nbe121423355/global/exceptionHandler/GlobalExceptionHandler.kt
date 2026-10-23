@@ -2,9 +2,7 @@ package com.gamelog.nbe121423355.global.exceptionHandler
 
 import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import java.util.Comparator
 import java.util.NoSuchElementException
-import java.util.stream.Collectors
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -33,18 +31,10 @@ class GlobalExceptionHandler {
         val message =
             e.bindingResult
                 .allErrors
-                .stream()
-                .filter { error -> error is FieldError }
-                .map { error -> error as FieldError? }
-                .map { error ->
-                    requireNotNull(error).field +
-                        "-" +
-                        requireNotNull(error).code +
-                        "-" +
-                        requireNotNull(error).defaultMessage
-                }
-                .sorted(Comparator.comparing(String::toString))
-                .collect(Collectors.joining("\n"))
+                .filterIsInstance<FieldError>()
+                .map { error -> "${error.field}-${error.code}-${error.defaultMessage}" }
+                .sorted()
+                .joinToString("\n")
         return RsData<Void>("400-1", message)
     }
 

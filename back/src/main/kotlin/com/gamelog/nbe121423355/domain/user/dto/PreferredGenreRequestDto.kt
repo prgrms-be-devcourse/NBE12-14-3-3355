@@ -8,5 +8,5 @@ import jakarta.validation.constraints.NotEmpty
 data class PreferredGenreRequestDto(
     @field:NotEmpty
     @field:Schema(description = "선호 장르 ID 목록", example = "[12, 31, 36]")
-    val genreIds: MutableList<Long>?
+    val genreIds: List<Long>?
 )

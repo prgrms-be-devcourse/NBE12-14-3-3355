@@ -55,7 +55,7 @@ class JwtAuthenticationFilter(
             if (!jwtProvider.isAccessToken(claims)) {
                 return
             }
-            val userId = java.lang.Long.parseLong(claims.subject)
+            val userId = claims.subject.toLong()
             val role = claims.get("role", String::class.java)
             setSecurityContext(userId, role)
         } catch (e: Exception) {
@@ -75,7 +75,7 @@ class JwtAuthenticationFilter(
             return
         }
         try {
-            val expectedUserId: Long? = java.lang.Long.parseLong(expiredClaims.subject)
+            val expectedUserId: Long? = expiredClaims.subject.toLong()
             val result: ReissueResult = tokenReissueService.reissue(refreshToken, expectedUserId)
             setSecurityContext(result.userId, result.role)
             response.setHeader("New-Access-Token", result.accessToken)
@@ -93,7 +93,7 @@ class JwtAuthenticationFilter(
 
     // SecurityContest에 인증 정보 세팅
     private fun setSecurityContext(userId: Long?, role: String?) {
-        val authorities = java.util.List.of(SimpleGrantedAuthority("ROLE_$role"))
+        val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
         val securityUser = SecurityUser(requireNotNull(userId), authorities)
         val authentication: Authentication =
             UsernamePasswordAuthenticationToken(securityUser, null, securityUser.authorities)
@@ -116,7 +116,7 @@ class JwtAuthenticationFilter(
             return null
         }
         for (cookie in cookies) {
-            if ("refreshToken".equals(cookie.name)) {
+            if (cookie.name == "refreshToken") {
                 return cookie.value
             }
         }
