@@ -22,6 +22,9 @@ class RelatedGamePrecomputeBatchService(
     private val gameRepository: GameRepository,
     private val precomputeService: RelatedGamePrecomputeService,
     private val executionLock: RelatedGamePrecomputeLock,
+    private val changePreparation: RelatedGameChangePreparation,
+    private val changeExpansion: RelatedGameChangeExpansion,
+    private val refreshTargets: com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository,
     private val targetRepository: RelatedGamePrecomputeTargetRepository,
 ) {
     // 기존 CLI·신규 게임 호출 계약을 유지한다.
@@ -50,9 +53,17 @@ class RelatedGamePrecomputeBatchService(
             val result = executionLock.tryRun(Function<Runnable, Result> { checkOwnership ->
                 observer.onAcquired()
                 val progress = Progress()
+                if (target.type == RelatedGamePrecomputeTargetType.ALL || target.type == RelatedGamePrecomputeTargetType.CHANGED) {
+                    changePreparation.expandPending(checkOwnership)
+                }
                 when (target.type) {
                     RelatedGamePrecomputeTargetType.ALL -> {
                         val upperId = gameRepository.findMaxGameIdForPrecompute()
+                        if (target.initializeBaseline) {
+                            checkOwnership.run()
+                            changeExpansion.initializeBaseline(upperId)
+                            observer.onBaselineRegistered()
+                        }
                         val preparationStartedAt = System.nanoTime()
                         val snapshot = precomputeService.prepare(mode, upperId)
                         log.info(
@@ -68,6 +79,13 @@ class RelatedGamePrecomputeBatchService(
                             )
                         }
                         log.info("장르 조합별 기본 추천 계산: {}회", snapshot.calculatedGroupCount())
+                    }
+                    RelatedGamePrecomputeTargetType.CHANGED -> {
+                        val upperId = gameRepository.findMaxGameIdForPrecompute()
+                        observer.onPrepared(upperId, refreshTargets.countPending(upperId))
+                        processPages(upperId, mode, null, checkOwnership, progress, observer) { afterId ->
+                            refreshTargets.findPendingIds(afterId, upperId, PAGE_SIZE)
+                        }
                     }
                     RelatedGamePrecomputeTargetType.IDS -> {
                         val ids = target.normalizedIds()

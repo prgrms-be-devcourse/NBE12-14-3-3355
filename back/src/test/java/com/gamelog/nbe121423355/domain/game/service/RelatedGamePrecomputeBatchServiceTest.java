@@ -42,7 +42,9 @@ class RelatedGamePrecomputeBatchServiceTest {
 
     @BeforeEach
     void setUp() {
-        batch = new RelatedGamePrecomputeBatchService(gameRepository, precomputeService, lock, targetRepository);
+        batch = new RelatedGamePrecomputeBatchService(gameRepository, precomputeService, lock, org.mockito.Mockito.mock(RelatedGameChangePreparation.class),
+                org.mockito.Mockito.mock(RelatedGameChangeExpansion.class),
+                org.mockito.Mockito.mock(com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository.class), targetRepository);
     }
 
     private void allowLock() {
