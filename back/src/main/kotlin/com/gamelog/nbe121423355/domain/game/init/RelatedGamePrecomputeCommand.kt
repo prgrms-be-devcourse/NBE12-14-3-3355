@@ -67,6 +67,8 @@ object RelatedGamePrecomputeCommand {
         RelatedGamePrecomputeLock::class,
         RelatedGamePrecomputeService::class,
         RelatedGamePrecomputeStore::class,
+        com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder::class,
+        com.gamelog.nbe121423355.domain.game.repository.RelatedGameInputChangeRepository::class,
         RelatedGameQueryRepository::class,
         RelatedGamePrecomputeSnapshotRepository::class,
         RelatedGamePrecomputeTargetRepository::class,
