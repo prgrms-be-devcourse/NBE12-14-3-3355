@@ -7,7 +7,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-@JvmRecord
 data class UserGameReqBody(
     @field:Schema(description = "플레이 완료 세부 상태", example = "COMPLETED", nullable = true)
     val playStatus: PlayStatus?,

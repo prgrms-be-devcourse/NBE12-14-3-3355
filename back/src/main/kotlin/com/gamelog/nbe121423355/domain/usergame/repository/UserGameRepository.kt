@@ -8,7 +8,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 
 interface UserGameRepository : JpaRepository<UserGame, Long> {
     fun findByUser_IdAndGame_Id(userId: Long, gameId: Long): UserGame?
@@ -37,19 +36,19 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
     )
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = ["game"])
     fun findByLibraryFilters(
-        @Param("userId") userId: Long,
-        @Param("status") status: String,
-        @Param("keyword") keyword: String?,
-        @Param("filterPlatforms") filterPlatforms: Boolean,
-        @Param("platformIds") platformIds: List<Long>,
-        @Param("filterGenres") filterGenres: Boolean,
-        @Param("genreIds") genreIds: List<Long>,
-        @Param("sort") sort: String,
+        userId: Long,
+        status: String,
+        keyword: String?,
+        filterPlatforms: Boolean,
+        platformIds: List<Long>,
+        filterGenres: Boolean,
+        genreIds: List<Long>,
+        sort: String,
         pageable: Pageable,
     ): Page<UserGame>
 
     @Query("SELECT ug FROM UserGame ug WHERE ug.user.id = :userId AND ug.inLibrary = true AND $PLAYED_GAME")
-    fun findPlayedGames(@Param("userId") userId: Long): List<UserGame>
+    fun findPlayedGames(userId: Long): List<UserGame>
 
     @Query(
         """
@@ -70,7 +69,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
 """
     )
-    fun findPlayedGameScatterData(@Param("userId") userId: Long): List<UserGameScatterDto>
+    fun findPlayedGameScatterData(userId: Long): List<UserGameScatterDto>
 
     @Query(
         """
@@ -91,7 +90,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
     """
     )
-    fun findGenreDistribution(@Param("userId") userId: Long): List<UserGameGenreDTO>
+    fun findGenreDistribution(userId: Long): List<UserGameGenreDTO>
 
     @Query(
         """
@@ -106,7 +105,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 """
     )
     fun findRecentPlayedGames(
-        @Param("userId") userId: Long,
+        userId: Long,
         pageable: Pageable,
     ): List<UserGame>
 

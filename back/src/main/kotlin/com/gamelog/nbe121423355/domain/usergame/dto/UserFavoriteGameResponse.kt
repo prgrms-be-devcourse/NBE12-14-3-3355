@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.usergame.dto
 
 import com.gamelog.nbe121423355.domain.user.entity.UserFavoriteGame
 
-@JvmRecord
 data class UserFavoriteGameResponse(
     val gameId: Long,
     val title: String,

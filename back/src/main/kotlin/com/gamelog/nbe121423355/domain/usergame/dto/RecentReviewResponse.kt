@@ -5,7 +5,6 @@ import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-@JvmRecord
 data class RecentReviewResponse(
     val reviewId: Long,
     val gameId: Long,
