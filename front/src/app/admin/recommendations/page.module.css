@@ -47,3 +47,7 @@
   .details { grid-template-columns: 90px minmax(0, 1fr); gap: 10px; }
   .pagination { justify-content: center; gap: 10px; }
 }
+
+.baseline { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; }
+.baseline input { accent-color: var(--lime); width: 18px; height: 18px; }
+.baseline input:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }

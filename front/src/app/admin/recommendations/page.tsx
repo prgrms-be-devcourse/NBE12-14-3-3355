@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/auth-context";
 import {
-  isActive, normalizeGameIds, request, statusLabels, targetLabels,
-  type ExecutionStatus, type Failure, type Page, type Run, type StartRequest, type TargetType,
+  isActive, normalizeGameIds, request, statusLabels, targetLabels, changeReasonLabels,
+  type ChangeSummary, type PendingTarget, type ExecutionStatus, type Failure, type Page, type Run, type StartRequest, type TargetType,
 } from "@/features/admin-recommendations/api";
 import styles from "./page.module.css";
 
@@ -29,6 +29,9 @@ function Pagination({ page, totalPages, onChange, label }: {
 function RunSummary({ run }: { run: Run }) {
   return <>
     <div className={styles.heading}><h3>{targetLabels[run.type]}</h3><span className={styles.badge}>{statusLabels[run.status]}</span></div>
+    {run.initializeBaseline && <p className={styles.warning}>{run.baselineRegisteredAt
+      ? `초기 기준선 대기 등록 완료: ${time(run.baselineRegisteredAt)}. 이후 계산 실패·중단 대상은 변경 기반 갱신으로 처리할 수 있습니다.`
+      : "초기 기준선 대기 등록 완료가 아직 확인되지 않았습니다. 이 상태에서 실패·중단됐다면 초기 기준선 전체 갱신을 다시 실행하세요."}</p>}
     {run.status === "ACCEPTED" && <p>요청을 접수했습니다. 계산 시작 전이며, 실행 경쟁이 발생하면 거절될 수 있습니다.</p>}
     {run.status === "PREPARING" && <p>계산 대상과 공통 데이터를 준비하고 있습니다.</p>}
     {run.status === "SUCCEEDED" && run.processed === 0 && <p>처리 대상이 없어 정상 완료했습니다.</p>}
@@ -63,6 +66,12 @@ export default function RecommendationsAdminPage() {
   const isAdmin = auth.status === "authenticated" && auth.user?.role === "ADMIN";
   const [scope, setScope] = useState<"ALL" | "PARTIAL">("PARTIAL");
   const [partialType, setPartialType] = useState<Exclude<TargetType, "ALL">>("IDS");
+  const [initializeBaseline, setInitializeBaseline] = useState(false);
+  const [changes, setChanges] = useState<ChangeSummary | null>(null);
+  const [pending, setPending] = useState<Page<PendingTarget> | null>(null);
+  const [pendingPage, setPendingPage] = useState(0);
+  const [changesError, setChangesError] = useState("");
+  const [pendingError, setPendingError] = useState("");
   const [ids, setIds] = useState("");
   const [status, setStatus] = useState<ExecutionStatus | null>(null);
   const [statusError, setStatusError] = useState("");
@@ -94,9 +103,11 @@ export default function RecommendationsAdminPage() {
         request<Page<Run>>(token!, `runs?page=${historyPage}&size=10`, { signal }),
         selectedId ? request<Run>(token!, `runs/${selectedId}`, { signal }) : Promise.resolve(null),
         selectedId ? request<Page<Failure>>(token!, `runs/${selectedId}/failures?page=${failurePage}&size=10`, { signal }) : Promise.resolve(null),
+        request<ChangeSummary>(token!, "changes", { signal }),
+        request<Page<PendingTarget>>(token!, `changes/targets?page=${pendingPage}&size=10`, { signal }),
       ] as const);
       if (controller.signal.aborted) return;
-      const [current, records, selected, failed] = results;
+      const [current, records, selected, failed, changeSummary, pendingTargets] = results;
       if (current.status === "fulfilled") { setStatus(current.value); setStatusError(""); }
       else setStatusError(message(current.reason));
       if (records.status === "fulfilled") { setHistory(records.value); setHistoryError(""); }
@@ -105,11 +116,15 @@ export default function RecommendationsAdminPage() {
       else if (selected?.status === "rejected") setDetailError(message(selected.reason));
       if (failed?.status === "fulfilled" && failed.value) { setFailures(failed.value); setFailureError(""); }
       else if (failed?.status === "rejected") setFailureError(message(failed.reason));
+      if (changeSummary.status === "fulfilled") { setChanges(changeSummary.value); setChangesError(""); }
+      else setChangesError(message(changeSummary.reason));
+      if (pendingTargets.status === "fulfilled") { setPending(pendingTargets.value); setPendingError(""); }
+      else setPendingError(message(pendingTargets.reason));
       timer = setTimeout(poll, 5000);
     }
     void poll();
     return () => { controller.abort(); clearTimeout(timer); };
-  }, [isAdmin, token, historyPage, selectedId, failurePage, refresh]);
+  }, [isAdmin, token, historyPage, selectedId, failurePage, pendingPage, refresh]);
 
   const busy = Boolean(status && (status.databaseLocked || status.localRequestActive || status.activeRuns.length));
   const blocked = sending || !status || Boolean(statusError) || busy;
@@ -145,6 +160,7 @@ export default function RecommendationsAdminPage() {
       }
       body = {
         type,
+        initializeBaseline: type === "ALL" && (source?.initializeBaseline ?? initializeBaseline),
         ...(type === "IDS" ? { gameIds: normalizeGameIds(source ? source.gameIds.join(",") : ids) } : {}),
         ...(source ? { sourceRunId: source.runId } : {}),
       };
@@ -153,8 +169,9 @@ export default function RecommendationsAdminPage() {
       ? `지정한 기준 게임 ${body.gameIds!.split(",").length}개의 추천 후보를 다시 계산합니다.`
       : body.type === "ALL" ? "모든 기준 게임의 추천 후보를 다시 계산합니다. 실행 규모에 따라 오래 걸릴 수 있습니다."
       : body.type === "FAILED" ? "현재 마지막 계산 시도가 실패한 게임의 추천 후보를 다시 계산합니다."
+      : body.type === "CHANGED" ? "미처리 변경으로 영향받는 기준 게임을 선정하고 추천 후보를 갱신합니다. 정확한 대상 수는 준비 후 표시됩니다."
       : "아직 최초 계산에 성공하지 않은 게임의 추천 후보를 계산합니다.";
-    if (!window.confirm(`${description}\n${source ? "원본 실행과 같은 범위의 새 실행을 만듭니다. 이미 성공한 게임도 다시 처리될 수 있습니다.\n" : ""}갱신을 요청할까요?`)) return;
+    if (!window.confirm(`${description}\n${body.initializeBaseline ? "초기 기준선 설정: 전체 범위의 갱신 대기를 먼저 등록합니다. 등록 도중 중단되면 초기 기준선을 다시 실행해야 합니다.\n" : ""}${source ? "원본 실행과 같은 범위의 새 실행을 만듭니다. 이미 성공한 게임도 다시 처리될 수 있습니다.\n" : ""}갱신을 요청할까요?`)) return;
     submitting.current = true;
     setSending(true);
     try {
@@ -190,21 +207,46 @@ export default function RecommendationsAdminPage() {
         <button type="button" aria-pressed={scope === "ALL"} onClick={() => setScope("ALL")}>전체 갱신</button>
         <button type="button" aria-pressed={scope === "PARTIAL"} onClick={() => setScope("PARTIAL")}>부분 갱신</button>
       </div>
-      {scope === "ALL" ? <p>실행 시점의 전체 기준 게임을 대상으로 갱신합니다. 대상 예상 수는 계산 준비가 끝난 뒤 표시됩니다.</p> : <>
+      {scope === "ALL" ? <>
+        <p>실행 시점의 전체 기준 게임을 대상으로 갱신합니다. 대상 예상 수는 계산 준비가 끝난 뒤 표시됩니다.</p>
+        <label className={styles.baseline}><input type="checkbox" checked={initializeBaseline} onChange={(event) => setInitializeBaseline(event.target.checked)} />초기 기준선 설정</label>
+        <p>변경 추적 도입 후 처음 실행하거나 초기 대기 등록이 중단된 경우 선택하세요. 전체 대기를 등록한 뒤 계산하며, 자동으로 실행하지 않습니다.</p>
+      </> : <>
         <label className={styles.field}>부분 갱신 대상
           <select value={partialType} onChange={(event) => setPartialType(event.target.value as Exclude<TargetType, "ALL">)}>
-            <option value="IDS">지정 ID</option><option value="FAILED">실패 게임</option><option value="UNREADY">최초 계산 미완료 게임</option>
+            <option value="CHANGED">변경 영향 게임</option><option value="IDS">지정 ID</option><option value="FAILED">실패 게임</option><option value="UNREADY">최초 계산 미완료 게임</option>
           </select>
         </label>
         {partialType === "IDS" ? <label className={styles.field}>기준 게임 ID
           <textarea value={ids} onChange={(event) => setIds(event.target.value)} maxLength={30000} rows={4} placeholder="예: 1, 2, 3" aria-describedby="ids-help" />
           <span id="ids-help">쉼표·공백·줄바꿈으로 구분하며 중복 제외 최대 1,000개입니다. 잘못된 ID나 없는 게임이 있으면 요청 전체가 거절됩니다.</span>
-        </label> : <p>{partialType === "FAILED" ? "마지막 계산 시도가 실패한 게임을 대상으로 합니다. 이전 성공 이력이 있는 게임도 포함됩니다." : "최초 성공 이력이 없는 게임을 대상으로 합니다. 아직 계산 상태가 없는 게임도 포함됩니다."} 실제 대상은 실행 시점에 선정합니다.</p>}
+        </label> : <p>{partialType === "CHANGED" ? "미처리 변경 게임 자신과 변경 전·후 장르를 공유하는 기준 게임을 갱신합니다. 1,000개 수동 입력 상한을 적용하지 않으며 전체 갱신으로 자동 전환하지 않습니다." : partialType === "FAILED" ? "마지막 계산 시도가 실패한 게임을 대상으로 합니다. 이전 성공 이력이 있는 게임도 포함됩니다." : "최초 성공 이력이 없는 게임을 대상으로 합니다. 아직 계산 상태가 없는 게임도 포함됩니다."} 실제 대상은 실행 시점에 선정합니다.</p>}
       </>}
       <p>게임별로 후보를 교체하며, 갱신 실패 시 이전 정상 후보와 마지막 성공 이력을 보존합니다. 창을 닫아도 서버에서 계속 실행됩니다.</p>
       <button className={styles.primary} type="button" onClick={() => void start()} disabled={blocked}>{sending ? "요청 중…" : busy ? "다른 추천 작업 진행 중" : `${scope === "ALL" ? "전체" : "부분"} 갱신 요청`}</button>
       <p role="status">{notice}</p>
       {submitError && <p role="alert" className={styles.error}>{submitError}</p>}
+    </section>
+
+    <section className={styles.panel} aria-labelledby="changes-title">
+      <h2 id="changes-title">변경과 갱신 대기</h2>
+      {changesError && <p role="alert" className={styles.error}>변경 현황 조회 실패: {changesError}</p>}
+      {changes && <dl className={styles.metrics}>
+        <div><dt>아직 영향 대상을 선정하지 않은 변경 게임</dt><dd>{changes.unexpandedGames.toLocaleString()}개</dd></div>
+        <div><dt>이미 선정된 갱신 대기 기준 게임</dt><dd>{changes.pendingTargets.toLocaleString()}개</dd></div>
+      </dl>}
+      <p>두 집합은 겹칠 수 있으므로 합산하지 않습니다. 아래 목록은 이미 선정된 대기이며, 이번 실행의 대상 수는 준비 후 확정됩니다. 부분 갱신이 전체 갱신보다 항상 빠르지는 않습니다.</p>
+      {pendingError && <p role="alert" className={styles.error}>대기 목록 조회 실패: {pendingError}</p>}
+      {pending && pending.page === pendingPage && <>
+        <div className={styles.tableWrap}><table><caption className={styles.srOnly}>갱신 대기 기준 게임</caption>
+          <thead><tr><th scope="col">기준 게임 ID</th><th scope="col">선정 이유</th><th scope="col">변경 시각</th></tr></thead>
+          <tbody>{pending.content.map((item) => <tr key={item.gameId}>
+            <td>{item.gameId}</td><td className={styles.failure}>{item.reasons.map((reason) => changeReasonLabels[reason] ?? reason).join(", ")}</td><td>{time(item.changedAt)}</td>
+          </tr>)}</tbody>
+        </table></div>
+        {!pending.content.length && <p>이미 선정된 갱신 대기가 없습니다. 미확장 변경이 있다면 변경 기반 실행에서 대상을 선정합니다.</p>}
+        <Pagination page={pendingPage} totalPages={pending.totalPages} onChange={setPendingPage} label="갱신 대기 페이지" />
+      </>}
     </section>
 
     <section className={styles.panel} aria-labelledby="status-title">
@@ -229,7 +271,7 @@ export default function RecommendationsAdminPage() {
         <div className={styles.tableWrap}><table><caption className={styles.srOnly}>관리자 추천 갱신 실행 이력</caption>
           <thead><tr><th scope="col">접수 시각</th><th scope="col">범위</th><th scope="col">상태</th><th scope="col">처리 / 성공 / 실패</th><th scope="col">상세</th></tr></thead>
           <tbody>{history.content.map((run) => <tr key={run.runId} aria-selected={selectedId === run.runId}>
-            <td>{time(run.requestedAt)}</td><td>{targetLabels[run.type]}</td><td>{statusLabels[run.status]}</td>
+            <td>{time(run.requestedAt)}</td><td>{targetLabels[run.type]}{run.initializeBaseline ? " · 초기 기준선" : ""}</td><td>{statusLabels[run.status]}</td>
             <td>{run.processed.toLocaleString()} / {run.succeeded.toLocaleString()} / {run.failed.toLocaleString()}</td>
             <td><button type="button" onClick={() => selectRun(run.runId)} aria-label={`${time(run.requestedAt)} ${targetLabels[run.type]} 상세 보기`}>보기</button></td>
           </tr>)}</tbody>
@@ -249,7 +291,7 @@ export default function RecommendationsAdminPage() {
         <RunSummary run={selectedRun} />
         {!isActive(selectedRun) && <>
           <button type="button" disabled={blocked || Boolean(detailError)} onClick={() => void start(selectedRun)}>같은 범위로 새 실행 요청</button>
-          <p>전체·실패·미완료 범위는 새 실행 시점에 다시 선정합니다. 지정 ID는 원본 ID를 사용합니다. 과거 실행의 실패 게임만 그대로 재실행하는 기능은 아닙니다.</p>
+          <p>전체·실패·미완료·변경 영향 범위는 새 실행 시점에 다시 선정합니다. 지정 ID는 원본 ID를 사용합니다. 과거 실행의 실패 게임만 그대로 재실행하는 기능은 아닙니다.</p>
         </>}
         <h3>실패한 게임</h3>
         {failureError && <p role="alert" className={styles.error}>실패 목록 조회 실패: {failureError}</p>}
