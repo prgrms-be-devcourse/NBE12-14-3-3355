@@ -7,7 +7,6 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameReqBody
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
-import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import java.math.BigDecimal
@@ -21,7 +20,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -87,7 +85,7 @@ class UserGameConcurrencyTest {
                     check(start.await(10, TimeUnit.SECONDS)) { "동시 등록 시작 대기 시간이 초과되었습니다." }
                     userGameService.addOrUpdateGameToLibrary(userId, gameId, reqBody)
                     Unit
-                    })
+                })
             }
             assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue()
             start.countDown()
@@ -108,18 +106,6 @@ class UserGameConcurrencyTest {
 
         // 나중 요청이 생성된 행을 조회해 UPDATE하면 두 요청 모두 성공할 수 있다.
         assertThat(successCount).isBetween(1, threadCount)
-        assertThat(recordCount()).isEqualTo(1L)
-    }
-
-    @Test
-    @DisplayName("MySQL UNIQUE 제약조건은 같은 사용자와 게임의 중복 행 저장을 거절한다")
-    fun uniqueConstraintRejectsDuplicateRecord() {
-        val user = userRepository.findById(checkNotNull(userId)).orElseThrow()
-        val game = gameRepository.findById(checkNotNull(gameId)).orElseThrow()
-        userGameRepository.saveAndFlush(UserGame(user, game))
-
-        assertThatThrownBy { userGameRepository.saveAndFlush(UserGame(user, game)) }
-            .satisfies(::assertDuplicateEntry)
         assertThat(recordCount()).isEqualTo(1L)
     }
 

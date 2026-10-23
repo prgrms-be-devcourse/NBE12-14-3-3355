@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional
 @SpringBootTest
 @MySqlIntegrationTest
 @Transactional
-class UserGameFavoriteMembershipTest {
+class UserGameFavoriteTest {
     @Autowired private lateinit var service: UserGameService
     @Autowired private lateinit var users: UserRepository
     @Autowired private lateinit var games: GameRepository
@@ -46,9 +46,9 @@ class UserGameFavoriteMembershipTest {
             null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
     }
 
-    private fun request(hours: BigDecimal?) = UserGameReqBody(
+    private fun request(hours: BigDecimal?, playing: Boolean = false) = UserGameReqBody(
         playStatus = null,
-        isPlaying = false,
+        isPlaying = playing,
         isBacklog = false,
         isWishlist = false,
         isLiked = true,
@@ -81,9 +81,9 @@ class UserGameFavoriteMembershipTest {
         val recordId = checkNotNull(record.id)
         when (route) {
             "played" -> service.changePlayed(uid, gid, null)
-            "playing" -> service.changePlaying(uid, gid, false)
-            "wishlist" -> service.changeWishlist(uid, gid, false)
-            "backlog" -> service.changeBacklog(uid, gid, false)
+            "playing" -> assertThat(service.changePlaying(uid, gid, false)).isFalse()
+            "wishlist" -> assertThat(service.changeWishlist(uid, gid, false)).isFalse()
+            "backlog" -> assertThat(service.changeBacklog(uid, gid, false)).isFalse()
             "update" -> service.updatePlayRecord(uid, gid, request(null))
             "upsert" -> service.addOrUpdateGameToLibrary(uid, gid, request(null))
             "liked" -> service.changeLiked(uid, gid, true)
@@ -120,20 +120,28 @@ class UserGameFavoriteMembershipTest {
     fun remainingHoursKeepFavorite() {
         val uid = checkNotNull(user.id)
         val gid = checkNotNull(game.id)
-        val record = service.addOrUpdateGameToLibrary(uid, gid, request(BigDecimal.TEN)).userGame
+        val record = service.addOrUpdateGameToLibrary(
+            uid, gid, request(BigDecimal.TEN, playing = true),
+        ).userGame
+        assertThat(record.playing).isTrue()
         favorites.saveAndFlush(UserFavoriteGame(user, game, 1))
+
         service.changePlaying(uid, gid, false)
         em.flush()
-        assertThat(record.inLibrary).isTrue()
-        assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)).hasSize(1)
+        em.clear()
+
+        val saved = checkNotNull(records.findByUser_IdAndGame_Id(uid, gid))
+        assertThat(saved.playing).isFalse()
+        assertThat(saved.playTimeHours).isEqualByComparingTo(BigDecimal.TEN)
+        assertThat(saved.inLibrary).isTrue()
+        assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid).map { it.game.id })
+            .containsExactly(gid)
     }
 
     @Test
     @DisplayName("라이브러리 밖 게임의 인생게임 등록을 거절해도 기존 목록은 유지된다")
     fun rejectOutsideLibraryWithoutReplacingFavorites() {
-        val record = UserGame(user, game)
-        record.changeLiked(true)
-        records.saveAndFlush(record)
+        records.saveAndFlush(UserGame(user, game))
         val other = games.save(Game.createFromIgdb(IgdbGameResponse(987655L, "other", "test",
             null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
         val eligible = UserGame(user, other)
@@ -144,9 +152,11 @@ class UserGameFavoriteMembershipTest {
         service.updateFavoriteGames(uid, listOf(otherId))
         assertThatThrownBy { service.updateFavoriteGames(uid, listOf(checkNotNull(game.id))) }
             .isInstanceOfSatisfying(ServiceException::class.java) { error ->
-            assertThat(error.resultCode).isEqualTo("400-11")
-            assertThat(error.msg).isEqualTo("라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요.")
-        }
+                assertThat(error.resultCode).isEqualTo("400-11")
+                assertThat(error.msg).isEqualTo("라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요.")
+            }
+        em.flush()
+        em.clear()
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid).map { it.game.id })
             .containsExactly(otherId)
     }

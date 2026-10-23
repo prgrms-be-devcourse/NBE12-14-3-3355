@@ -5,13 +5,13 @@ import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.domain.game.repository.PlatformRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
+import com.gamelog.nbe121423355.domain.user.entity.UserFavoriteGame
 import com.gamelog.nbe121423355.domain.user.repository.UserFavoriteGameRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserFavoriteGameResponse
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
-import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.util.Optional
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -49,45 +49,42 @@ class UserGameServiceFavoriteTest {
     private lateinit var userFavoriteGameRepository: UserFavoriteGameRepository
 
     @Test
-    @DisplayName("인생게임을 등록할 수 있다")
+    @DisplayName("인생게임을 요청한 순서대로 저장하고 표시 순서와 함께 반환한다")
     fun updateFavoriteGames() {
         val userId = 1L
-
+        val gameIds = listOf(20L, 10L)
         val user = mock(User::class.java)
         val game1 = mock(Game::class.java)
         val game2 = mock(Game::class.java)
-
         val userGame1 = mock(UserGame::class.java)
         val userGame2 = mock(UserGame::class.java)
+        var savedGames = emptyList<UserFavoriteGame>()
 
-        given(userRepository.findById(userId))
-            .willReturn(Optional.of(user))
-
+        given(userRepository.findById(userId)).willReturn(Optional.of(user))
+        given(user.id).willReturn(userId)
         given(game1.id).willReturn(10L)
         given(game2.id).willReturn(20L)
         given(game1.title).willReturn("Game 1")
         given(game2.title).willReturn("Game 2")
-
         given(userGame1.game).willReturn(game1)
         given(userGame2.game).willReturn(game2)
+        given(userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(userId, gameIds))
+            .willReturn(listOf(userGame1, userGame2))
+        given(userFavoriteGameRepository.saveAll(anyList<UserFavoriteGame>()))
+            .willAnswer { invocation ->
+                savedGames = invocation.getArgument<List<UserFavoriteGame>>(0)
+                savedGames
+            }
 
-        given(userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(
-            userId,
-            listOf(10L, 20L)
-        )).willReturn(listOf(userGame1, userGame2))
+        val result = userGameService.updateFavoriteGames(userId, gameIds)
 
-        val result: List<UserFavoriteGameResponse> = userGameService.updateFavoriteGames(
-            userId,
-            listOf(10L, 20L)
+        verify(userFavoriteGameRepository).deleteAllByUserId(userId)
+        assertThat(savedGames.map { it.game.id }).containsExactly(20L, 10L)
+        assertThat(savedGames.map { it.displayOrder }).containsExactly(1, 2)
+        assertThat(result).containsExactly(
+            UserFavoriteGameResponse(20L, "Game 2", null, 1),
+            UserFavoriteGameResponse(10L, "Game 1", null, 2),
         )
-
-        verify(userFavoriteGameRepository)
-            .deleteAllByUserId(userId)
-
-        verify(userFavoriteGameRepository)
-            .saveAll(anyList())
-
-        assertThat(result).hasSize(2)
     }
 
     @Test
@@ -134,38 +131,5 @@ class UserGameServiceFavoriteTest {
             .saveAll(anyList())
 
         assertThat(result).isEmpty()
-    }
-
-    @Test
-    @DisplayName("라이브러리에 등록하지 않은 게임은 인생게임으로 등록할 수 없다")
-    fun rejectGameNotInLibrary() {
-        val userId = 1L
-
-        val user = mock(User::class.java)
-
-        given(userRepository.findById(userId))
-            .willReturn(Optional.of(user))
-
-        given(userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(
-            userId,
-            listOf(10L, 20L)
-        )).willReturn(listOf())
-
-        assertThatThrownBy {
-            userGameService.updateFavoriteGames(
-                userId,
-                listOf(10L, 20L)
-            )
-        }
-            .isInstanceOfSatisfying(ServiceException::class.java) { error ->
-            assertThat(error.resultCode).isEqualTo("400-11")
-            assertThat(error.msg).isEqualTo("라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요.")
-        }
-
-        verify(userFavoriteGameRepository, never())
-            .deleteAllByUserId(userId)
-
-        verify(userFavoriteGameRepository, never())
-            .saveAll(anyList())
     }
 }

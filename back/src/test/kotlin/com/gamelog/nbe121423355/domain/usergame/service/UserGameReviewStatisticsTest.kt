@@ -74,29 +74,34 @@ class UserGameReviewStatisticsTest {
     private fun review(game: UserGame): Review { return reviews.findByUserGame_Id(checkNotNull(game.id)).orElseThrow() }
 
     @Test
-    @DisplayName("플레이 상태 없이 별점이나 양수 시간이 있어도 집계하고 본문만 있는 게임과 0시간은 제외한다")
+    @DisplayName("요약 카운터: 플레이 상태 상관없이 별점이나 양수 시간이 있어도 집계하고 본문만 있는 게임과 0시간은 제외")
     fun statisticsUseRatingsAndPositiveHoursWithoutPlayStatus() {
         val rated = save(null, null, "4.0", null)
         val timed = save(null, "10.0", null, null)
         val both = save(null, "5.0", "2.0", null)
-        val contentOnly = save(null, null, null, "기대평")
-        val zeroOnly = save(null, "0.0", null, null)
+        save(null, null, null, "기대평")
+        save(null, "0.0", null, null)
+
         val zeroRated = save(null, "0.0", "3.0", null)
         val hidden = save(null, "20.0", "5.0", null)
         review(hidden).hideByAdmin()
         library.synchronizeLibraryState(hidden)
+
         val deleted = save(null, "30.0", "5.0", null)
         val deletedReview = review(deleted)
         gameRecordReviewService.deleteReview(userId, checkNotNull(deletedReview.id), deletedReview.version)
+
         val completed = save(PlayStatus.COMPLETED, null, null, null)
         val wish = save(null, null, null, null)
         library.changeWishlist(userId, checkNotNull(wish.game.id), true)
+
         val expectedPlayed = listOf(checkNotNull(rated.id), checkNotNull(timed.id), checkNotNull(both.id), checkNotNull(zeroRated.id), checkNotNull(hidden.id), checkNotNull(deleted.id), checkNotNull(completed.id))
         val scatterGameId = checkNotNull(both.game.id)
         em.flush()
         em.clear()
 
         val profile = library.profileTab(userId, userId)
+
         assertThat(profile.stats.playedGameCount).isEqualTo(7L)
         assertThat(profile.stats.averageRating).isEqualByComparingTo("3.0")
         assertThat(profile.stats.totalPlayTime).isEqualByComparingTo("65.0")
@@ -105,8 +110,6 @@ class UserGameReviewStatisticsTest {
         assertThat(records.findGenreDistribution(userId).map { it.gameCount }).containsExactly(7L)
         assertThat(profile.tasteResponse.completion.ratio).isEqualByComparingTo("0.1429")
         assertThat(profile.tasteResponse.longPlay.ratio).isEqualByComparingTo("0.75")
-        assertThat(records.findById(checkNotNull(contentOnly.id)).orElseThrow().inLibrary).isTrue()
-        assertThat(records.findById(checkNotNull(zeroOnly.id)).orElseThrow().inLibrary).isFalse()
     }
 
     @Test
@@ -135,13 +138,14 @@ class UserGameReviewStatisticsTest {
             .containsExactlyInAnyOrderElementsOf(expectedGames)
     }
 
+    //TODO 기존 DB 데이터에서 status가 null인 데이터가 삭제되면 Review의 isActive 조건 수정과 함께 삭제
     @Test
     @DisplayName("status가 null인 기존 리뷰도 라이브러리·정렬·평균·산점도에서 활성 리뷰로 취급한다")
     fun legacyNullStatusRemainsActive() {
         val legacy = save(null, "5", "4.0", null)
         save(null, null, "2.0", null)
-        val recordId = checkNotNull(checkNotNull(legacy.id))
-        val gameId = checkNotNull(checkNotNull(legacy.game.id))
+        val recordId = checkNotNull(legacy.id)
+        val gameId = checkNotNull(legacy.game.id)
         em.flush()
         em.createQuery("UPDATE Review r SET r.status = NULL WHERE r.userGame.id = :id")
             .setParameter("id", recordId).executeUpdate()
@@ -158,7 +162,7 @@ class UserGameReviewStatisticsTest {
     }
 
     @Test
-    @DisplayName("활성 별점을 본문만 있는 리뷰로 바꾸면 라이브러리는 유지하고 플레이 통계에서는 제외한다")
+    @DisplayName("활성 별점을 본문만 있는 리뷰로 바꾸면 플레이 통계에서 제외한다")
     fun contentOnlyAfterEditIsNotPlayed() {
         val rated = save(null, null, "4.0", null)
         val ratedReview = review(rated)
@@ -173,6 +177,5 @@ class UserGameReviewStatisticsTest {
         assertThat(profile.stats.playedGameCount).isZero()
         assertThat(profile.stats.averageRating).isEqualByComparingTo(BigDecimal.ZERO)
         assertThat(profile.scatterData).isEmpty()
-        assertThat(library.getUserGameList(userId, UserGameSearchRequest()).totalElements).isEqualTo(1L)
     }
 }

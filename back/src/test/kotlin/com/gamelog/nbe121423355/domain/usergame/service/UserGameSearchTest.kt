@@ -58,14 +58,16 @@ class UserGameSearchTest {
         rpg = Genre.createFromIgdb(81001L, "Library RPG")
         action = Genre.createFromIgdb(81002L, "Library Action")
         listOf(pc, console, rpg, action).forEach(em::persist)
-        save(owner, "가 게임", PlayStatus.COMPLETED, false, false, false, pc, 10, 1, "4.5", listOf(rpg, action))
-        save(owner, "나 게임", null, true, true, false, console, 20, 2, "2.0", listOf(action))
-        save(owner, "다 100%_!", null, false, false, true, null, null, null, null, listOf())
+        save(title = "가 게임", status = PlayStatus.COMPLETED, platform = pc, hours = 10, day = 1,
+            rating = "4.5", genres = listOf(rpg, action))
+        save(title = "나 게임", playing = true, platform = console, hours = 20, day = 2,
+            rating = "2.0", genres = listOf(action))
+        save(title = "다 100%_!", wishlist = true)
         other = User("other", "other@test.com", "password")
         em.persist(other)
-        save(other, "Other", PlayStatus.PLAYED, true, true, true, pc, 100, 3, "5.0", listOf(rpg))
-        val removed = save(owner, "Removed", null, false, false, false, null, null, null, null, listOf())
-        removed.updatePlayRecord(null, false, false, false, true, null, null, null, null, null, null, null)
+        save(user = other, title = "Other", status = PlayStatus.PLAYED, playing = true, backlog = true,
+            wishlist = true, platform = pc, hours = 100, day = 3, rating = "5.0", genres = listOf(rpg))
+        save(title = "Removed", liked = true)
         em.flush()
         em.clear()
     }
@@ -78,12 +80,16 @@ class UserGameSearchTest {
 
     @Test
     fun filtersEachStatusIndependently() {
+        save(title = "Backlog", backlog = true)
+        em.flush()
+        em.clear()
         for (tab in listOf(UserGameTab.PLAYED, UserGameTab.PLAYING, UserGameTab.BACKLOG, UserGameTab.WISHLIST, UserGameTab.LIKED)) {
             val request = UserGameSearchRequest()
             request.status = tab
             val expected = when (tab) {
                 UserGameTab.PLAYED -> "가 게임"
-                UserGameTab.PLAYING, UserGameTab.BACKLOG -> "나 게임"
+                UserGameTab.PLAYING -> "나 게임"
+                UserGameTab.BACKLOG -> "Backlog"
                 UserGameTab.WISHLIST -> "다 100%_!"
                 UserGameTab.LIKED -> "Removed"
                 else -> throw IllegalArgumentException("지원하지 않는 상태: $tab")
@@ -119,25 +125,48 @@ class UserGameSearchTest {
     }
 
     @Test
-    fun treatsWildcardsAsLiteralTextAndEmptyFiltersAsAll() {
-        val request = UserGameSearchRequest()
-        request.keyword = " %_! "
-        request.genreIds = listOf()
-        request.platformIds = listOf()
+    fun treatsWildcardsAsLiteralText() {
+        save(title = "다 100abc_!", wishlist = true)
+        save(title = "다 100%X!", wishlist = true)
+        em.flush()
+        em.clear()
+        val request = UserGameSearchRequest().apply { keyword = " %_! " }
+
         assertThat(search(request).content.map { it.title }).containsExactly("다 100%_!")
-        request.keyword = "  "
-        assertThat(search(request).totalElements).isEqualTo(3L)
     }
 
     @Test
-    fun sortsByPersonalRatingTitleAndPlayTimeWithNullsLast() {
-        val request = UserGameSearchRequest()
-        for (sort in listOf(UserGameSort.RATING, UserGameSort.TITLE)) {
-            request.sort = sort
-            assertThat(search(request).content.map { it.title })
-                .containsExactly("가 게임", "나 게임", "다 100%_!")
+    fun treatsEmptyFiltersAndBlankKeywordAsAll() {
+        val request = UserGameSearchRequest().apply {
+            keyword = "  "
+            genreIds = emptyList()
+            platformIds = emptyList()
         }
-        request.sort = UserGameSort.PLAY_TIME
+
+        assertThat(search(request).content.map { it.title })
+            .containsExactly("나 게임", "가 게임", "다 100%_!")
+    }
+
+    @Test
+    fun sortsByPersonalRatingWithNullsLast() {
+        val request = UserGameSearchRequest().apply { sort = UserGameSort.RATING }
+
+        assertThat(search(request).content.map { it.title })
+            .containsExactly("가 게임", "나 게임", "다 100%_!")
+    }
+
+    @Test
+    fun sortsByTitle() {
+        val request = UserGameSearchRequest().apply { sort = UserGameSort.TITLE }
+
+        assertThat(search(request).content.map { it.title })
+            .containsExactly("가 게임", "나 게임", "다 100%_!")
+    }
+
+    @Test
+    fun sortsByPlayTimeWithNullsLast() {
+        val request = UserGameSearchRequest().apply { sort = UserGameSort.PLAY_TIME }
+
         assertThat(search(request).content.map { it.title })
             .containsExactly("나 게임", "가 게임", "다 100%_!")
     }
@@ -145,7 +174,7 @@ class UserGameSearchTest {
     @Test
     fun endpointBindsFiltersAndPreservesResponseShape() {
         mockMvc.perform(get("/api/v1/library/games")
-            .with(user(SecurityUser(checkNotNull(owner.id), listOf())))
+            .with(ownerAuthentication())
             .param("status", "PLAYED").param("sort", "RATING")
             .param("genreIds", "${checkNotNull(rpg.id)},${checkNotNull(action.id)}")
             .param("platformIds", checkNotNull(pc.id).toString()))
@@ -157,15 +186,12 @@ class UserGameSearchTest {
     @Test
     @DisplayName("비로그인 사용자도 다른 사용자의 프로필 통계를 조회할 수 있다")
     fun publicProfileAllowsAnonymousUser() {
-        // given: 프로필 통계를 가진 다른 사용자를 준비
         val targetUserId = checkNotNull(other.id)
 
-        // when: 인증 정보 없이 다른 사용자의 프로필을 조회
         mockMvc.perform(get(
             "/api/v1/library/games/profile/{userId}",
             targetUserId
         ))
-        // then: 대상 사용자 ID와 공개 조회 상태를 반환하는지 확인
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.data.userId")
@@ -179,19 +205,11 @@ class UserGameSearchTest {
     @Test
     @DisplayName("본인이 사용자 ID 경로로 프로필을 조회하면 본인 여부를 반환한다")
     fun publicProfileIdentifiesAuthenticatedOwner() {
-        // given: 프로필 소유자의 인증 정보를 준비
-        val loginUser = SecurityUser(
-            checkNotNull(owner.id),
-            listOf()
-        )
-
-        // when: 본인의 사용자 ID가 포함된 공개 프로필 경로를 조회
         mockMvc.perform(get(
             "/api/v1/library/games/profile/{userId}",
             checkNotNull(owner.id)
         )
-            .with(user(loginUser)))
-        // then: 본인 프로필로 판별하는지 확인
+            .with(ownerAuthentication()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.userId")
                 .value(checkNotNull(owner.id)))
@@ -202,17 +220,14 @@ class UserGameSearchTest {
     @Test
     @DisplayName("비로그인 사용자도 다른 사용자의 게임 목록을 조회할 수 있다")
     fun publicGameListAllowsAnonymousUser() {
-        // given: 다른 사용자의 게임 목록과 조회 조건을 준비
         val targetUserId = checkNotNull(other.id)
 
-        // when: 인증 정보 없이 다른 사용자의 게임 목록을 조회
         mockMvc.perform(get(
             "/api/v1/library/games/profile/{userId}/games",
             targetUserId
         )
             .param("status", "ALL")
             .param("sort", "RECENT_PLAYED"))
-        // then: 대상 사용자의 게임과 전체 개수를 반환하는지 확인
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalElements").value(1))
             .andExpect(jsonPath("$.data.totalPages").value(1))
@@ -234,7 +249,7 @@ class UserGameSearchTest {
         for ((name, value) in invalidParameters) {
             mockMvc.perform(
                 get("/api/v1/library/games")
-                    .with(user(SecurityUser(checkNotNull(owner.id), listOf())))
+                    .with(ownerAuthentication())
                     .param(name, value),
             ).andExpect(status().isBadRequest())
         }
@@ -244,19 +259,47 @@ class UserGameSearchTest {
         return service.getUserGameList(checkNotNull(owner.id), request)
     }
 
+    private fun ownerAuthentication() =
+        user(SecurityUser(checkNotNull(owner.id), emptyList()))
+
     private fun save(
-        user: User, title: String, status: PlayStatus?, playing: Boolean, backlog: Boolean,
-        wishlist: Boolean, platform: Platform?, hours: Int?, day: Int?, rating: String?, genres: List<Genre>,
+        title: String,
+        user: User = owner,
+        status: PlayStatus? = null,
+        playing: Boolean = false,
+        backlog: Boolean = false,
+        wishlist: Boolean = false,
+        liked: Boolean = false,
+        platform: Platform? = null,
+        hours: Int? = null,
+        day: Int? = null,
+        rating: String? = null,
+        genres: List<Genre> = emptyList(),
     ): UserGame {
-        val game = Game.createFromIgdb(IgdbGameResponse(nextIgdbId++, title, null, null, null, null,
-            mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf()))
+        val game = Game.createFromIgdb(
+            IgdbGameResponse(nextIgdbId++, title, null, null, null, null,
+                mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf()),
+        )
         em.persist(game)
         genres.forEach { genre -> em.persist(GameGenre(game, genre)) }
-        // Both games support PC, but only one user record uses PC.
+        // 지원 플랫폼과 사용자 기록의 플랫폼이 달라도 검색 조건은 사용자 기록을 따른다.
         em.persist(GamePlatform(game, pc))
-        val record = UserGame(user, game, status, playing, backlog, wishlist, false, platform,
-            hours?.let { BigDecimal.valueOf(it.toLong()) }, null, null, null, null,
-            day?.let { LocalDateTime.of(2026, 9, it, 12, 0) })
+        val record = UserGame(
+            user = user,
+            game = game,
+            playStatus = status,
+            playing = playing,
+            backlog = backlog,
+            wishlist = wishlist,
+            liked = liked,
+            platform = platform,
+            playTimeHours = hours?.let { BigDecimal.valueOf(it.toLong()) },
+            finishTimeHours = null,
+            masterTimeHours = null,
+            startedAt = null,
+            completedAt = null,
+            lastPlayedAt = day?.let { LocalDateTime.of(2026, 9, it, 12, 0) },
+        )
         em.persist(record)
         if (rating != null) em.persist(Review(record, BigDecimal(rating), null, false))
         return record

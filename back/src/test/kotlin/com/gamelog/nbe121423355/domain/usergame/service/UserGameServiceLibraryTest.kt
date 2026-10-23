@@ -73,11 +73,8 @@ class UserGameServiceLibraryTest {
         val game = mock(Game::class.java)
         val platform = mock(Platform::class.java)
 
-        val request = UserGameReqBody(
+        val request = createRequest(
             playStatus = PlayStatus.PLAYED,
-            isPlaying = false,
-            isBacklog = false,
-            isWishlist = false,
             isLiked = true,
             platformId = platformId,
             playTimeHours = BigDecimal("42.5"),
@@ -90,14 +87,7 @@ class UserGameServiceLibraryTest {
 
         given(platformRepository.findById(platformId))
             .willReturn(Optional.of(platform))
-        given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-            .willReturn(null)
-        given(userRepository.findById(userId))
-            .willReturn(Optional.of(user))
-        given(gameRepository.findById(gameId))
-            .willReturn(Optional.of(game))
-        given(userGameRepository.save(anyUserGame()))
-            .willAnswer { invocation -> invocation.getArgument<UserGame>(0) }
+        stubNewUserGame(userId, gameId, user, game)
 
         val result = userGameService.addOrUpdateGameToLibrary(
             userId,
@@ -125,11 +115,9 @@ class UserGameServiceLibraryTest {
 
         val userGame = UserGame(user, game)
 
-        val request = UserGameReqBody(
+        val request = createRequest(
             playStatus = PlayStatus.PLAYED,
             isPlaying = true,
-            isBacklog = false,
-            isWishlist = false,
             isLiked = true,
             platformId = platformId,
             playTimeHours = BigDecimal("42.5"),
@@ -172,11 +160,9 @@ class UserGameServiceLibraryTest {
         val platform = mock(Platform::class.java)
         val userGame = UserGame(user, game)
 
-        val request = UserGameReqBody(
+        val request = createRequest(
             playStatus = PlayStatus.PLAYED,
             isPlaying = true,
-            isBacklog = false,
-            isWishlist = false,
             isLiked = true,
             platformId = platformId,
             playTimeHours = BigDecimal("50.0"),
@@ -210,19 +196,11 @@ class UserGameServiceLibraryTest {
         val userId = 1L
         val gameId = 1L
 
-        val request = UserGameReqBody(
+        val request = createRequest(
             playStatus = PlayStatus.PLAYED,
-            isPlaying = false,
-            isBacklog = false,
-            isWishlist = false,
-            isLiked = false,
-            platformId = null,
             playTimeHours = BigDecimal.ZERO,
             finishTimeHours = BigDecimal.ZERO,
             masterTimeHours = BigDecimal.ZERO,
-            startedAt = null,
-            completedAt = null,
-            lastPlayedAt = null,
         )
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
@@ -363,14 +341,7 @@ class UserGameServiceLibraryTest {
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
 
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(null)
-        given(userRepository.findById(1L))
-            .willReturn(Optional.of(user))
-        given(gameRepository.findById(1L))
-            .willReturn(Optional.of(game))
-        given(userGameRepository.save(anyUserGame()))
-            .willAnswer { invocation -> invocation.getArgument<UserGame>(0) }
+        stubNewUserGame(1L, 1L, user, game)
 
         val result = userGameService.changePlayed(
             1L,
@@ -551,51 +522,6 @@ class UserGameServiceLibraryTest {
     }
 
     @Test
-    @DisplayName("playing 상태를 true에서 false로 변경할 수 있다")
-    fun changePlayingTrueToFalse() {
-        val userGame = createUserGame()
-        userGame.changePlaying(true)
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changePlaying(1L, 1L, false)
-
-        assertThat(result).isFalse()
-        assertThat(userGame.playing).isFalse()
-    }
-
-    @Test
-    @DisplayName("wishlist 상태를 true에서 false로 변경할 수 있다")
-    fun changeWishlistTrueToFalse() {
-        val userGame = createUserGame()
-        userGame.changeWishlist(true)
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changeWishlist(1L, 1L, false)
-
-        assertThat(result).isFalse()
-        assertThat(userGame.wishlist).isFalse()
-    }
-
-    @Test
-    @DisplayName("backlog 상태를 true에서 false로 변경할 수 있다")
-    fun changeBacklogTrueToFalse() {
-        val userGame = createUserGame()
-        userGame.changeBacklog(true)
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changeBacklog(1L, 1L, false)
-
-        assertThat(result).isFalse()
-        assertThat(userGame.backlog).isFalse()
-    }
-
-    @Test
     @DisplayName("liked 상태를 true에서 false로 변경할 수 있다")
     fun changeLikedTrueToFalse() {
         val userGame = createUserGame()
@@ -630,6 +556,14 @@ class UserGameServiceLibraryTest {
             .isEqualTo(playStatus)
     }
 
+    private fun stubNewUserGame(userId: Long, gameId: Long, user: User, game: Game) {
+        given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId)).willReturn(null)
+        given(userRepository.findById(userId)).willReturn(Optional.of(user))
+        given(gameRepository.findById(gameId)).willReturn(Optional.of(game))
+        given(userGameRepository.save(anyUserGame()))
+            .willAnswer { invocation -> invocation.getArgument<UserGame>(0) }
+    }
+
     private fun createUserGame(): UserGame {
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
@@ -637,22 +571,33 @@ class UserGameServiceLibraryTest {
         return UserGame(user, game)
     }
 
-    private fun createRequest(playStatus: PlayStatus?, startedAt: LocalDate?, completedAt: LocalDate?, lastPlayedAt: LocalDateTime?): UserGameReqBody {
-        return UserGameReqBody(
-            playStatus = playStatus,
-            isPlaying = false,
-            isBacklog = false,
-            isWishlist = false,
-            isLiked = false,
-            platformId = null,
-            playTimeHours = null,
-            finishTimeHours = null,
-            masterTimeHours = null,
-            startedAt = startedAt,
-            completedAt = completedAt,
-            lastPlayedAt = lastPlayedAt,
-        )
-    }
+    private fun createRequest(
+        playStatus: PlayStatus? = null,
+        startedAt: LocalDate? = null,
+        completedAt: LocalDate? = null,
+        lastPlayedAt: LocalDateTime? = null,
+        isPlaying: Boolean = false,
+        isBacklog: Boolean = false,
+        isWishlist: Boolean = false,
+        isLiked: Boolean = false,
+        platformId: Long? = null,
+        playTimeHours: BigDecimal? = null,
+        finishTimeHours: BigDecimal? = null,
+        masterTimeHours: BigDecimal? = null,
+    ) = UserGameReqBody(
+        playStatus = playStatus,
+        isPlaying = isPlaying,
+        isBacklog = isBacklog,
+        isWishlist = isWishlist,
+        isLiked = isLiked,
+        platformId = platformId,
+        playTimeHours = playTimeHours,
+        finishTimeHours = finishTimeHours,
+        masterTimeHours = masterTimeHours,
+        startedAt = startedAt,
+        completedAt = completedAt,
+        lastPlayedAt = lastPlayedAt,
+    )
 
     @Test
     @DisplayName("존재하지 않는 사용자는 라이브러리에 게임을 등록할 수 없다")
@@ -660,12 +605,7 @@ class UserGameServiceLibraryTest {
         val userId = 999L
         val gameId = 1L
 
-        val request = createRequest(
-            PlayStatus.PLAYED,
-            null,
-            null,
-            null
-        )
+        val request = createRequest(playStatus = PlayStatus.PLAYED)
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
             .willReturn(null)
@@ -699,12 +639,7 @@ class UserGameServiceLibraryTest {
             "password"
         )
 
-        val request = createRequest(
-            PlayStatus.PLAYED,
-            null,
-            null,
-            null
-        )
+        val request = createRequest(playStatus = PlayStatus.PLAYED)
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
             .willReturn(null)
@@ -735,19 +670,9 @@ class UserGameServiceLibraryTest {
         val gameId = 1L
         val platformId = 999L
 
-        val request = UserGameReqBody(
+        val request = createRequest(
             playStatus = PlayStatus.PLAYED,
-            isPlaying = false,
-            isBacklog = false,
-            isWishlist = false,
-            isLiked = false,
             platformId = platformId,
-            playTimeHours = null,
-            finishTimeHours = null,
-            masterTimeHours = null,
-            startedAt = null,
-            completedAt = null,
-            lastPlayedAt = null,
         )
 
         given(platformRepository.findById(platformId))
@@ -793,17 +718,7 @@ class UserGameServiceLibraryTest {
             today.atStartOfDay()
         )
 
-        given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-            .willReturn(null)
-
-        given(userRepository.findById(userId))
-            .willReturn(Optional.of(user))
-
-        given(gameRepository.findById(gameId))
-            .willReturn(Optional.of(game))
-
-        given(userGameRepository.save(anyUserGame()))
-            .willAnswer { invocation -> invocation.getArgument<UserGame>(0) }
+        stubNewUserGame(userId, gameId, user, game)
 
         val result = userGameService.addOrUpdateGameToLibrary(
             userId,
