@@ -1,8 +1,10 @@
 package com.gamelog.nbe121423355.global.security.jwt
 
+import jakarta.servlet.http.HttpServletResponse
 import java.time.Duration
 import java.time.Duration.ZERO
 import java.time.LocalDateTime
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
 
@@ -34,4 +36,9 @@ class RefreshTokenCookieFactory constructor(private val cookieProperties: Cookie
     companion object {
         val COOKIE_NAME = "refreshToken"
     }
+}
+
+// ResponseCookie는 서블릿 Cookie가 아니라서 addCookie 대신 Set-Cookie 헤더로 내려야 함
+fun HttpServletResponse.addResponseCookie(cookie: ResponseCookie) {
+    addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
 }

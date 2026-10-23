@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import java.io.IOException
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpHeaders.SET_COOKIE
 import org.springframework.http.ResponseCookie
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
@@ -55,7 +54,7 @@ class JwtAuthenticationFilter(
             if (!jwtProvider.isAccessToken(claims)) {
                 return
             }
-            val userId = claims.subject.toLong()
+            val userId = claims.userId
             val role = claims.get("role", String::class.java)
             setSecurityContext(userId, role)
         } catch (e: Exception) {
@@ -75,14 +74,14 @@ class JwtAuthenticationFilter(
             return
         }
         try {
-            val expectedUserId: Long? = expiredClaims.subject.toLong()
+            val expectedUserId = expiredClaims.userId
             val result: ReissueResult = tokenReissueService.reissue(refreshToken, expectedUserId)
             setSecurityContext(result.userId, result.role)
             response.setHeader("New-Access-Token", result.accessToken)
             // Rotation으로 교체된 refreshToken (프록시는 relayAuthHeaders로 Set-Cookie를 브라우저까지 전달)
             val cookie: ResponseCookie =
                 refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
-            response.addHeader(SET_COOKIE, cookie.toString())
+            response.addResponseCookie(cookie)
         } catch (e: ServiceException) {
             // 무효/로그아웃된 refreshToken → 재발급 없이 미인증으로 진행 (정상적인 실패라 로그 안 남김)
             // 재사용 감지(401-3)는 TokenReissueService에서 warn 로그를 남김
