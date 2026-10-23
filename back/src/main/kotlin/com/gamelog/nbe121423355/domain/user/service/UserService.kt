@@ -13,11 +13,12 @@ import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.user.service.TokenReissueService.ReissueResult
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.security.jwt.JwtProvider
+import com.gamelog.nbe121423355.global.security.jwt.toLocalDateTime
 import com.gamelog.nbe121423355.global.upload.ImageUploadService
 import jakarta.transaction.Transactional
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.UUID
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionSynchronization
@@ -85,7 +86,7 @@ class UserService(
         val familyId = UUID.randomUUID().toString()
         val jti = UUID.randomUUID().toString()
         val expiration = jwtProvider.newRefreshTokenExpiration()
-        val expiryDate = expiration.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+        val expiryDate = expiration.toLocalDateTime()
         refreshTokenRepository.save(RefreshToken.create(user, familyId, jti, expiryDate))
         val refreshToken = jwtProvider.generateRefreshToken(user.id, familyId, jti, expiration)
         return IssuedSession(refreshToken, expiryDate)
@@ -111,29 +112,20 @@ class UserService(
 
     // 내정보 가져오기 - 온보딩 확인 여부
     fun getMe(userId: Long): UserDto {
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getUserById(userId)
         return UserDto(user)
     }
 
     // 유저 정보 가져오기 (탈퇴한 유저는 존재하지 않는 유저로 취급)
     fun getUser(userId: Long?): PublicUserDto {
-        val user =
-            userRepository
-                .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저입니다.") }
+        val user = userRepository.getActiveUserById(userId)
         return PublicUserDto(user)
     }
 
     // 온보딩 완료(선호 정보 저장 후 확정)
     @Transactional
     fun exitOnboarding(userId: Long): UserDto {
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getUserById(userId)
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -141,10 +133,7 @@ class UserService(
     // 온보딩 건너뛰기
     @Transactional
     fun skipOnboarding(userId: Long): UserDto {
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getUserById(userId)
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -159,10 +148,7 @@ class UserService(
 
     @Transactional
     fun updateProfile(userId: Long, updateProfileRequestDto: UpdateProfileRequestDto): UserDto {
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getUserById(userId)
         if (
             user.nickname != updateProfileRequestDto.nickname &&
                 userRepository.existsByNickname(updateProfileRequestDto.nickname)
@@ -189,10 +175,7 @@ class UserService(
     // accessToken은 그대로 유효하므로 새로 주지 않고, 새 refreshToken만 쿠키로 교체
     @Transactional
     fun changePassword(userId: Long, requestDto: ChangePasswordRequestDto): IssuedSession {
-        val user =
-            userRepository
-                .findById(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getUserById(userId)
         if (!passwordEncoder.matches(requestDto.currentPassword, user.password)) {
             throw ServiceException("400-3", "현재 비밀번호가 일치하지 않습니다.")
         }
@@ -209,10 +192,7 @@ class UserService(
     @Transactional
     fun promoteToAdmin(userId: Long?): UserDto {
         // 탈퇴한 유저는 권한 변경 대상에서 제외
-        val user =
-            userRepository
-                .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getActiveUserById(userId)
         user.promoteToAdmin()
         return UserDto(user)
     }
@@ -220,10 +200,7 @@ class UserService(
     // 회원탈퇴 (soft delete + 즉시 익명화)
     @Transactional
     fun withdraw(userId: Long?, requestDto: WithdrawRequestDto) {
-        val user =
-            userRepository
-                .findByIdAndDeletedAtIsNull(userId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
+        val user = userRepository.getActiveUserById(userId)
         if (user.role == "ADMIN") {
             throw ServiceException("403-2", "관리자 계정은 탈퇴할 수 없습니다.")
         }
@@ -251,4 +228,13 @@ class UserService(
             )
         }
     }
+
+    private fun UserRepository.getUserById(id: Long): User =
+        findByIdOrNull(id) ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
+
+    // 탈퇴한 유저는 존재하지 않는 유저로 취급
+    private fun UserRepository.getActiveUserById(id: Long?): User =
+        findByIdAndDeletedAtIsNull(id).orElseThrow {
+            ServiceException("404-1", "존재하지 않는 유저입니다.")
+        }
 }

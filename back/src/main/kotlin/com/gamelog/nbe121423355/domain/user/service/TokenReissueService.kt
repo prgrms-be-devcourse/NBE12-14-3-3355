@@ -4,10 +4,10 @@ import com.gamelog.nbe121423355.domain.user.entity.RefreshToken
 import com.gamelog.nbe121423355.domain.user.repository.RefreshTokenRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.security.jwt.JwtProvider
+import com.gamelog.nbe121423355.global.security.jwt.toDate
+import com.gamelog.nbe121423355.global.security.jwt.userId
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.Date
 import java.util.UUID
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -56,10 +56,7 @@ class TokenReissueService(
             throw ServiceException("401-2", "유효하지 않은 토큰 입니다.")
         }
         // DB 조회 전에 먼저 비교 (불일치면 쿼리 없이 종료)
-        if (
-            expectedUserId != null &&
-                expectedUserId != claims.subject.toLong()
-        ) {
+        if (expectedUserId != null && expectedUserId != claims.userId) {
             throw ServiceException("401-2", "토큰의 사용자 정보가 일치하지 않습니다.")
         }
         val familyId = jwtProvider.getFamilyId(claims)
@@ -94,8 +91,7 @@ class TokenReissueService(
         }
         // 교체 성공: currentJti = 방금 만든 jti
         // 유예 시간 내 요청: currentJti = 다른 요청이 교체한 jti → 같은 refreshToken을 다시 내려줘서 쿠키 복구
-        val expiration =
-            Date.from(session.expiryDate.atZone(ZoneId.systemDefault()).toInstant())
+        val expiration = session.expiryDate.toDate()
         val newRefreshToken =
             jwtProvider.generateRefreshToken(user.id, familyId, session.currentJti, expiration)
         val newAccessToken = jwtProvider.generateAccessToken(user.id, user.role)

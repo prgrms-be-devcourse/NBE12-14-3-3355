@@ -208,7 +208,7 @@ class UserFollowService(
     private fun getUser(userId: Long?): User {
         return userRepository
             .findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow { ServiceException("404-1", "존재하지 않는 사용자입니다.") }
+            .orElseThrow { ServiceException("404-1", "존재하지 않는 유저입니다.") }
     }
 
     companion object {
