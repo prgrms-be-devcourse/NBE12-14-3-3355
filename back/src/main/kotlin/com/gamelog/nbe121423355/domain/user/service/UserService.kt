@@ -235,7 +235,7 @@ class UserService(
         val oldProfileImageUrl = user.profileImageUrl
         // 익명화를 먼저: 마지막 refreshToken 삭제의 clearAutomatically 이후에는 user 변경이 반영되지 않음
         user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()))
-        reviewService.hideAllByWithdrawnUser(userId)
+        reviewService.hideAllByWithdrawnUser(checkNotNull(user.id))
         userFollowRepository.deleteAllByUserId(userId)
         userPreferenceGenreRepository.deleteByUser_Id(userId)
         userPreferenceGameRepository.deleteByUser_Id(userId)

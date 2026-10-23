@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page
 
 @JvmRecord
 data class ReviewReportPageResponse(
-    val reports: MutableList<ReviewReportGroupResponse>,
+    val reports: List<ReviewReportGroupResponse>,
     val page: Int,
     val size: Int,
     val totalElements: Long,
@@ -16,7 +16,7 @@ data class ReviewReportPageResponse(
         @JvmStatic
         fun from(
             reviewIdPage: Page<Long>,
-            reports: MutableList<ReviewReportGroupResponse>,
+            reports: List<ReviewReportGroupResponse>,
         ): ReviewReportPageResponse {
             return ReviewReportPageResponse(
                 reports,

@@ -17,7 +17,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
         jakarta.persistence.LockModeType.PESSIMISTIC_WRITE
     )
     @Query("SELECT r FROM Review r WHERE r.id = :id AND " + ReviewRepository.ACTIVE_REVIEW)
-    fun findActiveForUpdate(@Param("id") id: Long?): Optional<Review>
+    fun findActiveForUpdate(@Param("id") id: Long): Optional<Review>
 
     @Query(
         """
@@ -32,7 +32,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findByUserGame_Id(@Param("userGameId") userGameId: Long?): Optional<Review>
+    fun findByUserGame_Id(@Param("userGameId") userGameId: Long): Optional<Review>
 
     @Query(
         """
@@ -42,7 +42,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findIncludingDeletedByUserGameId(@Param("userGameId") userGameId: Long?): Optional<Review>
+    fun findIncludingDeletedByUserGameId(@Param("userGameId") userGameId: Long): Optional<Review>
 
     @Query(
         """
@@ -57,7 +57,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findActiveById(@Param("reviewId") reviewId: Long?): Optional<Review>
+    fun findActiveById(@Param("reviewId") reviewId: Long): Optional<Review>
 
     @EntityGraph(attributePaths = ["userGame.user", "userGame.game", "userGame.platform"])
     @Query(
@@ -81,8 +81,8 @@ interface ReviewRepository : JpaRepository<Review, Long> {
             """
     )
     fun findByUserGame_Game_Id(
-        @Param("gameId") gameId: Long?,
-        pageable: Pageable?,
+        @Param("gameId") gameId: Long,
+        pageable: Pageable,
     ): Page<Review>
 
     @EntityGraph(attributePaths = ["userGame.user", "userGame.game", "userGame.platform"])
@@ -107,8 +107,8 @@ interface ReviewRepository : JpaRepository<Review, Long> {
             """
     )
     fun findByUserGame_User_Id(
-        @Param("userId") userId: Long?,
-        pageable: Pageable?,
+        @Param("userId") userId: Long,
+        pageable: Pageable,
     ): Page<Review>
 
     @Query(
@@ -145,7 +145,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findPlayedGameRatings(@Param("userId") userId: Long?): MutableList<BigDecimal>
+    fun findPlayedGameRatings(@Param("userId") userId: Long): MutableList<BigDecimal>
 
     @Query(
         """
@@ -172,8 +172,8 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 """
     )
     fun findRecentReviews(
-        @Param("userId") userId: Long?,
-        pageable: Pageable?,
+        @Param("userId") userId: Long,
+        pageable: Pageable,
     ): MutableList<Review>
 
     // 회원탈퇴: 활성 리뷰만 숨김 (UPDATE에는 JOIN을 못 써서 user_game은 서브쿼리)
@@ -193,8 +193,8 @@ interface ReviewRepository : JpaRepository<Review, Long> {
             """
     )
     fun hideAllByUserId(
-        @Param("userId") userId: Long?,
-        @Param("now") now: LocalDateTime?,
+        @Param("userId") userId: Long,
+        @Param("now") now: LocalDateTime,
     ): Int
 
     companion object {

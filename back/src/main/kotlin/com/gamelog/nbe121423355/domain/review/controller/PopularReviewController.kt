@@ -24,8 +24,8 @@ class PopularReviewController constructor(private val popularReviewService: Popu
         )
         @RequestParam(defaultValue = "5")
         size: Int
-    ): RsData<MutableList<PopularReviewResponse>> {
+    ): RsData<List<PopularReviewResponse>> {
         val response = popularReviewService.getPopularReviews(size)
-        return RsData<MutableList<PopularReviewResponse>>("200-1", "인기 리뷰를 조회했습니다.", response)
+        return RsData<List<PopularReviewResponse>>("200-1", "인기 리뷰를 조회했습니다.", response)
     }
 }

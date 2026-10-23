@@ -23,17 +23,17 @@ interface ReviewCommentLikeRepository : JpaRepository<ReviewCommentLike, ReviewC
     fun counts(
         @Param("ids") ids: Collection<Long>,
         @Param("viewerId") viewerId: Long?,
-    ): MutableList<Likes>
+    ): List<Likes>
 
     @Modifying
     @org.springframework.data.jpa.repository.Query(
         "DELETE FROM ReviewCommentLike l WHERE l.reviewComment.id = :id"
     )
-    fun deleteForComment(@Param("id") id: Long?)
+    fun deleteForComment(@Param("id") id: Long)
 
     @Modifying
     @org.springframework.data.jpa.repository.Query(
         "DELETE FROM ReviewCommentLike l WHERE l.reviewComment.review.id = :id"
     )
-    fun deleteForReview(@Param("id") id: Long?)
+    fun deleteForReview(@Param("id") id: Long)
 }

@@ -5,16 +5,18 @@ import com.gamelog.nbe121423355.domain.game.entity.Game;
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository;
 import com.gamelog.nbe121423355.domain.review.entity.Review;
 import com.gamelog.nbe121423355.domain.review.entity.ReviewLike;
+import com.gamelog.nbe121423355.domain.review.entity.ReviewLikeId;
+import jakarta.persistence.EntityManager;
 import com.gamelog.nbe121423355.domain.user.entity.User;
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +26,13 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(properties =
-        "spring.datasource.url=jdbc:h2:mem:popular-review-repository-test;MODE=MySQL;NON_KEYWORDS=USER"
-)
-@ActiveProfiles("test")
+@SpringBootTest
+@MySqlIntegrationTest
 @Transactional
 class ReviewLikeRepositoryTest {
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Autowired
     private ReviewLikeRepository reviewLikeRepository;
@@ -234,6 +237,29 @@ class ReviewLikeRepositoryTest {
         assertThat(result)
                 .extracting(PopularReviewProjection::getReviewId)
                 .containsExactly(activeReview.getId());
+    }
+
+    @Test
+    @DisplayName("새로 만든 동일 복합키로 좋아요를 조회하고 삭제한다")
+    void findAndDeleteLikeUsingEquivalentKey() {
+        Game game = saveGame(3301L, "복합키 검증 게임");
+        User author = saveUser(41, "작성자");
+        User liker = saveUser(42, "좋아요 사용자");
+        Review review = saveReview(author, game, "복합키 검증 리뷰", BigDecimal.ONE, false);
+        reviewLikeRepository.saveAndFlush(new ReviewLike(review, liker));
+        Long userId = liker.getId();
+        Long reviewId = review.getId();
+        entityManager.clear();
+
+        var found = reviewLikeRepository.findById(new ReviewLikeId(userId, reviewId));
+
+        assertThat(found).isPresent();
+        assertThat(found.orElseThrow().getUser().getId()).isEqualTo(userId);
+        assertThat(found.orElseThrow().getReview().getId()).isEqualTo(reviewId);
+        reviewLikeRepository.deleteById(new ReviewLikeId(userId, reviewId));
+        reviewLikeRepository.flush();
+        entityManager.clear();
+        assertThat(reviewLikeRepository.existsById(new ReviewLikeId(userId, reviewId))).isFalse();
     }
 
     private Game saveGame(Long igdbId, String title) {

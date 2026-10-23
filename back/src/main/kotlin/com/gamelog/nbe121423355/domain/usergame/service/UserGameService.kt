@@ -204,7 +204,7 @@ class UserGameService(
         val hasActiveReview =
             userGame.id != null &&
                 reviewRepository
-                    .findByUserGame_Id(userGame.id)
+                    .findByUserGame_Id(checkNotNull(userGame.id))
                     .filter { obj: Review -> obj.hasVisibleContent() }
                     .isPresent
         userGame.updateLibraryStatus(hasActiveReview)
@@ -689,7 +689,7 @@ class UserGameService(
     fun getRecentReviews(userId: Long): List<RecentReviewResponse> {
         val pageable = PageRequest.of(0, 3)
         return reviewRepository
-            .findRecentReviews(userId, pageable)
+            .findRecentReviews(requireNotNull(userId), pageable)
             .stream()
             .map { value -> RecentReviewResponse(value) }
             .toList()

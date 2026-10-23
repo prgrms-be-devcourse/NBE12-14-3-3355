@@ -5,7 +5,6 @@ import com.gamelog.nbe121423355.domain.review.dto.response.DetailedReviewRespons
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewPageResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewResponse
 import com.gamelog.nbe121423355.domain.review.entity.Review
-import com.gamelog.nbe121423355.domain.review.repository.ReviewLikeCountProjection
 import com.gamelog.nbe121423355.domain.review.repository.ReviewLikeRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameDto
@@ -14,7 +13,6 @@ import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
 import java.util.Objects
-import java.util.stream.Collectors
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -30,21 +28,21 @@ constructor(
     private val userGameRepository: UserGameRepository,
     private val reviewCommentService: ReviewCommentService,
 ) {
-    fun getMyDetailedReview(userId: Long?, gameId: Long?): DetailedReviewResponse {
+    fun getMyDetailedReview(userId: Long, gameId: Long): DetailedReviewResponse {
         val userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId).orElse(null)
         if (userGame == null) {
             return DetailedReviewResponse(null, null)
         }
         val review =
             reviewRepository
-                .findByUserGame_Id(userGame.id)
+                .findByUserGame_Id(checkNotNull(userGame.id))
                 .map({ review: Review -> this.toReviewResponse(review) })
                 .orElse(null)
         return DetailedReviewResponse(UserGameDto(userGame), review)
     }
 
     @Transactional
-    fun saveReview(userId: Long?, userGameId: Long, request: ReviewSaveRequest): ReviewResponse {
+    fun saveReview(userId: Long, userGameId: Long, request: ReviewSaveRequest): ReviewResponse {
         validateReviewContent(request)
         val userGame = getUserGame(userGameId)
         validateOwner(userId, userGame)
@@ -71,22 +69,22 @@ constructor(
         return toReviewResponse(savedReview)
     }
 
-    fun getReview(reviewId: Long?): ReviewResponse {
+    fun getReview(reviewId: Long): ReviewResponse {
         return toReviewResponse(getReviewEntity(reviewId))
     }
 
-    fun getGameReviews(gameId: Long?, pageable: Pageable?): ReviewPageResponse {
+    fun getGameReviews(gameId: Long, pageable: Pageable): ReviewPageResponse {
         val reviews: Page<Review> = reviewRepository.findByUserGame_Game_Id(gameId, pageable)
         return toReviewPageResponse(reviews, reviewLikeRepository.countVisibleLikesByGameId(gameId))
     }
 
-    fun getUserReviews(userId: Long?, pageable: Pageable?): ReviewPageResponse {
+    fun getUserReviews(userId: Long, pageable: Pageable): ReviewPageResponse {
         val reviews: Page<Review> = reviewRepository.findByUserGame_User_Id(userId, pageable)
         return toReviewPageResponse(reviews, reviewLikeRepository.countVisibleLikesByUserId(userId))
     }
 
     @Transactional
-    fun updateReview(userId: Long?, reviewId: Long?, request: ReviewSaveRequest): ReviewResponse {
+    fun updateReview(userId: Long, reviewId: Long, request: ReviewSaveRequest): ReviewResponse {
         validateReviewContent(request)
         val review = getReviewEntity(reviewId)
         validateOwner(userId, review.userGame)
@@ -98,7 +96,7 @@ constructor(
     }
 
     @Transactional
-    fun deleteReview(userId: Long?, reviewId: Long?, version: Long?): Long? {
+    fun deleteReview(userId: Long, reviewId: Long, version: Long?): Long {
         val review =
             reviewRepository
                 .findActiveForUpdate(reviewId)
@@ -108,12 +106,12 @@ constructor(
         reviewCommentService.purge(reviewId)
         review.deleteByUser()
         reviewRepository.flush()
-        return review.userGame.id
+        return checkNotNull(review.userGame.id)
     }
 
     // 회원탈퇴 트랜잭션 안에서만 호출 (라이브러리 통계 유지를 위해 라이브러리 상태는 재계산하지 않음)
     @Transactional(propagation = MANDATORY)
-    fun hideAllByWithdrawnUser(userId: Long?) {
+    fun hideAllByWithdrawnUser(userId: Long) {
         reviewRepository.hideAllByUserId(userId, LocalDateTime.now())
     }
 
@@ -123,13 +121,13 @@ constructor(
             .orElseThrow({ ServiceException("404-2", "게임 기록을 찾을 수 없습니다.") })
     }
 
-    private fun getReviewEntity(reviewId: Long?): Review {
+    private fun getReviewEntity(reviewId: Long): Review {
         return reviewRepository
             .findActiveById(reviewId)
             .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
     }
 
-    fun getReviewByUserGameId(userGameId: Long?): ReviewResponse? {
+    fun getReviewByUserGameId(userGameId: Long): ReviewResponse? {
         return reviewRepository
             .findByUserGame_Id(userGameId)
             .map({ review: Review -> this.toReviewResponse(review) })
@@ -137,27 +135,20 @@ constructor(
     }
 
     private fun toReviewResponse(review: Review): ReviewResponse {
-        return ReviewResponse.from(review, reviewLikeRepository.countByReview_Id(review.id))
+        return ReviewResponse.from(review, reviewLikeRepository.countByReview_Id(checkNotNull(review.id)))
     }
 
     private fun toReviewPageResponse(
         reviews: Page<Review>,
         totalLikes: Long,
     ): ReviewPageResponse {
-        val reviewIds: MutableList<Long> =
-            reviews.content.map { requireNotNull(it.id) }.toMutableList()
-        val likeCounts: MutableMap<Long, Long> =
-            if (reviewIds.isEmpty()) java.util.Map.of()
+        val reviewIds = reviews.content.map { requireNotNull(it.id) }
+        val likeCounts: Map<Long, Long> =
+            if (reviewIds.isEmpty()) emptyMap()
             else
                 reviewLikeRepository
                     .findLikeCountsByReviewIds(reviewIds)
-                    .stream()
-                    .collect(
-                        Collectors.toMap(
-                            { obj: ReviewLikeCountProjection -> obj.reviewId },
-                            { obj: ReviewLikeCountProjection -> obj.likeCount },
-                        )
-                    )
+                    .associate { checkNotNull(it.reviewId) to it.likeCount }
         return ReviewPageResponse.from(reviews, likeCounts, totalLikes)
     }
 
@@ -167,7 +158,7 @@ constructor(
         }
     }
 
-    private fun validateOwner(userId: Long?, userGame: UserGame) {
+    private fun validateOwner(userId: Long, userGame: UserGame) {
         if (!Objects.equals(userGame.user.id, userId)) {
             throw ServiceException("403-1", "본인의 리뷰만 작성하거나 변경할 수 있습니다.")
         }

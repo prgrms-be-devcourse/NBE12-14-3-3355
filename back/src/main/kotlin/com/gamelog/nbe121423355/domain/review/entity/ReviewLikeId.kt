@@ -14,40 +14,14 @@ class ReviewLikeId : Serializable {
     final var reviewId: Long? = null
         private set
 
-    public override fun equals(o: Any?): Boolean {
-        if (o === this) return true
-        if (o !is ReviewLikeId) return false
-        val other = o
-        if (!other.canEqual(this as Any)) return false
-        val `this$userId`: Any? = this.userId
-        val `other$userId`: Any? = other.userId
-        if (
-            if (`this$userId` == null) `other$userId` != null
-            else !`this$userId`.equals(`other$userId`)
-        )
-            return false
-        val `this$reviewId`: Any? = this.reviewId
-        val `other$reviewId`: Any? = other.reviewId
-        if (
-            if (`this$reviewId` == null) `other$reviewId` != null
-            else !`this$reviewId`.equals(`other$reviewId`)
-        )
-            return false
-        return true
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ReviewLikeId) return false
+        return userId == other.userId && reviewId == other.reviewId
     }
 
-    protected fun canEqual(other: Any?): Boolean {
-        return other is ReviewLikeId
-    }
-
-    public override fun hashCode(): Int {
-        val PRIME = 59
-        var result = 1
-        val `$userId`: Any? = this.userId
-        result = result * PRIME + (if (`$userId` == null) 43 else `$userId`.hashCode())
-        val `$reviewId`: Any? = this.reviewId
-        result = result * PRIME + (if (`$reviewId` == null) 43 else `$reviewId`.hashCode())
-        return result
+    override fun hashCode(): Int {
+        return 59 * (59 + (userId?.hashCode() ?: 43)) + (reviewId?.hashCode() ?: 43)
     }
 
     constructor()

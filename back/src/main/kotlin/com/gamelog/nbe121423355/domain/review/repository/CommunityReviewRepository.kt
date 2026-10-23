@@ -19,8 +19,8 @@ interface CommunityReviewRepository : Repository<Review, Long> {
             " ORDER BY r.createdDate DESC, r.id DESC"
     )
     fun findFollowing(
-        @Param("viewerId") viewerId: Long?,
-        pageable: Pageable?,
+        @Param("viewerId") viewerId: Long,
+        pageable: Pageable,
     ): Slice<CommunityReviewProjection>
 
     @Query(
@@ -33,14 +33,14 @@ interface CommunityReviewRepository : Repository<Review, Long> {
             " HAVING COUNT(l.user.id) > 0 ORDER BY COUNT(l.user.id) DESC, r.createdDate DESC, r.id DESC"
     )
     fun findPopular(
-        @Param("viewerId") viewerId: Long?,
-        @Param("since") since: LocalDateTime?,
-        @Param("now") now: LocalDateTime?,
-        pageable: Pageable?,
-    ): MutableList<CommunityReviewProjection>
+        @Param("viewerId") viewerId: Long,
+        @Param("since") since: LocalDateTime,
+        @Param("now") now: LocalDateTime,
+        pageable: Pageable,
+    ): List<CommunityReviewProjection>
 
     @Query("SELECT COUNT(f) > 0 FROM UserFollow f WHERE f.follower.id = :viewerId")
-    fun hasFollowing(@Param("viewerId") viewerId: Long?): Boolean
+    fun hasFollowing(@Param("viewerId") viewerId: Long): Boolean
 
     companion object {
         const val SELECT: String =
