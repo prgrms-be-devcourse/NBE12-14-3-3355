@@ -9,6 +9,7 @@ import styles from "./layout.module.css";
 const menus = [
   { href: "/admin/reports", label: "신고 관리" },
   { href: "/admin/igdb", label: "게임 데이터 관리" },
+  { href: "/admin/recommendations", label: "추천 갱신" },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
