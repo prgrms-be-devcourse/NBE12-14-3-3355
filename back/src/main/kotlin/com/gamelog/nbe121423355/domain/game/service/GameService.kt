@@ -28,8 +28,8 @@ constructor(
         val keywordPattern: String? =
             if (keyword == null || keyword.javaIsBlank()) null
             else toContainsPattern(keyword.strip())
-        val filterGenres = genreIds != null && !genreIds.isEmpty()
-        val filterPlatforms = platformIds != null && !platformIds.isEmpty()
+        val filterGenres = !genreIds.isNullOrEmpty()
+        val filterPlatforms = !platformIds.isNullOrEmpty()
         // 전체 목록을 포함해 필터가 없는 기본 정렬은 ID를 먼저 조회합니다.
         val useDefaultSearch = !filterGenres && !filterPlatforms && request.sort == null
         if (useDefaultSearch) {
@@ -44,7 +44,7 @@ constructor(
                     keywordPattern,
                     minDate,
                     maxDate,
-                    pageable.getPageSize(),
+                    pageable.pageSize,
                     pageable.offset,
                 )
             // 마지막 부분 페이지는 크기로 총 개수를 알 수 있습니다.
@@ -68,21 +68,19 @@ constructor(
     }
 
     @Transactional(readOnly = true)
-    fun getSuggestions(keyword: String?): MutableList<GameListResponse> {
-        if (keyword == null || keyword.javaIsBlank()) return java.util.List.of()
+    fun getSuggestions(keyword: String?): List<GameListResponse> {
+        if (keyword == null || keyword.javaIsBlank()) return emptyList()
         val normalized = keyword.strip()
         val escaped = escapeLike(normalized)
         return gameRepository
             .findSuggestions(
                 normalized,
-                escaped + "%",
-                "%" + escaped + "%",
+                "${escaped}%",
+                "%${escaped}%",
                 GameService.MIN_RELEASE_DATE,
                 LocalDate.now(GameService.CATALOG_ZONE).plusDays(1),
             )
-            .stream()
-            .map({ value -> GameListResponse(value) })
-            .toList()
+            .map(::GameListResponse)
     }
 
     private fun escapeLike(keyword: String): String {
@@ -90,7 +88,7 @@ constructor(
     }
 
     private fun toContainsPattern(keyword: String): String {
-        return "%" + escapeLike(keyword) + "%"
+        return "%${escapeLike(keyword)}%"
     }
 
     companion object {

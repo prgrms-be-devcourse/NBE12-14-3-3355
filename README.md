@@ -232,7 +232,9 @@ npm run dev
 
 ### 5. 테스트 및 빌드
 
-백엔드는 `back` 디렉터리에서 실행합니다. `test` 프로파일은 H2와 테스트용 외부 서비스 설정을 사용합니다.
+백엔드는 `back` 디렉터리에서 실행합니다. `test` 프로파일의 기본 DB는 H2이며, `@MySqlIntegrationTest`를 적용한 테스트는 Testcontainers의 실제 MySQL 8.4로 연결을 대체합니다. MySQL 테스트 실행에는 Docker가 필요합니다.
+
+게임 수집·검색 테스트의 보완 내용, Mockito 사용 경계 및 실행 결과는 [게임 수집·검색 테스트 보완 기록](docs/game-data-search-testing.md)을 참고하세요.
 
 도메인별 서비스·컨트롤러 테스트와 동시성 테스트(같은 이메일·닉네임 동시 가입, 같은 게임 동시 등록 시 한 건만 저장)를 포함하며, push와 PR마다 GitHub Actions에서 실행됩니다.
 

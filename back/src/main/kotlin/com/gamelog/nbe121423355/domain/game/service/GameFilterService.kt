@@ -20,15 +20,11 @@ constructor(
             val genres =
                 genreRepository
                     .findAll(Sort.by("name"))
-                    .stream()
-                    .map({ genre -> GameFilterResponse.Option(genre.id, genre.name) })
-                    .toList()
-            val platforms: MutableList<GameFilterResponse.Option>? =
+                    .map { genre -> Option(genre.id, genre.name) }
+            val platforms =
                 platformRepository
                     .findAll(Sort.by("name"))
-                    .stream()
-                    .map({ platform -> GameFilterResponse.Option(platform.id, platform.name) })
-                    .toList()
+                    .map { platform -> Option(platform.id, platform.name) }
             return GameFilterResponse(genres, platforms)
         }
 }

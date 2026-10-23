@@ -29,8 +29,8 @@ class GameController constructor(private val gameService: GameService) {
             required = false,
         )
         keyword: String?
-    ): RsData<MutableList<GameListResponse>> {
-        return RsData<MutableList<GameListResponse>>(
+    ): RsData<List<GameListResponse>> {
+        return RsData<List<GameListResponse>>(
             "200-1",
             "게임 검색 후보를 조회했습니다.",
             gameService.getSuggestions(keyword),
