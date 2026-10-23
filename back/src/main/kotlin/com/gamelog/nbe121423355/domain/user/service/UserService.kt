@@ -18,7 +18,6 @@ import com.gamelog.nbe121423355.global.upload.ImageUploadService
 import jakarta.transaction.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionSynchronization
@@ -112,7 +111,7 @@ class UserService(
 
     // 내정보 가져오기 - 온보딩 확인 여부
     fun getMe(userId: Long): UserDto {
-        val user = userRepository.getUserById(userId)
+        val user = userRepository.getActiveUserById(userId)
         return UserDto(user)
     }
 
@@ -125,7 +124,7 @@ class UserService(
     // 온보딩 완료(선호 정보 저장 후 확정)
     @Transactional
     fun exitOnboarding(userId: Long): UserDto {
-        val user = userRepository.getUserById(userId)
+        val user = userRepository.getActiveUserById(userId)
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -133,7 +132,7 @@ class UserService(
     // 온보딩 건너뛰기
     @Transactional
     fun skipOnboarding(userId: Long): UserDto {
-        val user = userRepository.getUserById(userId)
+        val user = userRepository.getActiveUserById(userId)
         user.completeOnboarding()
         return UserDto(user)
     }
@@ -148,7 +147,7 @@ class UserService(
 
     @Transactional
     fun updateProfile(userId: Long, updateProfileRequestDto: UpdateProfileRequestDto): UserDto {
-        val user = userRepository.getUserById(userId)
+        val user = userRepository.getActiveUserById(userId)
         if (
             user.nickname != updateProfileRequestDto.nickname &&
                 userRepository.existsByNickname(updateProfileRequestDto.nickname)
@@ -175,7 +174,7 @@ class UserService(
     // accessToken은 그대로 유효하므로 새로 주지 않고, 새 refreshToken만 쿠키로 교체
     @Transactional
     fun changePassword(userId: Long, requestDto: ChangePasswordRequestDto): IssuedSession {
-        val user = userRepository.getUserById(userId)
+        val user = userRepository.getActiveUserById(userId)
         if (!passwordEncoder.matches(requestDto.currentPassword, user.password)) {
             throw ServiceException("400-3", "현재 비밀번호가 일치하지 않습니다.")
         }
@@ -228,9 +227,6 @@ class UserService(
             )
         }
     }
-
-    private fun UserRepository.getUserById(id: Long): User =
-        findByIdOrNull(id) ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
 
     // 탈퇴한 유저는 존재하지 않는 유저로 취급
     private fun UserRepository.getActiveUserById(id: Long?): User =
