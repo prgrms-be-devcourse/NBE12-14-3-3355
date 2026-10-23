@@ -183,8 +183,10 @@ class UserGameConcurrencyTest {
     @AfterEach
     void tearDown() {
         if (userId != null && gameId != null) {
-            userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
-                    .ifPresent(userGameRepository::delete);
+            var userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId);
+            if (userGame != null) {
+                userGameRepository.delete(userGame);
+            }
         }
         if (userId != null) userRepository.deleteById(userId);
         if (gameId != null) gameRepository.deleteById(gameId);

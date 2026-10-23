@@ -91,6 +91,6 @@ class GameRecordReviewTransactionTest {
                 new DetailedReviewSaveRequest(gameRecord, invalidReview)
         )).isInstanceOf(IllegalArgumentException.class);
 
-        assertThat(userGames.findByUser_IdAndGame_Id(user.getId(), game.getId())).isEmpty();
+        assertThat(userGames.findByUser_IdAndGame_Id(user.getId(), game.getId())).isNull();
     }
 }

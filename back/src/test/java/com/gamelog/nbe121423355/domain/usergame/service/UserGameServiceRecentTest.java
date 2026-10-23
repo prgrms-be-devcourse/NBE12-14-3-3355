@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -113,6 +114,10 @@ class UserGameServiceRecentTest {
 
         given(review1.getId()).willReturn(1L);
         given(review2.getId()).willReturn(2L);
+
+        LocalDateTime modifiedAt = LocalDateTime.of(2026, 10, 22, 12, 0);
+        given(review1.getLastModifiedDate()).willReturn(modifiedAt);
+        given(review2.getLastModifiedDate()).willReturn(modifiedAt.minusDays(1));
 
         given(review1.getUserGame()).willReturn(userGame1);
         given(review2.getUserGame()).willReturn(userGame2);

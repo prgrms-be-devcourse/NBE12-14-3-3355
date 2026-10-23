@@ -444,7 +444,7 @@ class ReviewServiceTest {
     @Test
     void getMyDetailedReviewWithoutUserGame() {
         when(userGameRepository.findByUser_IdAndGame_Id(USER_ID, GAME_ID))
-                .thenReturn(Optional.empty());
+                .thenReturn(null);
 
         DetailedReviewResponse response = reviewService.getMyDetailedReview(USER_ID, GAME_ID);
 
@@ -460,7 +460,7 @@ class ReviewServiceTest {
         when(userGame.getGame()).thenReturn(game);
         when(game.getId()).thenReturn(GAME_ID);
         when(userGameRepository.findByUser_IdAndGame_Id(USER_ID, GAME_ID))
-                .thenReturn(Optional.of(userGame));
+                .thenReturn(userGame);
         when(reviewRepository.findByUserGame_Id(USER_GAME_ID)).thenReturn(Optional.empty());
 
         DetailedReviewResponse response = reviewService.getMyDetailedReview(USER_ID, GAME_ID);
@@ -480,7 +480,7 @@ class ReviewServiceTest {
         when(review.getId()).thenReturn(10L);
         when(review.getContent()).thenReturn("내 상세 리뷰");
         when(userGameRepository.findByUser_IdAndGame_Id(USER_ID, GAME_ID))
-                .thenReturn(Optional.of(userGame));
+                .thenReturn(userGame);
         when(reviewRepository.findByUserGame_Id(USER_GAME_ID))
                 .thenReturn(Optional.of(review));
 

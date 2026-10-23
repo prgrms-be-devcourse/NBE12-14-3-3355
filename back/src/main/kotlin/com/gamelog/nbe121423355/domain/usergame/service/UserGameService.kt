@@ -127,12 +127,12 @@ class UserGameService(
         val platform = findPlatform(reqBody.platformId)
         return userGameRepository
             .findByUser_IdAndGame_Id(userId, gameId)
-            .map { userGame ->
+            ?.let { userGame ->
                 applyPlayRecord(userGame, reqBody, platform)
                 log.info("게임 기록 수정 완료 - userId={}, gameId={}", userId, gameId)
                 UserGameSaveResult(userGame, false)
             }
-            .orElseGet {
+            ?: run {
                 val userGame = createUserGame(userId, gameId, reqBody, platform)
                 log.info("게임 라이브러리 등록 완료 - userId={}, gameId={}", userId, gameId)
                 UserGameSaveResult(userGame, true)
@@ -264,12 +264,7 @@ class UserGameService(
     private fun findUserGame(userId: Long, gameId: Long): UserGame {
         return userGameRepository
             .findByUser_IdAndGame_Id(userId, gameId)
-            .orElseThrow {
-                ServiceException(
-                    "404-3",
-                    "라이브러리에 등록되지 않은 게임입니다.",
-                )
-            }
+            ?: throw ServiceException("404-3", "라이브러리에 등록되지 않은 게임입니다.")
     }
 
     private fun findPlatform(platformId: Long?): Platform? {
@@ -305,7 +300,7 @@ class UserGameService(
     private fun getOrCreateUserGame(userId: Long, gameId: Long): UserGame {
         return userGameRepository
             .findByUser_IdAndGame_Id(userId, gameId)
-            .orElseGet { userGameRepository.save(createUserGame(userId, gameId)) }
+            ?: userGameRepository.save(createUserGame(userId, gameId))
     }
 
     private fun findOrCreateUserGameForBoolean(
@@ -314,8 +309,8 @@ class UserGameService(
         status: Boolean,
     ): UserGame {
         val userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
-        if (userGame.isPresent) {
-            return userGame.get()
+        if (userGame != null) {
+            return userGame
         }
         if (!status) {
             log.warn(

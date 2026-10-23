@@ -29,7 +29,7 @@ constructor(
     private val reviewCommentService: ReviewCommentService,
 ) {
     fun getMyDetailedReview(userId: Long, gameId: Long): DetailedReviewResponse {
-        val userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId).orElse(null)
+        val userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
         if (userGame == null) {
             return DetailedReviewResponse(null, null)
         }

@@ -80,7 +80,7 @@ class UserGameFavoriteMembershipTest {
         em.flush();
         em.clear();
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)).isEmpty();
-        UserGame saved = records.findByUser_IdAndGame_Id(uid, gid).orElseThrow();
+        UserGame saved = java.util.Objects.requireNonNull(records.findByUser_IdAndGame_Id(uid, gid));
         assertThat(saved.getId()).isEqualTo(recordId);
         assertThat(saved.isInLibrary()).isFalse();
         assertThat(saved.isLiked()).isTrue();
@@ -96,7 +96,7 @@ class UserGameFavoriteMembershipTest {
         em.flush();
         em.clear();
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)).isEmpty();
-        UserGame saved = records.findByUser_IdAndGame_Id(uid, gid).orElseThrow();
+        UserGame saved = java.util.Objects.requireNonNull(records.findByUser_IdAndGame_Id(uid, gid));
         assertThat(saved.getId()).isEqualTo(recordId);
         assertThat(saved.isInLibrary()).isFalse();
         assertThat(saved.getPlayTimeHours()).isEqualByComparingTo(BigDecimal.ZERO);

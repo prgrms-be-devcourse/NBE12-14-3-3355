@@ -89,7 +89,7 @@ class UserGameServiceLibraryTest {
         given(platformRepository.findById(platformId))
                 .willReturn(Optional.of(platform));
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.empty());
+                .willReturn(null);
         given(userRepository.findById(userId))
                 .willReturn(Optional.of(user));
         given(gameRepository.findById(gameId))
@@ -142,7 +142,7 @@ class UserGameServiceLibraryTest {
         given(platformRepository.findById(platformId))
                 .willReturn(Optional.of(platform));
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         UserGameSaveResult result =
                 userGameService.addOrUpdateGameToLibrary(
@@ -188,7 +188,7 @@ class UserGameServiceLibraryTest {
         );
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
         given(platformRepository.findById(platformId))
                 .willReturn(Optional.of(platform));
 
@@ -227,7 +227,7 @@ class UserGameServiceLibraryTest {
         );
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.updatePlayRecord(userId, gameId, request)
@@ -367,7 +367,7 @@ class UserGameServiceLibraryTest {
         Game game = org.mockito.Mockito.mock(Game.class);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
         given(userRepository.findById(1L))
                 .willReturn(Optional.of(user));
         given(gameRepository.findById(1L))
@@ -401,7 +401,7 @@ class UserGameServiceLibraryTest {
     @DisplayName("UserGame이 없을 때 playing을 false로 변경하면 예외가 발생한다")
     void changePlayingFalseWithoutUserGame() {
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.changePlaying(1L, 1L, false)
@@ -421,7 +421,7 @@ class UserGameServiceLibraryTest {
         UserGame userGame = createUserGame();
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeWishlist(1L, 1L, true);
@@ -436,7 +436,7 @@ class UserGameServiceLibraryTest {
         UserGame userGame = createUserGame();
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeBacklog(1L, 1L, true);
@@ -451,7 +451,7 @@ class UserGameServiceLibraryTest {
         UserGame userGame = createUserGame();
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeLiked(1L, 1L, true);
@@ -466,7 +466,7 @@ class UserGameServiceLibraryTest {
         UserGame userGame = createUserGame();
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         assertThat(
                 userGameService.changePlaying(1L, 1L, true)
@@ -486,7 +486,7 @@ class UserGameServiceLibraryTest {
         userGame.changePlayStatus(PlayStatus.PLAYED);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         PlayStatus result =
                 userGameService.changePlayed(1L, 1L, null);
@@ -499,7 +499,7 @@ class UserGameServiceLibraryTest {
     @DisplayName("UserGame이 없을 때 wishlist를 false로 변경하면 예외가 발생한다")
     void changeWishlistFalseWithoutUserGame() {
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.changeWishlist(1L, 1L, false)
@@ -515,7 +515,7 @@ class UserGameServiceLibraryTest {
     @DisplayName("UserGame이 없을 때 backlog를 false로 변경하면 예외가 발생한다")
     void changeBacklogFalseWithoutUserGame() {
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.changeBacklog(1L, 1L, false)
@@ -531,7 +531,7 @@ class UserGameServiceLibraryTest {
     @DisplayName("UserGame이 없을 때 liked를 false로 변경하면 예외가 발생한다")
     void changeLikedFalseWithoutUserGame() {
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.changeLiked(1L, 1L, false)
@@ -547,7 +547,7 @@ class UserGameServiceLibraryTest {
     @DisplayName("UserGame이 없을 때 playStatus를 null로 변경하면 예외가 발생한다")
     void clearPlayStatusWithoutUserGame() {
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         assertThatThrownBy(() ->
                 userGameService.changePlayed(1L, 1L, null)
@@ -566,7 +566,7 @@ class UserGameServiceLibraryTest {
         userGame.changePlaying(true);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changePlaying(1L, 1L, false);
@@ -582,7 +582,7 @@ class UserGameServiceLibraryTest {
         userGame.changeWishlist(true);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeWishlist(1L, 1L, false);
@@ -598,7 +598,7 @@ class UserGameServiceLibraryTest {
         userGame.changeBacklog(true);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeBacklog(1L, 1L, false);
@@ -614,7 +614,7 @@ class UserGameServiceLibraryTest {
         userGame.changeLiked(true);
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         boolean result =
                 userGameService.changeLiked(1L, 1L, false);
@@ -630,7 +630,7 @@ class UserGameServiceLibraryTest {
         UserGame userGame = createUserGame();
 
         given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-                .willReturn(Optional.of(userGame));
+                .willReturn(userGame);
 
         PlayStatus result =
                 userGameService.changePlayed(
@@ -687,7 +687,7 @@ class UserGameServiceLibraryTest {
         );
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         given(userRepository.findById(userId))
                 .willReturn(Optional.empty());
@@ -726,7 +726,7 @@ class UserGameServiceLibraryTest {
         );
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         given(userRepository.findById(userId))
                 .willReturn(Optional.of(user));
@@ -813,7 +813,7 @@ class UserGameServiceLibraryTest {
         );
 
         given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-                .willReturn(Optional.empty());
+                .willReturn(null);
 
         given(userRepository.findById(userId))
                 .willReturn(Optional.of(user));
