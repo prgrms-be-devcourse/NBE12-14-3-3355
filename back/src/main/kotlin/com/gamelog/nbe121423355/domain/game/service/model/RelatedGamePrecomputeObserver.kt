@@ -5,6 +5,8 @@ import com.gamelog.nbe121423355.domain.game.service.RelatedGamePrecomputeBatchSe
 interface RelatedGamePrecomputeObserver {
     fun onAcquired() {}
 
+    fun onBaselineRegistered() {}
+
     fun onPrepared(upperId: Long?, estimatedTotal: Long) {}
 
     fun onProcessed(

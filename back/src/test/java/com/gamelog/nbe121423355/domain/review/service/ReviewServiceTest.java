@@ -64,6 +64,9 @@ class ReviewServiceTest {
     @Mock
     private Game game;
 
+    @org.mockito.Mock
+    com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder changeRecorder;
+
     @InjectMocks
     private ReviewService reviewService;
 
@@ -258,6 +261,9 @@ class ReviewServiceTest {
     @DisplayName("본인의 리뷰를 삭제한다")
     @Test
     void deleteOwnReview() {
+        // given: 변경 원천을 기록할 리뷰의 기준 게임을 준비한다.
+        when(userGame.getGame()).thenReturn(game);
+        when(game.getId()).thenReturn(GAME_ID);
         when(userGame.getUser()).thenReturn(user);
         when(user.getId()).thenReturn(USER_ID);
         Review review = prepareReview();

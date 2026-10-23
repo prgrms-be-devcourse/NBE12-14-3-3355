@@ -61,6 +61,38 @@ class AdminRelatedGamePrecomputeIntegrationTest {
     }
 
     @Test
+    void changedAdmissionWorksAfterUpgradingLegacyTargetTypeCheck() throws Exception {
+        // given: 현재 운영 코드와 달리 CHANGED를 허용하지 않는 기존 Hibernate CHECK를 재현한다.
+        jdbc.execute("ALTER TABLE related_game_precompute_runs ADD CONSTRAINT ck_legacy_partial_target CHECK (target_type IN ('ALL', 'IDS', 'FAILED', 'UNREADY'))");
+        String previousId = manualRun();
+        store.start(previousId);
+        store.prepared(previousId, null, 0);
+        store.complete(previousId, new RelatedGamePrecomputeObserver.Progress(0, 0, 0));
+        try {
+            // when: 기존 DB용 제약 갱신 SQL을 적용하고 실제 관리자 서비스로 변경 기반 실행을 접수한다.
+            var populator = new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(
+                    new org.springframework.core.io.FileSystemResource("../docs/sql/update-related-game-precompute-target-types.sql"));
+            populator.execute(java.util.Objects.requireNonNull(jdbc.getDataSource()));
+            var accepted = start(RelatedGamePrecomputeTargetType.CHANGED, null, null);
+
+            // then: DB 제약 409 없이 접수하고 같은 SQL 재적용 후에도 종료 이력과 실행 종류를 유지한다.
+            assertThat(accepted.status()).isEqualTo(RelatedGamePrecomputeRunStatus.ACCEPTED);
+            await().atMost(ofSeconds(5)).untilAsserted(() ->
+                    assertThat(query.detail(accepted.runId()).status()).isEqualTo(RelatedGamePrecomputeRunStatus.SUCCEEDED));
+            populator.execute(java.util.Objects.requireNonNull(jdbc.getDataSource()));
+            assertThat(query.detail(accepted.runId()).type()).isEqualTo(RelatedGamePrecomputeTargetType.CHANGED);
+            assertThat(query.detail(previousId).status()).isEqualTo(RelatedGamePrecomputeRunStatus.SUCCEEDED);
+            // 기존 상태 enum 제약을 제거하지 않았는지도 확인한다.
+            assertThatThrownBy(() -> jdbc.update("UPDATE related_game_precompute_runs SET status = 'UNKNOWN' WHERE id = ?", previousId))
+                    .isInstanceOf(org.springframework.dao.DataAccessException.class);
+        } finally {
+            // 임시 DB의 기존 제약은 테스트 실패 시에도 다음 테스트에 남기지 않는다.
+            var legacyCount = jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'related_game_precompute_runs' AND CONSTRAINT_NAME = 'ck_legacy_partial_target'", Long.class);
+            if (legacyCount != null && legacyCount > 0) jdbc.execute("ALTER TABLE related_game_precompute_runs DROP CHECK ck_legacy_partial_target");
+        }
+    }
+
+    @Test
     void acceptsWithoutWaitingAndRejectsSecondLocalExecution() throws Exception {
         // given: 첫 게임 계산을 잠시 멈춰 비동기 실행 상태를 관찰할 수 있게 한다.
         long gameId = createGame();

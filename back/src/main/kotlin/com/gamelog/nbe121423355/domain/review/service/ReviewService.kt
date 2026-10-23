@@ -1,5 +1,7 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
+import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewSaveRequest
 import com.gamelog.nbe121423355.domain.review.dto.response.DetailedReviewResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewPageResponse
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewService
 constructor(
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewRepository: ReviewRepository,
     private val reviewLikeRepository: ReviewLikeRepository,
     private val userGameRepository: UserGameRepository,
@@ -46,6 +49,7 @@ constructor(
         validateReviewContent(request)
         val userGame = getUserGame(userGameId)
         validateOwner(userId, userGame)
+        changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.REVIEW)
         // 리뷰가 있으면 수정하고 없으면 새로 작성.
         val review = reviewRepository.findIncludingDeletedByUserGameId(userGameId).orElse(null)
         if (review != null) {
@@ -92,6 +96,7 @@ constructor(
         // 변경된 리뷰를 자동으로 반영.
         review.edit(request.rating, request.content, request.spoiler)
         reviewRepository.flush()
+        changeRecorder.record(requireNotNull(review.userGame.game.id), RelatedGameChangeReason.REVIEW)
         return toReviewResponse(review)
     }
 
@@ -105,6 +110,7 @@ constructor(
         validateVersion(review, version)
         reviewCommentService.purge(reviewId)
         review.deleteByUser()
+        changeRecorder.record(requireNotNull(review.userGame.game.id), RelatedGameChangeReason.REVIEW)
         reviewRepository.flush()
         return checkNotNull(review.userGame.id)
     }
@@ -112,6 +118,7 @@ constructor(
     // 회원탈퇴 트랜잭션 안에서만 호출 (라이브러리 통계 유지를 위해 라이브러리 상태는 재계산하지 않음)
     @Transactional(propagation = MANDATORY)
     fun hideAllByWithdrawnUser(userId: Long) {
+        changeRecorder.recordWithdrawnReviews(userId)
         reviewRepository.hideAllByUserId(userId, LocalDateTime.now())
     }
 

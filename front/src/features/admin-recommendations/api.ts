@@ -1,6 +1,6 @@
 import { acceptRefreshedToken } from "@/features/auth/api";
 
-export type TargetType = "ALL" | "IDS" | "FAILED" | "UNREADY";
+export type TargetType = "ALL" | "IDS" | "FAILED" | "UNREADY" | "CHANGED";
 export type RunStatus = "ACCEPTED" | "PREPARING" | "RUNNING" | "SUCCEEDED" | "PARTIAL_FAILED" | "FAILED" | "INTERRUPTED" | "REJECTED";
 export type Run = {
   runId: string;
@@ -22,14 +22,16 @@ export type Run = {
   heartbeatExpired: boolean;
   elapsedSeconds: number;
   error: string | null;
+  initializeBaseline: boolean;
+  baselineRegisteredAt: string | null;
 };
 export type Failure = { gameId: number; error: string; occurredAt: string };
 export type Page<T> = { content: T[]; page: number; size: number; totalElements: number; totalPages: number };
 export type ExecutionStatus = { databaseLocked: boolean; localRequestActive: boolean; activeRuns: Run[]; recoveryDeferred: boolean };
-export type StartRequest = { type: TargetType; gameIds?: string; sourceRunId?: string };
+export type StartRequest = { type: TargetType; gameIds?: string; sourceRunId?: string; initializeBaseline?: boolean };
 
 export const targetLabels: Record<TargetType, string> = {
-  ALL: "전체 갱신", IDS: "지정 ID 갱신", FAILED: "실패 게임 재처리", UNREADY: "최초 계산 미완료 게임 갱신",
+  ALL: "전체 갱신", IDS: "지정 ID 갱신", FAILED: "실패 게임 재처리", UNREADY: "최초 계산 미완료 게임 갱신", CHANGED: "변경 영향 게임 갱신",
 };
 export const statusLabels: Record<RunStatus, string> = {
   ACCEPTED: "접수됨", PREPARING: "계산 준비 중", RUNNING: "계산 중", SUCCEEDED: "완료",
@@ -70,3 +72,10 @@ export async function request<T>(token: string, path: string, options: { signal?
   if (!response.ok) throw new Error(body.msg || `요청에 실패했습니다. (${response.status})`);
   return body.data;
 }
+
+export type ChangeSummary = { unexpandedGames: number; pendingTargets: number };
+export type PendingTarget = { gameId: number; requiredVersion: number; appliedVersion: number; reasons: string[]; changedAt: string };
+export const changeReasonLabels: Record<string, string> = {
+  GAME_INFORMATION: "게임 정보 저장", USER_GAME_RECORD: "사용자 게임 기록", REVIEW: "리뷰 변경",
+  GAME_ADDED: "신규 게임", GAME_DELETED: "게임 삭제", READY: "최초 준비 완료", INITIAL_BASELINE: "초기 기준선",
+};

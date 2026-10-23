@@ -32,6 +32,10 @@ class RelatedGamePrecomputeRunStore(
         lock(runId).start(LocalDateTime.now())
     }
 
+    fun baselineRegistered(runId: String) {
+        lock(runId).baselineRegistered(LocalDateTime.now())
+    }
+
     fun prepared(runId: String, upperId: Long?, total: Long) {
         lock(runId).prepared(upperId, total, LocalDateTime.now())
     }

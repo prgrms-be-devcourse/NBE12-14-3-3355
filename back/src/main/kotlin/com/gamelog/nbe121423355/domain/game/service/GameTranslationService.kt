@@ -17,6 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate
 @Service
 class GameTranslationService(
     private val repository: GameRepository,
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val client: DeepLClient,
     manager: PlatformTransactionManager,
     @Value("\${game.translation.enabled:false}") private val enabled: Boolean,
@@ -47,7 +48,12 @@ class GameTranslationService(
                         repository
                             .findById(requireNotNull(game.id))
                             .orElseThrow()
-                            .prepareDescriptionTranslation()
+                            .let { current ->
+                                val source = current.prepareDescriptionTranslation()
+                                changeRecorder.record(requireNotNull(current.id),
+                                    com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.GAME_INFORMATION)
+                                source
+                            }
                     }
                 if (source == null || source.javaIsBlank()) continue
                 val hash = GameTranslationService.hash(source)
@@ -68,7 +74,11 @@ class GameTranslationService(
                     repository
                         .findById(requireNotNull(game.id))
                         .orElseThrow()
-                        .applyDescriptionTranslation(source, korean, hash)
+                        .also { current ->
+                            current.applyDescriptionTranslation(source, korean, hash)
+                            changeRecorder.record(requireNotNull(current.id),
+                                com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.GAME_INFORMATION)
+                        }
                 }
                 translated++
                 GameTranslationService.log.info(

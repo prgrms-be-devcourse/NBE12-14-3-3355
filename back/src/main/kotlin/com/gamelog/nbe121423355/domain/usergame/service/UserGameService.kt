@@ -1,5 +1,7 @@
 package com.gamelog.nbe121423355.domain.usergame.service
 
+import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
+import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.game.entity.Platform
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
@@ -31,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class UserGameService(
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val userGameRepository: UserGameRepository,
     private val userRepository: UserRepository,
     private val gameRepository: GameRepository,
@@ -114,7 +117,9 @@ class UserGameService(
         gameId: Long,
         reqBody: UserGameReqBody,
     ): UserGameSaveResult {
-        return saveGameRecord(userId, gameId, reqBody)
+        return saveGameRecord(userId, gameId, reqBody).also {
+            changeRecorder.record(gameId, RelatedGameChangeReason.USER_GAME_RECORD)
+        }
     }
 
     private fun saveGameRecord(
@@ -208,6 +213,7 @@ class UserGameService(
                     .filter { obj: Review -> obj.hasVisibleContent() }
                     .isPresent
         userGame.updateLibraryStatus(hasActiveReview)
+        changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.USER_GAME_RECORD)
         if (!userGame.isInLibrary) {
             userFavoriteGameRepository.deleteByUser_IdAndGame_Id(userGame.user.id, userGame.game.id)
         }
