@@ -53,6 +53,60 @@ class RelatedGameRefreshTargetRepository(private val jdbcTemplate: JdbcTemplate)
         return true
     }
 
+    // 원천 확장마다 각 기준 게임의 자체 요구 버전을 한 번 증가시킨다.
+    @Transactional(propagation = MANDATORY)
+    fun requestAffected(gameId: Long, genreIds: Collection<Long>, reasonMask: Long, changedAt: LocalDateTime) {
+        require(reasonMask > 0 && genreIds.all { it > 0 })
+        val ids = genreIds.distinct().sorted()
+        val sharedGenre = if (ids.isEmpty()) "" else
+            " OR EXISTS (SELECT 1 FROM game_genres gg WHERE gg.game_id = g.id AND gg.genre_id IN (${ids.joinToString(",") { "?" }}))"
+        requestWhere("g.id = ?" + sharedGenre, listOf(gameId) + ids, reasonMask, changedAt)
+    }
+
+    @Transactional(propagation = MANDATORY)
+    fun requestBaseline(upperId: Long) {
+        require(upperId >= 0)
+        requestWhere("g.id <= ?", listOf(upperId), RelatedGameChangeReason.INITIAL_BASELINE.mask, LocalDateTime.now())
+    }
+
+    private fun requestWhere(condition: String, parameters: List<Any>, reasonMask: Long, changedAt: LocalDateTime) {
+        jdbcTemplate.update(
+            """
+            INSERT INTO related_game_refresh_targets
+                (game_id, required_version, applied_version, reason_mask, changed_at)
+            SELECT g.id, 1, 0, ?, ? FROM games g WHERE $condition ORDER BY g.id
+            ON DUPLICATE KEY UPDATE required_version = required_version + 1,
+                reason_mask = reason_mask | ?, changed_at = GREATEST(changed_at, ?)
+            """.trimIndent(),
+            *(listOf(reasonMask, changedAt) + parameters + listOf(reasonMask, changedAt)).toTypedArray(),
+        )
+    }
+
+    fun countPending(upperId: Long = Long.MAX_VALUE): Long = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM related_game_refresh_targets WHERE game_id <= ? AND required_version > applied_version",
+        Long::class.javaObjectType, upperId,
+    ) ?: 0L
+
+    fun findPendingIds(afterId: Long, upperId: Long, limit: Int): List<Long> {
+        require(afterId >= 0 && limit in 1..1000)
+        return jdbcTemplate.queryForList(
+            """
+            SELECT game_id FROM related_game_refresh_targets
+            WHERE game_id > ? AND game_id <= ? AND required_version > applied_version ORDER BY game_id LIMIT ?
+            """.trimIndent(), Long::class.javaObjectType, afterId, upperId, limit,
+        )
+    }
+
+    fun findPendingPage(offset: Long, limit: Int): List<RelatedGameRefreshTarget> {
+        require(offset >= 0 && limit in 1..100)
+        return jdbcTemplate.query(
+            """
+            SELECT game_id, required_version, applied_version, reason_mask, changed_at
+            FROM related_game_refresh_targets WHERE required_version > applied_version ORDER BY game_id LIMIT ? OFFSET ?
+            """.trimIndent(), rowMapper(), limit, offset,
+        )
+    }
+
     fun findByGameId(gameId: Long): RelatedGameRefreshTarget? = find(gameId, forUpdate = false)
 
     private fun find(gameId: Long, forUpdate: Boolean): RelatedGameRefreshTarget? =
@@ -61,12 +115,14 @@ class RelatedGameRefreshTargetRepository(private val jdbcTemplate: JdbcTemplate)
             SELECT game_id, required_version, applied_version, reason_mask, changed_at
             FROM related_game_refresh_targets WHERE game_id = ?
             """.trimIndent() + if (forUpdate) " FOR UPDATE" else "",
-            RowMapper { row, _ ->
+            rowMapper(),
+            gameId,
+        ).singleOrNull()
+
+    private fun rowMapper(): RowMapper<RelatedGameRefreshTarget> = RowMapper { row, _ ->
                 RelatedGameRefreshTarget(
                     row.getLong("game_id"), row.getLong("required_version"), row.getLong("applied_version"),
                     row.getLong("reason_mask"), row.getObject("changed_at", LocalDateTime::class.java),
                 )
-            },
-            gameId,
-        ).singleOrNull()
+            }
 }

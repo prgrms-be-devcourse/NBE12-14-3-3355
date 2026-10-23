@@ -74,6 +74,22 @@ class RelatedGameInputChangeRepository(
 
     fun findByGameId(gameId: Long): RelatedGameInputChange? = find(gameId, forUpdate = false)
 
+    fun countPending(): Long = jdbcTemplate.queryForObject(
+        "SELECT COUNT(*) FROM related_game_input_changes WHERE change_version > expanded_version",
+        Long::class.javaObjectType,
+    ) ?: 0L
+
+    fun findPendingAfter(afterId: Long, limit: Int): List<RelatedGameInputChange> {
+        require(afterId >= 0 && limit in 1..1000)
+        return jdbcTemplate.query(
+            """
+            SELECT game_id, change_version, expanded_version, affected_genre_ids, reason_mask, changed_at
+            FROM related_game_input_changes
+            WHERE game_id > ? AND change_version > expanded_version ORDER BY game_id LIMIT ?
+            """.trimIndent(), rowMapper(), afterId, limit,
+        )
+    }
+
     // JDBC로 읽어 같은 영속성 컨텍스트의 오래된 엔티티 대신 최신 잠금 행을 사용한다.
     private fun find(gameId: Long, forUpdate: Boolean): RelatedGameInputChange? =
         jdbcTemplate.query(
@@ -81,13 +97,15 @@ class RelatedGameInputChangeRepository(
             SELECT game_id, change_version, expanded_version, affected_genre_ids, reason_mask, changed_at
             FROM related_game_input_changes WHERE game_id = ?
             """.trimIndent() + if (forUpdate) " FOR UPDATE" else "",
-            RowMapper { row, _ ->
+            rowMapper(),
+            gameId,
+        ).singleOrNull()
+
+    private fun rowMapper(): RowMapper<RelatedGameInputChange> = RowMapper { row, _ ->
                 RelatedGameInputChange(
                     row.getLong("game_id"), row.getLong("change_version"), row.getLong("expanded_version"),
                     objectMapper.readValue(row.getString("affected_genre_ids"), LongArray::class.java).toList(),
                     row.getLong("reason_mask"), row.getObject("changed_at", LocalDateTime::class.java),
                 )
-            },
-            gameId,
-        ).singleOrNull()
+            }
 }
