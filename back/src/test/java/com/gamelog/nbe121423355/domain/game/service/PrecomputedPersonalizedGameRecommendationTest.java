@@ -9,6 +9,7 @@ import com.gamelog.nbe121423355.domain.user.entity.UserPreferenceGame;
 import com.gamelog.nbe121423355.domain.user.entity.UserPreferenceGenre;
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,8 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 
 // 기존 기록·온보딩·장르 전용 시나리오도 전환을 켠 상태에서 함께 검증한다.
-@SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;NON_KEYWORDS=USER",
-        "recommendation.personalized.precomputed-enabled=true"
-})
+@SpringBootTest(properties = "recommendation.personalized.precomputed-enabled=true")
+@MySqlIntegrationTest
 class PrecomputedPersonalizedGameRecommendationTest extends PersonalizedGameRecommendationServiceTest {
 
     @Autowired
