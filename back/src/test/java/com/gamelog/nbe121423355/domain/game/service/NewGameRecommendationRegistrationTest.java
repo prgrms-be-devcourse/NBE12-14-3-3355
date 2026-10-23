@@ -6,6 +6,7 @@ import com.gamelog.nbe121423355.domain.game.repository.GameRepository;
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGameCalculationRepository;
 import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeMode;
 import com.gamelog.nbe121423355.domain.game.sync.IgdbSyncStore;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +14,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = "recommendation.publication.ready-only=true")
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 class NewGameRecommendationRegistrationTest {
     @Autowired GameImportService imports;
     @Autowired IgdbSyncStore sync;
