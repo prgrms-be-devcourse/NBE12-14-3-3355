@@ -25,7 +25,7 @@ class UserGameController constructor(private val userGameService: UserGameServic
         security = [SecurityRequirement(name = "bearerAuth")],
     )
     fun getUserGameList(
-        @Valid @ModelAttribute request: @Valid UserGameSearchRequest,
+        @Valid @ModelAttribute request: UserGameSearchRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameLibraryResponse> {
         val pages = userGameService.getUserGameList(user.id, request)
@@ -41,7 +41,7 @@ class UserGameController constructor(private val userGameService: UserGameServic
     @Operation(summary = "사용자 프로필 게임 목록 조회", description = "특정 사용자의 공개 게임 기록을 페이지 단위로 조회합니다.")
     fun getUserProfileGames(
         @PathVariable userId: Long,
-        @Valid @ModelAttribute request: @Valid UserGameSearchRequest,
+        @Valid @ModelAttribute request: UserGameSearchRequest,
     ): RsData<UserGameLibraryResponse> {
         val pages = userGameService.getPublicUserGameList(userId, request)
         return RsData(
@@ -56,7 +56,7 @@ class UserGameController constructor(private val userGameService: UserGameServic
     @Operation(summary = "게임 기록 등록 또는 수정", security = [SecurityRequirement(name = "bearerAuth")])
     fun addGameToLibrary(
         @PathVariable gameId: Long,
-        @Valid @RequestBody reqBody: @Valid UserGameReqBody,
+        @Valid @RequestBody reqBody: UserGameReqBody,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameDto> {
 
@@ -72,7 +72,7 @@ class UserGameController constructor(private val userGameService: UserGameServic
     @Operation(summary = "게임 기록 수정", security = [SecurityRequirement(name = "bearerAuth")])
     fun updatePlayRecord(
         @PathVariable gameId: Long,
-        @Valid @RequestBody reqBody: @Valid UserGameReqBody,
+        @Valid @RequestBody reqBody: UserGameReqBody,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameDto> {
 

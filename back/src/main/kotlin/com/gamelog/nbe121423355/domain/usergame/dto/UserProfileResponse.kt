@@ -1,6 +1,5 @@
 package com.gamelog.nbe121423355.domain.usergame.dto
 
-@JvmRecord
 data class UserProfileResponse(
     val userId: Long,
     val isMe: Boolean,

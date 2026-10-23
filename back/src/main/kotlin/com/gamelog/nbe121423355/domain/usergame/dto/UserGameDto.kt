@@ -6,7 +6,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-@JvmRecord
 data class UserGameDto(
     val id: Long,
     val userId: Long,

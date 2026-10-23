@@ -466,7 +466,7 @@ class ReviewServiceTest {
         DetailedReviewResponse response = reviewService.getMyDetailedReview(USER_ID, GAME_ID);
 
         assertThat(response.userGame()).isNotNull();
-        assertThat(response.userGame().id()).isEqualTo(USER_GAME_ID);
+        assertThat(response.userGame().getId()).isEqualTo(USER_GAME_ID);
         assertThat(response.review()).isNull();
     }
 
@@ -486,7 +486,7 @@ class ReviewServiceTest {
 
         DetailedReviewResponse response = reviewService.getMyDetailedReview(USER_ID, GAME_ID);
 
-        assertThat(response.userGame().id()).isEqualTo(USER_GAME_ID);
+        assertThat(response.userGame().getId()).isEqualTo(USER_GAME_ID);
         assertThat(response.review().reviewId()).isEqualTo(10L);
         assertThat(response.review().content()).isEqualTo("내 상세 리뷰");
     }

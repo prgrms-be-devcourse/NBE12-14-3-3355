@@ -72,7 +72,7 @@ class GameRecordReviewServiceTest {
                 new DetailedReviewSaveRequest(userGameRequest, null)
         );
 
-        assertThat(response.userGame().backlog()).isTrue();
+        assertThat(response.userGame().getBacklog()).isTrue();
         assertThat(response.review()).isSameAs(existing);
         verify(userGameService).synchronizeLibraryState(userGame);
         verify(reviewService, never()).saveReview(

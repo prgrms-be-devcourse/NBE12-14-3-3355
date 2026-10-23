@@ -72,7 +72,7 @@ class ReviewLibraryLifecycleTest {
     void reviewOnlyIsIncluded(boolean ratingOnly) {
         var request = ratingOnly ? rating() : new ReviewSaveRequest(null, "본문만 작성", false);
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(false), request));
-        assertThat(response.userGame().inLibrary()).isTrue();
+        assertThat(response.userGame().getInLibrary()).isTrue();
         assertThat(reload().isInLibrary()).isTrue();
         assertThat(library.getUserGameList(userId, new UserGameSearchRequest()).getTotalElements()).isEqualTo(1);
     }
@@ -81,7 +81,7 @@ class ReviewLibraryLifecycleTest {
     @DisplayName("리뷰만 있는 게임의 리뷰를 삭제하면 라이브러리와 인생게임에서 제외되고 재작성 시 복원된다")
     void deleteAndRestoreReviewOnly() {
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(false), rating()));
-        Long recordId = response.userGame().id(), reviewId = response.review().reviewId();
+        Long recordId = response.userGame().getId(), reviewId = response.review().reviewId();
         library.updateFavoriteGames(userId, List.of(gameId));
         gameRecordReviewService.deleteReview(userId, reviewId, response.review().version());
         UserGame saved = reload();
@@ -134,7 +134,7 @@ class ReviewLibraryLifecycleTest {
         library.addOrUpdateGameToLibrary(userId, gameId, record(true));
         library.updateFavoriteGames(userId, List.of(gameId));
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(false), rating()));
-        assertThat(response.userGame().inLibrary()).isTrue();
+        assertThat(response.userGame().getInLibrary()).isTrue();
         assertThat(reload().isInLibrary()).isTrue();
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(userId)).hasSize(1);
     }

@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.usergame.dto
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 
-@JvmRecord
 data class UserGameListResponse(
     val gameId: Long,
     val title: String,

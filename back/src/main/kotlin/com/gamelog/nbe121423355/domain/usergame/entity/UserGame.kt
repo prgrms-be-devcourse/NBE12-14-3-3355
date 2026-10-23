@@ -16,7 +16,7 @@ import org.hibernate.type.SqlTypes
     name = "user_games",
     uniqueConstraints = [UniqueConstraint(columnNames = ["user_id", "game_id"])],
 )
-class UserGame protected constructor() : BaseEntity() {
+class UserGame() : BaseEntity() {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -87,6 +87,21 @@ class UserGame protected constructor() : BaseEntity() {
     @Column(name = "is_in_library", nullable = false)
     var inLibrary: Boolean = false
         protected set
+
+    val isPlaying: Boolean
+        get() = playing
+
+    val isBacklog: Boolean
+        get() = backlog
+
+    val isWishlist: Boolean
+        get() = wishlist
+
+    val isLiked: Boolean
+        get() = liked
+
+    val isInLibrary: Boolean
+        get() = inLibrary
 
     constructor(user: User, game: Game) : this() {
         this.user = user
@@ -204,18 +219,4 @@ class UserGame protected constructor() : BaseEntity() {
         updateLibraryStatus()
     }
 
-    val isPlaying: Boolean
-        get() = playing
-
-    val isBacklog: Boolean
-        get() = backlog
-
-    val isWishlist: Boolean
-        get() = wishlist
-
-    val isLiked: Boolean
-        get() = liked
-
-    val isInLibrary: Boolean
-        get() = inLibrary
 }
