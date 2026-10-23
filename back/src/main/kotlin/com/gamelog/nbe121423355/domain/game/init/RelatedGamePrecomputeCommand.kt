@@ -3,6 +3,7 @@ package com.gamelog.nbe121423355.domain.game.init
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGameCandidateBatchRepository
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGamePrecomputeSnapshotRepository
+import com.gamelog.nbe121423355.domain.game.repository.RelatedGamePrecomputeTargetRepository
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGameQueryRepository
 import com.gamelog.nbe121423355.domain.game.service.*
 import org.springframework.boot.DefaultApplicationArguments
@@ -68,6 +69,7 @@ object RelatedGamePrecomputeCommand {
         RelatedGamePrecomputeStore::class,
         RelatedGameQueryRepository::class,
         RelatedGamePrecomputeSnapshotRepository::class,
+        RelatedGamePrecomputeTargetRepository::class,
         RelatedGameCandidateBatchRepository::class,
         GamePublicationPolicy::class,
     )
