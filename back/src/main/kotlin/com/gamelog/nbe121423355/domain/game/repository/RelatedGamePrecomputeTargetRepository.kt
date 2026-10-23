@@ -9,6 +9,16 @@ import org.springframework.transaction.annotation.Transactional
 @Repository
 @Transactional(readOnly = true)
 class RelatedGamePrecomputeTargetRepository(private val jdbcTemplate: JdbcTemplate) {
+    fun findExistingIds(gameIds: List<Long>): List<Long> {
+        require(gameIds.isNotEmpty())
+        val placeholders = gameIds.joinToString(",") { "?" }
+        return jdbcTemplate.query(
+            "SELECT id FROM games WHERE id IN ($placeholders) ORDER BY id",
+            RowMapper<Long> { row, _ -> row.getLong(1) },
+            *gameIds.toTypedArray(),
+        )
+    }
+
     fun count(type: RelatedGamePrecomputeTargetType, upperId: Long): Long =
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM games game WHERE game.id <= ? AND ${condition(type)}",

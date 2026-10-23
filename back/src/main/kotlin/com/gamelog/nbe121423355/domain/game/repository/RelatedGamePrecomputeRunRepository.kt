@@ -1,7 +1,10 @@
 package com.gamelog.nbe121423355.domain.game.repository
 
 import com.gamelog.nbe121423355.domain.game.entity.RelatedGamePrecomputeRun
+import com.gamelog.nbe121423355.domain.game.entity.RelatedGamePrecomputeRunStatus
+import java.time.LocalDateTime
 import jakarta.persistence.LockModeType
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -12,4 +15,25 @@ interface RelatedGamePrecomputeRunRepository : JpaRepository<RelatedGamePrecompu
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT run FROM RelatedGamePrecomputeRun run WHERE run.id = :runId")
     fun lockById(@Param("runId") runId: String): RelatedGamePrecomputeRun?
+
+    fun findByStatusInOrderByRequestedAtDescIdDesc(
+        statuses: Collection<RelatedGamePrecomputeRunStatus>,
+        pageable: Pageable,
+    ): List<RelatedGamePrecomputeRun>
+
+    fun existsByStatusInAndHeartbeatAtAfter(
+        statuses: Collection<RelatedGamePrecomputeRunStatus>,
+        cutoff: LocalDateTime,
+    ): Boolean
+
+    @Query("""
+        SELECT run.id FROM RelatedGamePrecomputeRun run
+        WHERE run.status IN :statuses AND run.heartbeatAt <= :cutoff
+        ORDER BY run.heartbeatAt, run.id
+    """)
+    fun findStaleIds(
+        @Param("statuses") statuses: Collection<RelatedGamePrecomputeRunStatus>,
+        @Param("cutoff") cutoff: LocalDateTime,
+        pageable: Pageable,
+    ): List<String>
 }

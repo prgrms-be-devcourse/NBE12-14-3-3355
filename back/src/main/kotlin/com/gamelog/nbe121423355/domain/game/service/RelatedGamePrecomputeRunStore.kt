@@ -79,6 +79,29 @@ class RelatedGamePrecomputeRunStore(
         run.heartbeat(ownerId, LocalDateTime.now())
     }
 
+    // 호출자가 공통 실행 잠금을 보유한 복구 구간에서만 사용한다.
+    fun interruptStale(runId: String, cutoff: LocalDateTime): Boolean {
+        val run = runRepository.lockById(runId) ?: return false
+        // 대상 조회 이후 생존 신호나 종료 상태가 갱신됐으면 변경하지 않는다.
+        if (run.status.isTerminal() || run.heartbeatAt.isAfter(cutoff)) return false
+        interrupt(run)
+        return true
+    }
+
+    fun interruptOwned(runId: String, ownerId: String) {
+        val run = lock(runId)
+        if (run.status.isTerminal() || run.ownerId != ownerId) return
+        interrupt(run)
+    }
+
+    private fun interrupt(run: RelatedGamePrecomputeRun) {
+        run.terminate(
+            RelatedGamePrecomputeRunStatus.INTERRUPTED,
+            "실행이 중단되었습니다. 마지막 저장 집계를 확인하고 새 실행을 요청하세요.",
+            LocalDateTime.now(),
+        )
+    }
+
     private fun lock(runId: String): RelatedGamePrecomputeRun =
         checkNotNull(runRepository.lockById(runId)) { "추천 갱신 실행 이력이 없습니다." }
 
