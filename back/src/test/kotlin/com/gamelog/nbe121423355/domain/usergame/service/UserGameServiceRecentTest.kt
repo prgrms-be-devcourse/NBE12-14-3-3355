@@ -60,8 +60,26 @@ class UserGameServiceRecentTest {
         val result = userGameService.getRecentPlayedGames(userId)
 
         assertThat(result).containsExactly(
-            UserGameListResponse(1L, "Game 1", "cover1", null, false, false, false, false),
-            UserGameListResponse(2L, "Game 2", "cover2", null, false, false, false, false),
+            UserGameListResponse(
+                gameId = 1L,
+                title = "Game 1",
+                coverImageUrl = "cover1",
+                playStatus = null,
+                playing = false,
+                backlog = false,
+                wishlist = false,
+                liked = false,
+            ),
+            UserGameListResponse(
+                gameId = 2L,
+                title = "Game 2",
+                coverImageUrl = "cover2",
+                playStatus = null,
+                playing = false,
+                backlog = false,
+                wishlist = false,
+                liked = false,
+            ),
         )
         verify(userGameRepository).findRecentPlayedGames(userId, pageable)
     }

@@ -19,14 +19,14 @@ data class RecentReviewResponse(
     constructor(
         review: Review
     ) : this(
-        checkNotNull(review.id) { "review.id must be present in a persisted response" },
-        checkNotNull(review.userGame.game.id) { "review.userGame.game.id must be present in a persisted response" },
-        checkNotNull(review.userGame.game.title) { "review.userGame.game.title must be present in a persisted response" },
-        review.userGame.game.coverImageUrl,
-        review.userGame.playStatus,
-        review.userGame.platform?.name,
-        review.rating,
-        review.content,
-        checkNotNull(review.lastModifiedDate) { "review.lastModifiedDate must be present in a persisted response" },
+        reviewId = checkNotNull(review.id) { "review.id must be present in a persisted response" },
+        gameId = checkNotNull(review.userGame.game.id) { "review.userGame.game.id must be present in a persisted response" },
+        gameTitle = checkNotNull(review.userGame.game.title) { "review.userGame.game.title must be present in a persisted response" },
+        gameCoverImageUrl = review.userGame.game.coverImageUrl,
+        playStatus = review.userGame.playStatus,
+        platform = review.userGame.platform?.name,
+        rating = review.rating,
+        content = review.content,
+        lastModifiedDate = checkNotNull(review.lastModifiedDate) { "review.lastModifiedDate must be present in a persisted response" },
     )
 }
