@@ -137,23 +137,23 @@ class ApiV1UserController(
     fun updatePreferredGenres(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
         @Valid @RequestBody requestDto: @Valid PreferredGenreRequestDto,
-    ): RsData<MutableList<PreferredGenreResponseDto>> {
-        val result: MutableList<PreferredGenreResponseDto>? =
+    ): RsData<List<PreferredGenreResponseDto>> {
+        val result =
             userPreferenceGenreService.updatePreferredGenres(
                 securityUser.id,
                 requireNotNull(requestDto.genreIds),
             )
-        return RsData<MutableList<PreferredGenreResponseDto>>("200-6", "선호 장르 저장 성공", result)
+        return RsData<List<PreferredGenreResponseDto>>("200-6", "선호 장르 저장 성공", result)
     }
 
     @GetMapping("/me/preferred-genres")
     @Operation(summary = "선호 장르 조회", security = [SecurityRequirement(name = "bearerAuth")])
     fun getPreferredGenres(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
-    ): RsData<MutableList<PreferredGenreResponseDto>> {
-        val result: MutableList<PreferredGenreResponseDto>? =
+    ): RsData<List<PreferredGenreResponseDto>> {
+        val result =
             userPreferenceGenreService.getPreferredGenres(securityUser.id)
-        return RsData<MutableList<PreferredGenreResponseDto>>("200-7", "선호 장르 조회 성공", result)
+        return RsData<List<PreferredGenreResponseDto>>("200-7", "선호 장르 조회 성공", result)
     }
 
     @PutMapping("/me/preferred-games")
@@ -165,22 +165,22 @@ class ApiV1UserController(
     fun updatePreferredGames(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
         @Valid @RequestBody requestDto: @Valid PreferredGameRequestDto,
-    ): RsData<MutableList<PreferredGameResponseDto>> {
-        val result: MutableList<PreferredGameResponseDto>? =
+    ): RsData<List<PreferredGameResponseDto>> {
+        val result =
             userPreferenceGameService.updatePreferredGames(
                 securityUser.id,
                 requireNotNull(requestDto.gameIds),
             )
-        return RsData<MutableList<PreferredGameResponseDto>>("200-8", "선호 게임 저장 성공", result)
+        return RsData<List<PreferredGameResponseDto>>("200-8", "선호 게임 저장 성공", result)
     }
 
     @GetMapping("/me/preferred-games")
     @Operation(summary = "선호 게임 조회", security = [SecurityRequirement(name = "bearerAuth")])
     fun getPreferredGames(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
-    ): RsData<MutableList<PreferredGameResponseDto>> {
+    ): RsData<List<PreferredGameResponseDto>> {
         val result = userPreferenceGameService.getPreferredGames(securityUser.id)
-        return RsData<MutableList<PreferredGameResponseDto>>("200-9", "선호 게임 조회 성공", result)
+        return RsData<List<PreferredGameResponseDto>>("200-9", "선호 게임 조회 성공", result)
     }
 
     @PatchMapping("/me/password")

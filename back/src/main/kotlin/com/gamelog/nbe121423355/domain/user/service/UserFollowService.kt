@@ -10,8 +10,6 @@ import com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaTrim
-import java.util.HashSet
-import java.util.function.Function
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -53,12 +51,12 @@ class UserFollowService(
         val followedIds =
             findFollowedUserIds(
                 loginUserId,
-                result.content.stream().map({ obj: User -> requireNotNull(obj.id) }).toList(),
+                result.content.map { requireNotNull(it.id) },
             )
         val users =
             result.content
                 .stream()
-                .map({ user ->
+                .map { user ->
                     FollowUserResponseDto(
                         user.id,
                         user.nickname,
@@ -67,7 +65,7 @@ class UserFollowService(
                         followedIds.contains(user.id),
                         (user.id == loginUserId),
                     )
-                })
+                }
                 .toList()
         return FollowPageResponseDto(
             users,
@@ -124,7 +122,7 @@ class UserFollowService(
         return createPageResponse(
             loginUserId,
             followPage,
-            Function { obj: UserFollow -> obj.followee },
+            { it.followee },
         )
     }
 
@@ -150,53 +148,45 @@ class UserFollowService(
         return createPageResponse(
             loginUserId,
             followPage,
-            Function { obj: UserFollow -> obj.follower },
+            { it.follower },
         )
     }
 
     private fun createPageResponse(
         loginUserId: Long?,
         followPage: Page<UserFollow>,
-        userExtractor: Function<UserFollow, User>,
+        userExtractor: (UserFollow) -> User,
     ): FollowPageResponseDto {
-        val displayedUserIds: MutableList<Long> =
+        val displayedUserIds = followPage.content.map { requireNotNull(userExtractor(it).id) }
+        val followedUserIds = findFollowedUserIds(loginUserId, displayedUserIds)
+        val users: List<FollowUserResponseDto> =
             followPage.content
                 .stream()
-                .map(userExtractor)
-                .map({ obj: User -> requireNotNull(obj.id) })
-                .toList()
-        val followedUserIds: MutableSet<Long> = findFollowedUserIds(loginUserId, displayedUserIds)
-        val users: MutableList<FollowUserResponseDto> =
-            followPage.content
-                .stream()
-                .map({ userFollow ->
-                    val user: User = userExtractor.apply(userFollow)
+                .map { userFollow ->
+                    val user = userExtractor(userFollow)
                     FollowUserResponseDto(
                         user.id,
                         user.nickname,
                         user.profileImageUrl,
                         userFollow.createdDate,
                         followedUserIds.contains(user.id),
-                        loginUserId != null && loginUserId.equals(user.id),
+                        loginUserId != null && loginUserId == user.id,
                     )
-                })
+                }
                 .toList()
         return FollowPageResponseDto.from(followPage, users)
     }
 
     private fun findFollowedUserIds(
         loginUserId: Long?,
-        displayedUserIds: MutableList<Long>,
-    ): MutableSet<Long> {
+        displayedUserIds: List<Long>,
+    ): Set<Long> {
         if (loginUserId == null || displayedUserIds.isEmpty()) {
-            return java.util.Set.of()
+            return emptySet()
         }
-        return HashSet(
-            userFollowRepository.findFolloweeIdsByFollowerIdAndFolloweeIds(
-                loginUserId,
-                displayedUserIds,
-            )
-        )
+        return userFollowRepository
+            .findFolloweeIdsByFollowerIdAndFolloweeIds(loginUserId, displayedUserIds)
+            .toSet()
     }
 
     private fun validatePageRequest(page: Int, size: Int) {
@@ -209,7 +199,7 @@ class UserFollowService(
     }
 
     private fun validateNotSelfFollow(followerId: Long, targetUserId: Long?) {
-        if (followerId.equals(targetUserId)) {
+        if (followerId == targetUserId) {
             throw ServiceException("400-6", "자기 자신은 팔로우할 수 없습니다.")
         }
     }

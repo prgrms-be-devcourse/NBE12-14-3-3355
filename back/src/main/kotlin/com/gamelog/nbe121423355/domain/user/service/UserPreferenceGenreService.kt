@@ -19,8 +19,8 @@ class UserPreferenceGenreService(
     @Transactional
     fun updatePreferredGenres(
         userId: Long,
-        genreIds: MutableList<Long>,
-    ): MutableList<PreferredGenreResponseDto> {
+        genreIds: List<Long>,
+    ): List<PreferredGenreResponseDto> {
         if (genreIds.size > 3) {
             throw ServiceException("400-12", "선호 장르는 최대 3개까지 선택 가능합니다.") // 온보딩 장르 최대 3개 선택
         }
@@ -33,18 +33,18 @@ class UserPreferenceGenreService(
             throw ServiceException("400-11", "존재하지 않는 장르가 포함되어 있습니다.")
         }
         userPreferenceGenreRepository.deleteByUser_Id(userId)
-        val newPreferences: MutableList<UserPreferenceGenre> =
-            genres.stream().map({ genre -> UserPreferenceGenre(user, genre) }).toList()
+        val newPreferences: List<UserPreferenceGenre> =
+            genres.stream().map { genre -> UserPreferenceGenre(user, genre) }.toList()
         userPreferenceGenreRepository.saveAll(newPreferences)
-        return newPreferences.stream().map({ value -> PreferredGenreResponseDto(value) }).toList()
+        return newPreferences.stream().map { value -> PreferredGenreResponseDto(value) }.toList()
     }
 
     // 온보딩 장르정보 가져오기
-    fun getPreferredGenres(userId: Long?): MutableList<PreferredGenreResponseDto> {
+    fun getPreferredGenres(userId: Long?): List<PreferredGenreResponseDto> {
         return userPreferenceGenreRepository
             .findByUser_Id(userId)
             .stream()
-            .map({ value -> PreferredGenreResponseDto(value) })
+            .map { value -> PreferredGenreResponseDto(value) }
             .toList()
     }
 }
