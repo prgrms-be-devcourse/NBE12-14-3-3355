@@ -7,7 +7,6 @@ import com.gamelog.nbe121423355.domain.user.repository.UserPreferenceGenreReposi
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import jakarta.transaction.Transactional
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 
 @Service
@@ -26,8 +25,9 @@ class UserPreferenceGenreService(
             throw ServiceException("400-12", "선호 장르는 최대 3개까지 선택 가능합니다.") // 온보딩 장르 최대 3개 선택
         }
         val user =
-            userRepository.findByIdOrNull(userId)
-                ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
+            userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow {
+                ServiceException("404-1", "존재하지 않는 유저입니다.")
+            }
         val genres = genreRepository.findAllById(genreIds)
         if (genres.size != genreIds.size) {
             throw ServiceException("400-11", "존재하지 않는 장르가 포함되어 있습니다.")
