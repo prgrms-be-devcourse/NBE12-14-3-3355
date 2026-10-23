@@ -7,6 +7,8 @@ CREATE TABLE related_game_precompute_runs (
     source_run_id VARCHAR(36) NULL,
     owner_id VARCHAR(36) NOT NULL,
     status VARCHAR(20) NOT NULL,
+    initialize_baseline BOOLEAN NOT NULL DEFAULT FALSE,
+    baseline_registered_at DATETIME(6) NULL,
     upper_game_id BIGINT NULL,
     estimated_total BIGINT NULL,
     processed BIGINT NOT NULL,

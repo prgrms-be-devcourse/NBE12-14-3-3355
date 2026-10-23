@@ -27,6 +27,8 @@ data class AdminRelatedGamePrecomputeRunResponse(
     val heartbeatExpired: Boolean,
     val elapsedSeconds: Long,
     val error: String?,
+    val initializeBaseline: Boolean,
+    val baselineRegisteredAt: LocalDateTime?,
 ) {
     companion object {
         fun from(run: RelatedGamePrecomputeRun, now: LocalDateTime, staleAfter: Duration) =
@@ -38,7 +40,7 @@ data class AdminRelatedGamePrecomputeRunResponse(
                 !run.status.isTerminal() && !run.heartbeatAt.isAfter(now.minus(staleAfter)),
                 Duration.between(run.startedAt ?: run.requestedAt, run.finishedAt ?: now)
                     .seconds.coerceAtLeast(0),
-                run.error,
+                run.error, run.initializeBaseline, run.baselineRegisteredAt,
             )
     }
 }

@@ -11,7 +11,10 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/v1/admin/related-game-precompute")
-class AdminRelatedGamePrecomputeController(private val service: AdminRelatedGamePrecomputeService) {
+class AdminRelatedGamePrecomputeController(
+    private val service: AdminRelatedGamePrecomputeService,
+    private val changes: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeQueryService,
+) {
     @PostMapping("/runs")
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun start(
@@ -19,6 +22,15 @@ class AdminRelatedGamePrecomputeController(private val service: AdminRelatedGame
         @Valid @RequestBody request: AdminRelatedGamePrecomputeRequest,
     ): RsData<AdminRelatedGamePrecomputeRunResponse> =
         RsData("202-1", "추천 갱신 요청을 접수했습니다.", service.start(user.id, request))
+
+    @GetMapping("/changes")
+    fun changes() = RsData("200-1", "추천 입력 변경과 갱신 대기 현황", changes.summary())
+
+    @GetMapping("/changes/targets")
+    fun pendingTargets(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ) = RsData("200-1", "갱신 대기 기준 게임", changes.pending(page, size))
 
     @GetMapping("/status")
     fun status(): RsData<AdminRelatedGamePrecomputeStatusResponse> =

@@ -44,6 +44,19 @@ class AdminRelatedGamePrecomputeServiceTest {
     void stopWorker() { service.stop(); }
 
     @Test
+    void baselineOptionIsRejectedForPartialRunsBeforeCreatingHistory() {
+        // given: 변경 기반 부분 갱신에 초기 기준선 옵션을 잘못 지정한다.
+        var request = new AdminRelatedGamePrecomputeRequest(RelatedGamePrecomputeTargetType.CHANGED, null, null, true);
+
+        // when: 초기 기준선 접수를 시도한다.
+        var error = catchThrowable(() -> service.start(7, request));
+
+        // then: 전체 갱신 전용 옵션임을 안내하고 이력·계산을 만들지 않는다.
+        assertThat(error).isInstanceOf(ServiceException.class).hasMessageContaining("전체 갱신");
+        verifyNoInteractions(store, batch);
+    }
+
+    @Test
     void invalidIdRejectsWholeRequestBeforeDatabaseWrite() {
         // given: 양수 ID 사이에 잘못된 문자열을 포함한다.
         var request = request(RelatedGamePrecomputeTargetType.IDS, "1, invalid 2", null);

@@ -111,10 +111,13 @@ class AdminRelatedGamePrecomputeService(
             if (text.isNotBlank()) throw badRequest("지정 ID 실행에만 게임 ID를 입력해야 합니다.")
             emptyList()
         }
-        val target = RelatedGamePrecomputeTarget(type, ids)
+        if (request.initializeBaseline && type != RelatedGamePrecomputeTargetType.ALL) {
+            throw badRequest("초기 기준선은 전체 갱신에서만 설정할 수 있습니다.")
+        }
+        val target = RelatedGamePrecomputeTarget(type, ids, request.initializeBaseline)
         request.sourceRunId?.let { sourceId ->
             val original = query.replayTarget(sourceId)
-            if (original.type != type || original.normalizedIds() != target.normalizedIds()) {
+            if (original.type != type || original.normalizedIds() != target.normalizedIds() || original.initializeBaseline != target.initializeBaseline) {
                 throw badRequest("원본 실행과 같은 종류·지정 ID로 다시 요청해야 합니다.")
             }
         }
@@ -125,6 +128,7 @@ class AdminRelatedGamePrecomputeService(
         val delegate = tracker.observer(runId)
         val observer = object : RelatedGamePrecomputeObserver {
             override fun onAcquired() { checkActive(); delegate.onAcquired() }
+            override fun onBaselineRegistered() { checkActive(); delegate.onBaselineRegistered() }
             override fun onPrepared(upperId: Long?, estimatedTotal: Long) {
                 checkActive(); delegate.onPrepared(upperId, estimatedTotal)
             }

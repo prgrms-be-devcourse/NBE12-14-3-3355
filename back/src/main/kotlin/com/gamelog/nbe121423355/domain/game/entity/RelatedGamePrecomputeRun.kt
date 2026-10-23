@@ -63,6 +63,14 @@ class RelatedGamePrecomputeRun protected constructor() {
     var status: RelatedGamePrecomputeRunStatus = RelatedGamePrecomputeRunStatus.ACCEPTED
         protected set
 
+    @Column(name = "initialize_baseline", nullable = false)
+    var initializeBaseline: Boolean = false
+        protected set
+
+    @Column(name = "baseline_registered_at")
+    var baselineRegisteredAt: LocalDateTime? = null
+        protected set
+
     @Column(name = "upper_game_id")
     var upperGameId: Long? = null
         protected set
@@ -121,6 +129,7 @@ class RelatedGamePrecomputeRun protected constructor() {
         require(ids.size <= 1_000) { "관리자 지정 ID는 최대 1,000개입니다." }
         this.requestedBy = requestedBy
         this.targetType = target.type
+        this.initializeBaseline = target.initializeBaseline
         this.requestedGameIds = ids.takeIf { it.isNotEmpty() }?.joinToString(",")
         this.sourceRunId = sourceRunId
         this.ownerId = ownerId
@@ -131,6 +140,7 @@ class RelatedGamePrecomputeRun protected constructor() {
     fun target(): RelatedGamePrecomputeTarget = RelatedGamePrecomputeTarget(
         targetType,
         requestedGameIds?.split(',')?.map(String::toLong) ?: emptyList(),
+        initializeBaseline,
     )
 
     fun start(now: LocalDateTime) {
@@ -138,6 +148,11 @@ class RelatedGamePrecomputeRun protected constructor() {
         status = RelatedGamePrecomputeRunStatus.PREPARING
         startedAt = now
         heartbeatAt = now
+    }
+
+    fun baselineRegistered(now: LocalDateTime) {
+        check(initializeBaseline && status == RelatedGamePrecomputeRunStatus.PREPARING)
+        baselineRegisteredAt = now
     }
 
     fun prepared(upperId: Long?, total: Long, now: LocalDateTime) {

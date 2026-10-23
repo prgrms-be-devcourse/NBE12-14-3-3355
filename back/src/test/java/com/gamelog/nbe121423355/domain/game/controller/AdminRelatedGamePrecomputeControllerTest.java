@@ -43,14 +43,31 @@ class AdminRelatedGamePrecomputeControllerTest {
     @Autowired MockMvc mvc;
     @Autowired ApplicationContext context;
     @MockitoBean AdminRelatedGamePrecomputeService service;
+    @MockitoBean com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeQueryService changeQuery;
     @MockitoBean JwtProvider jwtProvider;
     @MockitoBean TokenReissueService tokenReissueService;
     @MockitoBean RefreshTokenCookieFactory refreshTokenCookieFactory;
 
     @Test
+    void adminCanReadSeparateChangeCountsAndPendingTargets() throws Exception {
+        // given: 미확장 변경 수와 선정 대기 수가 다른 관리자 응답을 준비한다.
+        when(changeQuery.summary()).thenReturn(new com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeSummary(3, 7));
+        when(changeQuery.pending(0, 10)).thenReturn(new AdminRelatedGamePrecomputePage<>(List.of(), 0, 10, 0, 0));
+
+        // when: 관리자 인증으로 신규 현황·대기 목록 API를 조회한다.
+        var summary = mvc.perform(get(BASE + "/changes").with(user(admin())));
+        var pending = mvc.perform(get(BASE + "/changes/targets?size=10").with(user(admin())));
+
+        // then: 두 수를 합산하지 않고 각각 반환하며 대기 목록의 페이지 계약을 유지한다.
+        summary.andExpect(status().isOk()).andExpect(jsonPath("$.data.unexpandedGames").value(3))
+                .andExpect(jsonPath("$.data.pendingTargets").value(7));
+        pending.andExpect(status().isOk()).andExpect(jsonPath("$.data.content").isEmpty());
+    }
+
+    @Test
     void anonymousAndOrdinaryUsersCannotUseAnyEndpoint() throws Exception {
         // given: 조회·실행 경로와 일반 사용자 인증 정보를 준비한다.
-        var paths = List.of("/status", "/runs", "/runs/unknown", "/runs/unknown/failures");
+        var paths = List.of("/status", "/runs", "/runs/unknown", "/runs/unknown/failures", "/changes", "/changes/targets");
 
         // when: 인증 없이 또는 일반 사용자로 관리자 API를 호출한다.
         var anonymous = mvc.perform(post(BASE + "/runs").contentType(MediaType.APPLICATION_JSON).content("{\"type\":\"ALL\"}")).andReturn();
