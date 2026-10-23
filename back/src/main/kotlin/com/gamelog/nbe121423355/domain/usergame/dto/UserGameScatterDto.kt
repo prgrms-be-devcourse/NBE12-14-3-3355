@@ -4,9 +4,9 @@ import java.math.BigDecimal
 
 @JvmRecord
 data class UserGameScatterDto(
-    val gameId: Long?,
-    val title: String?,
+    val gameId: Long,
+    val title: String,
     val coverImage: String?,
-    val playTime: BigDecimal?,
-    val rating: BigDecimal?,
+    val playTime: BigDecimal,
+    val rating: BigDecimal,
 ) {}

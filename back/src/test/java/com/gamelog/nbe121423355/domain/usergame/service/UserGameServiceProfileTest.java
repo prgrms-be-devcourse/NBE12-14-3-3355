@@ -58,6 +58,7 @@ public class UserGameServiceProfileTest {
     void anonymousProfile() {
         // given: 조회 대상 사용자가 존재
         when(userRepository.existsByIdAndDeletedAtIsNull(2L)).thenReturn(true);
+        when(reviewRepository.findAverageRating(2L)).thenReturn(BigDecimal.ZERO);
         // when: 비로그인 상태로 조회
         UserProfileResponse result = userGameService.profileTab(2L, null);
         // then: 대상 사용자와 공개 조회 상태를 반환
@@ -72,6 +73,7 @@ public class UserGameServiceProfileTest {
     void otherUserProfile() {
         // given: 현재 사용자가 조회 대상을 팔로우
         when(userRepository.existsByIdAndDeletedAtIsNull(2L)).thenReturn(true);
+        when(reviewRepository.findAverageRating(2L)).thenReturn(BigDecimal.ZERO);
         when(userFollowRepository.existsByFollowerIdAndFolloweeId(1L, 2L)).thenReturn(true);
         // when: 다른 사용자의 프로필을 조회
         UserProfileResponse result = userGameService.profileTab(2L, 1L);

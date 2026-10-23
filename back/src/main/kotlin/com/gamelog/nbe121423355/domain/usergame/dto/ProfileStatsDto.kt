@@ -5,6 +5,6 @@ import java.math.BigDecimal
 @JvmRecord
 data class ProfileStatsDto(
     val playedGameCount: Long,
-    val averageRating: BigDecimal?,
-    val totalPlayTime: BigDecimal?,
+    val averageRating: BigDecimal,
+    val totalPlayTime: BigDecimal,
 ) {}

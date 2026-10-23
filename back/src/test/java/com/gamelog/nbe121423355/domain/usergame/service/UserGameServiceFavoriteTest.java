@@ -64,6 +64,8 @@ class UserGameServiceFavoriteTest {
 
         given(game1.getId()).willReturn(10L);
         given(game2.getId()).willReturn(20L);
+        given(game1.getTitle()).willReturn("Game 1");
+        given(game2.getTitle()).willReturn("Game 2");
 
         given(userGame1.getGame()).willReturn(game1);
         given(userGame2.getGame()).willReturn(game2);

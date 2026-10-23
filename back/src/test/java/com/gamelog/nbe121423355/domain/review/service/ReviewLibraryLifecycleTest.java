@@ -63,7 +63,7 @@ class ReviewLibraryLifecycleTest {
     private UserGame reload() {
         em.flush();
         em.clear();
-        return records.findByUser_IdAndGame_Id(userId, gameId).orElseThrow();
+        return java.util.Objects.requireNonNull(records.findByUser_IdAndGame_Id(userId, gameId));
     }
 
     @ParameterizedTest

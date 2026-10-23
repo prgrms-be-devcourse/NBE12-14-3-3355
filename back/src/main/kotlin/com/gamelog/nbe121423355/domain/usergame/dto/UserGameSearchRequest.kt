@@ -23,11 +23,11 @@ class UserGameSearchRequest {
 
     @Schema(description = "플랫폼 ID 필터", example = "[1, 6]", nullable = true)
     @field:Size(max = 100)
-    var platformIds: MutableList<@NotNull @Positive Long>? = null
+    var platformIds: List<@NotNull @Positive Long>? = null
 
     @Schema(description = "장르 ID 필터", example = "[5, 12]", nullable = true)
     @field:Size(max = 100)
-    var genreIds: MutableList<@NotNull @Positive Long>? = null
+    var genreIds: List<@NotNull @Positive Long>? = null
 
     @Schema(description = "페이지 번호(0부터 시작)", example = "0", defaultValue = "0", minimum = "0")
     @field:Min(0)

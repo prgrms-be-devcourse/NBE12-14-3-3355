@@ -173,7 +173,7 @@ class UserWithdrawTest {
         assertThat(reviewRepository.findById(activeReview.getId()).orElseThrow().getDeletedAt()).isNotNull();
         assertThat(reviewRepository.findById(adminHiddenReview.getId()).orElseThrow().getStatus()).isEqualTo(ReviewStatus.HIDDEN_BY_ADMIN);
         assertThat(reviewRepository.findById(otherReview.getId()).orElseThrow().isActive()).isTrue();
-        assertThat(userGameRepository.findByUser_IdAndGame_Id(user.getId(), game1.getId())).isPresent();
+        assertThat(userGameRepository.findByUser_IdAndGame_Id(user.getId(), game1.getId())).isNotNull();
     }
 
     @Test
@@ -283,7 +283,10 @@ class UserWithdrawTest {
             verify(imageUploadService).deleteImage(imageUrl);
         } finally {
             reviewRepository.deleteById(review.getId());
-            userGameRepository.findByUser_IdAndGame_Id(user.getId(), game.getId()).ifPresent(userGameRepository::delete);
+            var userGame = userGameRepository.findByUser_IdAndGame_Id(user.getId(), game.getId());
+            if (userGame != null) {
+                userGameRepository.delete(userGame);
+            }
             gameRepository.deleteById(game.getId());
             userRepository.deleteById(user.getId());
         }

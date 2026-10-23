@@ -4,6 +4,6 @@ import java.math.BigDecimal
 
 @JvmRecord
 data class UserGameGenreDistributionResponse(
-    val genreName: String?,
-    val ratio: BigDecimal?,
+    val genreName: String,
+    val ratio: BigDecimal,
 ) {}

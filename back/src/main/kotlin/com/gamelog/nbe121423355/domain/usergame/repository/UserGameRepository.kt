@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameGenreDTO
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameScatterDto
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
-import java.util.Optional
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -12,54 +11,45 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface UserGameRepository : JpaRepository<UserGame, Long> {
-    fun findByUser_IdAndGame_Id(userId: Long?, gameId: Long?): Optional<UserGame>
-
-    fun findAllByUser_IdAndInLibraryTrue(
-        userId: Long?,
-        pageable: Pageable?,
-    ): Page<UserGame>
+    fun findByUser_IdAndGame_Id(userId: Long, gameId: Long): UserGame?
 
     fun findAllByUser_IdAndGame_IdInAndInLibraryTrue(
-        userId: Long?,
-        gameIds: MutableList<Long>?,
-    ): MutableList<UserGame>
+        userId: Long,
+        gameIds: List<Long>,
+    ): List<UserGame>
 
     @Query(
         value =
-            "SELECT ug " +
-                UserGameRepository.LIBRARY_FILTERS +
+            "SELECT ug $LIBRARY_FILTERS" +
                 """
-            ORDER BY
-              CASE WHEN :sort = 'RECENT_PLAYED' AND ug.lastPlayedAt IS NULL THEN 1 ELSE 0 END,
-              CASE WHEN :sort = 'RECENT_PLAYED' THEN ug.lastPlayedAt END DESC,
-              CASE WHEN :sort = 'RATING' AND r.rating IS NULL THEN 1 ELSE 0 END,
-              CASE WHEN :sort = 'RATING' THEN r.rating END DESC,
-              CASE WHEN :sort = 'TITLE' THEN g.title END ASC,
-              CASE WHEN :sort = 'PLAY_TIME' AND ug.playTimeHours IS NULL THEN 1 ELSE 0 END,
-              CASE WHEN :sort = 'PLAY_TIME' THEN ug.playTimeHours END DESC,
-              ug.id DESC
-
-            """,
-        countQuery = "SELECT COUNT(ug) " + UserGameRepository.LIBRARY_FILTERS,
+                ORDER BY
+                  CASE WHEN :sort = 'RECENT_PLAYED' AND ug.lastPlayedAt IS NULL THEN 1 ELSE 0 END,
+                  CASE WHEN :sort = 'RECENT_PLAYED' THEN ug.lastPlayedAt END DESC,
+                  CASE WHEN :sort = 'RATING' AND r.rating IS NULL THEN 1 ELSE 0 END,
+                  CASE WHEN :sort = 'RATING' THEN r.rating END DESC,
+                  CASE WHEN :sort = 'TITLE' THEN g.title END ASC,
+                  CASE WHEN :sort = 'PLAY_TIME' AND ug.playTimeHours IS NULL THEN 1 ELSE 0 END,
+                  CASE WHEN :sort = 'PLAY_TIME' THEN ug.playTimeHours END DESC,
+                  ug.id DESC
+    
+                """,
+        countQuery = "SELECT COUNT(ug) $LIBRARY_FILTERS",
     )
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = ["game"])
     fun findByLibraryFilters(
-        @Param("userId") userId: Long?,
-        @Param("status") status: String?,
+        @Param("userId") userId: Long,
+        @Param("status") status: String,
         @Param("keyword") keyword: String?,
         @Param("filterPlatforms") filterPlatforms: Boolean,
-        @Param("platformIds") platformIds: MutableList<Long>,
+        @Param("platformIds") platformIds: List<Long>,
         @Param("filterGenres") filterGenres: Boolean,
-        @Param("genreIds") genreIds: MutableList<Long>,
-        @Param("sort") sort: String?,
-        pageable: Pageable?,
+        @Param("genreIds") genreIds: List<Long>,
+        @Param("sort") sort: String,
+        pageable: Pageable,
     ): Page<UserGame>
 
-    @Query(
-        "SELECT ug FROM UserGame ug WHERE ug.user.id = :userId AND ug.inLibrary = true AND " +
-            UserGameRepository.PLAYED_GAME
-    )
-    fun findPlayedGames(@Param("userId") userId: Long?): MutableList<UserGame>
+    @Query("SELECT ug FROM UserGame ug WHERE ug.user.id = :userId AND ug.inLibrary = true AND $PLAYED_GAME")
+    fun findPlayedGames(@Param("userId") userId: Long): List<UserGame>
 
     @Query(
         """
@@ -72,10 +62,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
     )
     FROM UserGame ug
     JOIN ug.game g
-
-    """ +
-            UserGameRepository.ACTIVE_REVIEW_JOIN +
-            """
+        $ACTIVE_REVIEW_JOIN
     WHERE ug.user.id = :userId
       AND ug.inLibrary = true
       AND ug.playTimeHours > 0
@@ -83,7 +70,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 
 """
     )
-    fun findPlayedGameScatterData(@Param("userId") userId: Long?): MutableList<UserGameScatterDto>
+    fun findPlayedGameScatterData(@Param("userId") userId: Long): List<UserGameScatterDto>
 
     @Query(
         """
@@ -98,17 +85,13 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
         JOIN gg.genre genre
         WHERE ug.user.id = :userId
           AND ug.inLibrary = true
-          AND
-
-        """ +
-            UserGameRepository.PLAYED_GAME +
-            """
+          AND $PLAYED_GAME
         GROUP BY genre.id, genre.name
         ORDER BY COUNT(DISTINCT ug.game.id) DESC
 
     """
     )
-    fun findGenreDistribution(@Param("userId") userId: Long?): MutableList<UserGameGenreDTO>
+    fun findGenreDistribution(@Param("userId") userId: Long): List<UserGameGenreDTO>
 
     @Query(
         """
@@ -123,22 +106,19 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
 """
     )
     fun findRecentPlayedGames(
-        @Param("userId") userId: Long?,
-        pageable: Pageable?,
-    ): MutableList<UserGame>
+        @Param("userId") userId: Long,
+        pageable: Pageable,
+    ): List<UserGame>
 
     companion object {
         const val ACTIVE_REVIEW_JOIN: String =
-            " LEFT JOIN Review r ON r.userGame = ug AND " + ReviewRepository.ACTIVE_REVIEW + " "
+            " LEFT JOIN Review r ON r.userGame = ug AND ${ReviewRepository.ACTIVE_REVIEW} "
         const val PLAYED_GAME: String =
             """
             (ug.playStatus IS NOT NULL OR ug.playing = true OR ug.playTimeHours > 0
                 OR EXISTS (SELECT r.id FROM Review r WHERE r.userGame = ug
                     AND r.rating IS NOT NULL AND
-
-            """ +
-                ReviewRepository.ACTIVE_REVIEW +
-                ")) "
+                    ${ReviewRepository.ACTIVE_REVIEW})) """
 
         // EXISTS prevents multi-genre games from duplicating rows and corrupting pagination.
         const val LIBRARY_FILTERS: String =
@@ -146,9 +126,7 @@ interface UserGameRepository : JpaRepository<UserGame, Long> {
             FROM UserGame ug
             JOIN ug.game g
 
-            """ +
-                UserGameRepository.ACTIVE_REVIEW_JOIN +
-                """
+            $ACTIVE_REVIEW_JOIN 
             WHERE ug.user.id = :userId
               AND (ug.inLibrary = true OR (:status = 'LIKED' AND ug.liked = true))
               AND (:status = 'ALL'
