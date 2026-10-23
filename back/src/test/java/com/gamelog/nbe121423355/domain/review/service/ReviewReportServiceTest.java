@@ -3,6 +3,7 @@ package com.gamelog.nbe121423355.domain.review.service;
 import com.gamelog.nbe121423355.domain.game.entity.Game;
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest;
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest;
+import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportGroupResponse;
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus;
 import com.gamelog.nbe121423355.domain.review.entity.Review;
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport;
@@ -114,6 +115,27 @@ class ReviewReportServiceTest {
         assertThat(response.reports().get(0).reportCount()).isEqualTo(2);
         assertThat(response.reports().get(0).pendingReportCount()).isEqualTo(2);
         assertThat(response.reports().get(0).reports()).hasSize(2);
+    }
+
+    @DisplayName("신고 조회 결과 순서와 관계없이 페이지의 리뷰 순서를 유지한다")
+    @Test
+    void reportGroupsFollowPageOrder() {
+        Game game = mock(Game.class);
+        when(review.getUserGame().getGame()).thenReturn(game);
+        Review anotherReview = new Review(review.getUserGame(), BigDecimal.ONE, "다른 리뷰", false);
+        ReflectionTestUtils.setField(anotherReview, "id", 11L);
+        ReviewReport firstReport = new ReviewReport(review, reporter, "첫 신고");
+        ReviewReport secondReport = new ReviewReport(anotherReview, reporter, "다른 게임 신고");
+        PageRequest pageable = PageRequest.of(0, 20);
+        when(reviewReportRepository.findReviewIdsGroupedByReview(ReportStatus.PENDING, pageable))
+                .thenReturn(new PageImpl<>(List.of(11L, 10L), pageable, 2));
+        when(reviewReportRepository.findAllByReviewIdsAndStatus(List.of(11L, 10L), ReportStatus.PENDING))
+                .thenReturn(List.of(firstReport, secondReport));
+
+        var response = reviewReportService.getReports(ReportStatus.PENDING, pageable);
+
+        assertThat(response.reports()).extracting(ReviewReportGroupResponse::reviewId)
+                .containsExactly(11L, 10L);
     }
 
     @DisplayName("신고를 승인하면 리뷰를 관리자 숨김 처리한다")

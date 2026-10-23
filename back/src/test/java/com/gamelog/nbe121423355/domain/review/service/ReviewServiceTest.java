@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -89,7 +91,11 @@ class ReviewServiceTest {
         when(userGameRepository.findById(USER_GAME_ID)).thenReturn(Optional.of(userGame));
         when(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID)).thenReturn(Optional.empty());
         when(reviewRepository.save(any(Review.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+                .thenAnswer(invocation -> {
+                    Review savedReview = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(savedReview, "id", 10L);
+                    return savedReview;
+                });
 
         var response = reviewService.saveReview(
                 USER_ID,
@@ -376,7 +382,7 @@ class ReviewServiceTest {
                         ((ServiceException) exception).getResultCode()
                 ).isEqualTo("409-6"));
 
-        verify(reviewCommentService, never()).purge(any());
+        verify(reviewCommentService, never()).purge(anyLong());
         verify(review, never()).deleteByUser();
         verify(reviewRepository, never()).flush();
     }
@@ -444,7 +450,7 @@ class ReviewServiceTest {
 
         assertThat(response.userGame()).isNull();
         assertThat(response.review()).isNull();
-        verify(reviewRepository, never()).findByUserGame_Id(any());
+        verify(reviewRepository, never()).findByUserGame_Id(anyLong());
     }
 
     @DisplayName("게임 기록만 있으면 내 상세 조회의 리뷰는 null이다")
@@ -496,6 +502,7 @@ class ReviewServiceTest {
 
     private Review prepareReview() {
         Review review = org.mockito.Mockito.mock(Review.class);
+        lenient().when(review.getId()).thenReturn(10L);
         when(review.getUserGame()).thenReturn(userGame);
         return review;
     }

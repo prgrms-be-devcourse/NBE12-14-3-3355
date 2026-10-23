@@ -10,12 +10,11 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class PopularReviewService constructor(private val reviewLikeRepository: ReviewLikeRepository) {
-    fun getPopularReviews(size: Int): MutableList<PopularReviewResponse> {
+    fun getPopularReviews(size: Int): List<PopularReviewResponse> {
         validateSize(size)
         return reviewLikeRepository
             .findPopularReviews(PageRequest.of(0, size))
-            .stream()
-            .map({ review ->
+            .map { review ->
                 PopularReviewResponse(
                     review.reviewId,
                     review.userId,
@@ -30,8 +29,7 @@ class PopularReviewService constructor(private val reviewLikeRepository: ReviewL
                     review.likeCount,
                     review.createdDate,
                 )
-            })
-            .toList()
+            }
     }
 
     private fun validateSize(size: Int) {

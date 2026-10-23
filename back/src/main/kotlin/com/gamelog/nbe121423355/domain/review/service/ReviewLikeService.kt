@@ -20,7 +20,7 @@ constructor(
     private val userRepository: UserRepository,
 ) {
     @Transactional
-    fun addLike(userId: Long, reviewId: Long?): ReviewLikeResponse {
+    fun addLike(userId: Long, reviewId: Long): ReviewLikeResponse {
         val review = getReview(reviewId)
         val user = getUser(userId)
         // 같은 리뷰에 좋아요를 한 번만 누를 수 있음.
@@ -32,7 +32,7 @@ constructor(
     }
 
     @Transactional
-    fun removeLike(userId: Long?, reviewId: Long?): ReviewLikeResponse {
+    fun removeLike(userId: Long, reviewId: Long): ReviewLikeResponse {
         getReview(reviewId)
         if (!reviewLikeRepository.existsByReview_IdAndUser_Id(reviewId, userId)) {
             throw ServiceException("404-6", "좋아요 기록을 찾을 수 없습니다.")
@@ -41,19 +41,19 @@ constructor(
         return createResponse(reviewId, false)
     }
 
-    fun getLikeStatus(userId: Long?, reviewId: Long?): ReviewLikeResponse {
+    fun getLikeStatus(userId: Long?, reviewId: Long): ReviewLikeResponse {
         getReview(reviewId)
         val liked =
             userId != null && reviewLikeRepository.existsByReview_IdAndUser_Id(reviewId, userId)
         return createResponse(reviewId, liked)
     }
 
-    private fun createResponse(reviewId: Long?, liked: Boolean): ReviewLikeResponse {
+    private fun createResponse(reviewId: Long, liked: Boolean): ReviewLikeResponse {
         val likeCount = reviewLikeRepository.countByReview_Id(reviewId)
         return ReviewLikeResponse(reviewId, likeCount, liked)
     }
 
-    private fun getReview(reviewId: Long?): Review {
+    private fun getReview(reviewId: Long): Review {
         return reviewRepository
             .findActiveById(reviewId)
             .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })

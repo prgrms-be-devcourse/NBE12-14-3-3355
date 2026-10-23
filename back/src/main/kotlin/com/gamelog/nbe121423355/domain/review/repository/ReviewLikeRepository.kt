@@ -9,10 +9,10 @@ import org.springframework.data.repository.query.Param
 
 interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
     // 같은 사용자의 중복 좋아요 확인.
-    fun existsByReview_IdAndUser_Id(reviewId: Long?, userId: Long?): Boolean
+    fun existsByReview_IdAndUser_Id(reviewId: Long, userId: Long): Boolean
 
     // 리뷰의 좋아요 수 확인.
-    fun countByReview_Id(reviewId: Long?): Long
+    fun countByReview_Id(reviewId: Long): Long
 
     @Query(
         """
@@ -24,8 +24,8 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
             """
     )
     fun findLikeCountsByReviewIds(
-        @Param("reviewIds") reviewIds: Collection<Long>?
-    ): MutableList<ReviewLikeCountProjection>
+        @Param("reviewIds") reviewIds: Collection<Long>
+    ): List<ReviewLikeCountProjection>
 
     @Query(
         """
@@ -72,7 +72,7 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
 
             """
     )
-    fun findPopularReviews(pageable: Pageable?): MutableList<PopularReviewProjection>
+    fun findPopularReviews(pageable: Pageable): List<PopularReviewProjection>
 
     @Query(
         """
@@ -88,7 +88,7 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
 
             """
     )
-    fun countVisibleLikesByUserId(@Param("userId") userId: Long?): Long
+    fun countVisibleLikesByUserId(@Param("userId") userId: Long): Long
 
     @Query(
         """
@@ -104,8 +104,8 @@ interface ReviewLikeRepository : JpaRepository<ReviewLike, ReviewLikeId> {
 
             """
     )
-    fun countVisibleLikesByGameId(@Param("gameId") gameId: Long?): Long
+    fun countVisibleLikesByGameId(@Param("gameId") gameId: Long): Long
 
     // 사용자가 누른 좋아요 취소.
-    fun deleteByReview_IdAndUser_Id(reviewId: Long?, userId: Long?)
+    fun deleteByReview_IdAndUser_Id(reviewId: Long, userId: Long)
 }

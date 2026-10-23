@@ -30,7 +30,7 @@ constructor(
             )
         val review: ReviewResponse?
         if (request.review == null || !request.review.hasReviewContent()) {
-            review = reviewService.getReviewByUserGameId(userGameResult.userGame.id)
+            review = reviewService.getReviewByUserGameId(checkNotNull(userGameResult.userGame.id))
         } else {
             review =
                 reviewService.saveReview(
@@ -51,15 +51,15 @@ constructor(
     }
 
     @Transactional
-    fun updateReview(userId: Long, reviewId: Long?, request: ReviewSaveRequest): ReviewResponse {
+    fun updateReview(userId: Long, reviewId: Long, request: ReviewSaveRequest): ReviewResponse {
         val review = reviewService.updateReview(userId, reviewId, request)
         userGameService.synchronizeLibraryState(requireNotNull(review.userGameId))
         return review
     }
 
     @Transactional
-    fun deleteReview(userId: Long, reviewId: Long?, version: Long?) {
+    fun deleteReview(userId: Long, reviewId: Long, version: Long?) {
         val userGameId = reviewService.deleteReview(userId, reviewId, version)
-        userGameService.synchronizeLibraryState(requireNotNull(userGameId))
+        userGameService.synchronizeLibraryState(userGameId)
     }
 }
