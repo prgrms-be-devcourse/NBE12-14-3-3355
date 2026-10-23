@@ -51,7 +51,7 @@ class GameTranslationService(
                     }
                 if (source == null || source.javaIsBlank()) continue
                 val hash = GameTranslationService.hash(source)
-                if (hash.equals(game.descriptionTranslatedHash)) continue
+                if (hash == game.descriptionTranslatedHash) continue
                 val korean: String?
                 try {
                     korean = client.translate(source)
@@ -60,7 +60,7 @@ class GameTranslationService(
                     GameTranslationService.log.warn(
                         "번역 중단: gameId={}, 원인={}. 키·한도·네트워크를 확인 후 재실행하세요.",
                         game.id,
-                        exception.javaClass.getSimpleName(),
+                        exception.javaClass.simpleName,
                     )
                     return translated
                 }

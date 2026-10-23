@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -24,6 +25,31 @@ class GameFilterControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private GenreRepository genres;
     @Autowired private PlatformRepository platforms;
+
+    @Test
+    void returnsEmptyArraysWhenNoFiltersExist() throws Exception {
+        mockMvc.perform(get("/api/v1/games/filters"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.genres").isArray())
+                .andExpect(jsonPath("$.data.genres").isEmpty())
+                .andExpect(jsonPath("$.data.platforms").isArray())
+                .andExpect(jsonPath("$.data.platforms").isEmpty());
+    }
+
+    @Test
+    void sortsBothFilterListsByNameRegardlessOfInsertionOrder() throws Exception {
+        genres.save(Genre.createFromIgdb(80001L, "Zulu"));
+        genres.save(Genre.createFromIgdb(80002L, "Alpha"));
+        platforms.save(Platform.createFromIgdb(80001L, "Zulu"));
+        platforms.save(Platform.createFromIgdb(80002L, "Alpha"));
+        genres.flush();
+        platforms.flush();
+
+        mockMvc.perform(get("/api/v1/games/filters"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.genres[*].name", contains("Alpha", "Zulu")))
+                .andExpect(jsonPath("$.data.platforms[*].name", contains("Alpha", "Zulu")));
+    }
 
     @Test
     void returnsPersistedFilterIdsWithoutAuthentication() throws Exception {
