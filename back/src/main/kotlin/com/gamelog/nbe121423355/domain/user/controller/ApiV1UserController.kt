@@ -7,14 +7,13 @@ import com.gamelog.nbe121423355.domain.user.service.UserService
 import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import com.gamelog.nbe121423355.global.security.jwt.RefreshTokenCookieFactory
+import com.gamelog.nbe121423355.global.security.jwt.addResponseCookie
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpHeaders.SET_COOKIE
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
@@ -43,7 +42,7 @@ class ApiV1UserController(
         val result = userService.login(loginRequestDto)
         val responseCookie =
             refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
-        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        httpServletResponse.addResponseCookie(responseCookie)
         val body = LoginResponseDto(result.user, result.accessToken)
         return RsData<LoginResponseDto>("200-1", "로그인 성공", body)
     }
@@ -58,7 +57,7 @@ class ApiV1UserController(
             userService.logout(refreshToken)
         }
         val responseCookie = refreshTokenCookieFactory.delete()
-        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        httpServletResponse.addResponseCookie(responseCookie)
         return RsData<Void>("200-13", "로그아웃 성공")
     }
 
@@ -75,7 +74,7 @@ class ApiV1UserController(
         val result = userService.refresh(refreshToken)
         val responseCookie =
             refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
-        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        httpServletResponse.addResponseCookie(responseCookie)
         val tokenResponseDto = TokenResponseDto(result.accessToken)
         return RsData<TokenResponseDto>("200-2", "토큰 재발급 성공", tokenResponseDto)
     }
@@ -198,7 +197,7 @@ class ApiV1UserController(
         val session = userService.changePassword(securityUser.id, changePasswordRequestDto)
         val responseCookie =
             refreshTokenCookieFactory.create(session.refreshToken, session.expiryDate)
-        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        httpServletResponse.addResponseCookie(responseCookie)
         return RsData<Void>("200-14", "비밀번호 변경 성공")
     }
 
@@ -215,7 +214,7 @@ class ApiV1UserController(
     ): RsData<Void> {
         userService.withdraw(securityUser.id, withdrawRequestDto)
         val responseCookie = refreshTokenCookieFactory.delete()
-        httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        httpServletResponse.addResponseCookie(responseCookie)
         return RsData<Void>("200-19", "회원탈퇴 성공")
     }
 

@@ -7,6 +7,8 @@ import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.io.Decoders.BASE64
 import io.jsonwebtoken.security.Keys
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Date
 import java.util.Optional
 import javax.crypto.SecretKey
@@ -68,7 +70,7 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 클레임에서 userId 추출
     fun getUserId(token: String?): Long {
-        return parseClaims(token).subject.toLong()
+        return parseClaims(token).userId
     }
 
     // 토큰의 클레임 전체 파싱 (서명 검증 포함)
@@ -125,3 +127,13 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
         private const val FAMILY_ID = "fid"
     }
 }
+
+// subject에는 userId를 넣어 발급하므로 꺼내는 규칙도 여기서 관리
+val Claims.userId: Long
+    get() = subject.toLong()
+
+// JWT는 Date, refreshToken 만료 시각은 시스템 시간대 기준 LocalDateTime으로 저장하므로 둘 사이 변환
+fun Date.toLocalDateTime(): LocalDateTime =
+    toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
+
+fun LocalDateTime.toDate(): Date = Date.from(atZone(ZoneId.systemDefault()).toInstant())

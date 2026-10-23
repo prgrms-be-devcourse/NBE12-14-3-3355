@@ -2,28 +2,36 @@ package com.gamelog.nbe121423355.domain.review.controller;
 
 import com.gamelog.nbe121423355.domain.review.dto.response.PopularReviewResponse;
 import com.gamelog.nbe121423355.domain.review.service.PopularReviewService;
+import com.gamelog.nbe121423355.domain.user.service.TokenReissueService;
 import com.gamelog.nbe121423355.global.exception.ServiceException;
+import com.gamelog.nbe121423355.global.security.jwt.JwtProvider;
+import com.gamelog.nbe121423355.global.security.jwt.RefreshTokenCookieFactory;
+import com.gamelog.nbe121423355.support.PopularControllerTestConfiguration;
+import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(PopularReviewController.class)
+@ContextConfiguration(classes = {PopularReviewController.class, PopularControllerTestConfiguration.class})
 @ActiveProfiles("test")
 class PopularReviewControllerTest {
 
@@ -32,6 +40,25 @@ class PopularReviewControllerTest {
 
     @MockitoBean
     private PopularReviewService popularReviewService;
+
+    @MockitoBean
+    private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private TokenReissueService tokenReissueService;
+
+    @MockitoBean
+    private RefreshTokenCookieFactory refreshTokenCookieFactory;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Test
+    @DisplayName("웹 테스트는 DataSource와 JPA를 로딩하지 않는다")
+    void doesNotLoadDatabaseInfrastructure() {
+        assertThat(applicationContext.getBeansOfType(DataSource.class)).isEmpty();
+        assertThat(applicationContext.getBeansOfType(EntityManagerFactory.class)).isEmpty();
+    }
 
     @Test
     @DisplayName("비로그인 사용자가 기본 5개의 인기 리뷰를 조회한다")

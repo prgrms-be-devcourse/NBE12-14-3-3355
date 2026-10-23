@@ -14,6 +14,25 @@ import org.springframework.stereotype.Component
 
 @Component
 class RelatedGamePrecomputeLock constructor(private val dataSource: DataSource) {
+    // 조회 결과는 순간 상태다. 실제 실행 허용 여부는 tryRun의 GET_LOCK으로 판단한다.
+    fun isLocked(): Boolean {
+        try {
+            dataSource.connection.use { connection ->
+                connection.prepareStatement("SELECT IS_USED_LOCK(?)").use { statement ->
+                    statement.queryTimeout = 5
+                    statement.setString(1, lockName(connection.catalog))
+                    statement.executeQuery().use { result ->
+                        check(result.next()) { "잠금 조회 결과가 없습니다." }
+                        result.getLong(1)
+                        return !result.wasNull()
+                    }
+                }
+            }
+        } catch (failure: SQLException) {
+            throw IllegalStateException("추천 계산 잠금 상태를 조회할 수 없습니다.", failure)
+        }
+    }
+
     // 트랜잭션용 연결과 분리해 빌린 세션을 작업이 끝날 때까지 유지한다.
     fun <T : Any> tryRun(action: Function<Runnable, T>): Optional<T> {
         try {
