@@ -66,7 +66,7 @@ class ReviewLibraryLifecycleTest {
         // when: 리뷰 삭제·복원 후 탈퇴의 일괄 숨김 저장 경로를 실행한다.
         gameRecordReviewService.deleteReview(userId, saved.review().reviewId(), saved.review().version());
         var afterDeletion = changes.findByGameId(gameId);
-        gameRecordReviewService.saveReview(userId, saved.userGame().id(), rating());
+        gameRecordReviewService.saveReview(userId, saved.userGame().getId(), rating());
         long beforeWithdrawal = changes.findByGameId(gameId).getChangeVersion();
         reviewService.hideAllByWithdrawnUser(userId);
 
