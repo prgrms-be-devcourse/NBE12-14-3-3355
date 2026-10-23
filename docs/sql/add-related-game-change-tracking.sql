@@ -1,3 +1,4 @@
+-- 기존 Hibernate 실행 종류 CHECK는 update-related-game-precompute-target-types.sql로 함께 갱신한다.
 -- 기존 관리자 기능이 설치된 DB는 add-related-game-change-run-options.sql도 함께 적용한다.
 -- 원천은 게임 삭제 후에도 장르·변경 정보를 보존하므로 games 외래키를 두지 않는다.
 CREATE TABLE related_game_input_changes (

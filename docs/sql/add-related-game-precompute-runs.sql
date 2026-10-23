@@ -21,6 +21,9 @@ CREATE TABLE related_game_precompute_runs (
     heartbeat_at DATETIME(6) NOT NULL,
     error VARCHAR(500) NULL,
     PRIMARY KEY (id),
+    CONSTRAINT ck_precompute_run_target_type CHECK (
+        target_type IN ('ALL', 'IDS', 'FAILED', 'UNREADY', 'CHANGED')
+    ),
     INDEX idx_precompute_run_requested (requested_at, id),
     INDEX idx_precompute_run_status (status, heartbeat_at)
 );
