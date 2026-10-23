@@ -49,7 +49,7 @@ constructor(
             requireNotNull(game.id) to jdbc.queryForList(
                 "SELECT genre_id FROM game_genres WHERE game_id = :id",
                 mapOf("id" to game.id), Long::class.javaObjectType,
-            )
+            ).map { requireNotNull(it) }
         }
         val removed = page.filter { !eligible(it, cutoff) }.mapNotNull { existing[it.id] }
         if (!removed.isEmpty()) {

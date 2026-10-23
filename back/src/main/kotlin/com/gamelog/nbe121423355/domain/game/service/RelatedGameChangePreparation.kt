@@ -44,7 +44,7 @@ class RelatedGameChangeExpansion(
         if (current.expandedVersion >= change.changeVersion) return
         val currentGenres = jdbc.queryForList(
             "SELECT genre_id FROM game_genres WHERE game_id = ?", Long::class.javaObjectType, change.gameId,
-        )
+        ).map { requireNotNull(it) }
         targets.requestAffected(change.gameId, change.affectedGenreIds + currentGenres, change.reasonMask, change.changedAt)
         // 같은 트랜잭션으로 확인하되 캡처 이후에 들어온 새 원천은 보존한다.
         changes.markExpanded(change.gameId, change.changeVersion)

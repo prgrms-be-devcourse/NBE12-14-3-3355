@@ -94,7 +94,7 @@ class RelatedGameRefreshTargetRepository(private val jdbcTemplate: JdbcTemplate)
             SELECT game_id FROM related_game_refresh_targets
             WHERE game_id > ? AND game_id <= ? AND required_version > applied_version ORDER BY game_id LIMIT ?
             """.trimIndent(), Long::class.javaObjectType, afterId, upperId, limit,
-        )
+        ).map { requireNotNull(it) }
     }
 
     fun findPendingPage(offset: Long, limit: Int): List<RelatedGameRefreshTarget> {

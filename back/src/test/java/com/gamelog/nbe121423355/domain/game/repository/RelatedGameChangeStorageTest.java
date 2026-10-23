@@ -36,7 +36,8 @@ import static com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReaso
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@SpringBootTest
+// 배포 DDL 재생성 검증용 컨텍스트와 임시 DB를 다른 테스트에서 분리한다.
+@SpringBootTest(properties = "test.database-isolation=related-game-change-storage")
 @MySqlIntegrationTest
 class RelatedGameChangeStorageTest {
     private static final AtomicLong IGDB_IDS = new AtomicLong(3_500_000);

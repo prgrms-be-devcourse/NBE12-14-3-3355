@@ -19,7 +19,7 @@ class RelatedGameChangeRecorder(
         val currentGenres = jdbc.queryForList(
             "SELECT genre_id FROM game_genres WHERE game_id = ? ORDER BY genre_id",
             Long::class.javaObjectType, gameId,
-        )
+        ).map { requireNotNull(it) }
         changes.record(gameId, previousGenres + currentGenres, setOf(reason), LocalDateTime.now())
     }
 
@@ -29,6 +29,6 @@ class RelatedGameChangeRecorder(
             SELECT DISTINCT ug.game_id FROM user_games ug JOIN reviews r ON r.user_game_id = ug.id
             WHERE ug.user_id = ? AND (r.status IS NULL OR r.status = 'ACTIVE') ORDER BY ug.game_id
             """.trimIndent(), Long::class.javaObjectType, userId,
-        ).forEach { record(it, RelatedGameChangeReason.REVIEW) }
+        ).forEach { record(requireNotNull(it), RelatedGameChangeReason.REVIEW) }
     }
 }

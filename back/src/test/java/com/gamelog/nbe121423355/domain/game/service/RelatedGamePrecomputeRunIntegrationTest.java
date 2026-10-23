@@ -261,6 +261,26 @@ class RelatedGamePrecomputeRunIntegrationTest {
                 .getTotalElements()).isEqualTo(1);
     }
 
+    @Test
+    void baselineMigrationPreservesOldRunsAndPersistsRegistrationMarker() {
+        // given: 기존 일반 실행을 저장한 뒤 변경 추적 도입 이전 컬럼 구조를 재현한다.
+        String oldId = createRun(target(RelatedGamePrecomputeTargetType.ALL, List.of()));
+        jdbcTemplate.execute("ALTER TABLE related_game_precompute_runs DROP COLUMN initialize_baseline, DROP COLUMN baseline_registered_at");
+
+        // when: 기존 DB용 ALTER를 적용하고 초기 기준선 실행의 대기 등록 완료를 기록한다.
+        new ResourceDatabasePopulator(new FileSystemResource(
+                "../docs/sql/add-related-game-change-run-options.sql")).execute(dataSource);
+        String baselineId = createRun(new RelatedGamePrecomputeTarget(RelatedGamePrecomputeTargetType.ALL, List.of(), true));
+        store.start(baselineId);
+        store.baselineRegistered(baselineId);
+
+        // then: 과거 실행은 일반 실행으로 유지되고 초기 기준선 옵션·등록 시각은 복원 가능하다.
+        assertThat(runRepository.findById(oldId).orElseThrow().getInitializeBaseline()).isFalse();
+        var baseline = runRepository.findById(baselineId).orElseThrow();
+        assertThat(baseline.target().getInitializeBaseline()).isTrue();
+        assertThat(baseline.getBaselineRegisteredAt()).isNotNull();
+    }
+
     private RelatedGamePrecomputeTarget target(RelatedGamePrecomputeTargetType type, List<Long> ids) {
         return new RelatedGamePrecomputeTarget(type, ids);
     }

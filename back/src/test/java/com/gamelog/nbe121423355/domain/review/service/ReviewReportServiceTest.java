@@ -58,6 +58,10 @@ class ReviewReportServiceTest {
         writer = mock(User.class);
         reporter = mock(User.class);
         UserGame userGame = mock(UserGame.class);
+        // given: 추천 변경 기록에 사용할 리뷰의 기준 게임을 준비한다.
+        var game = mock(com.gamelog.nbe121423355.domain.game.entity.Game.class);
+        lenient().when(game.getId()).thenReturn(6L);
+        lenient().when(userGame.getGame()).thenReturn(game);
         lenient().when(writer.getId()).thenReturn(1L);
         lenient().when(writer.getNickname()).thenReturn("리뷰작성자");
         lenient().when(reporter.getId()).thenReturn(2L);

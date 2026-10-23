@@ -164,7 +164,7 @@ class ChangedRelatedGamePrecomputeTest {
     }
     private long genre() {
         return tx(() -> {
-            var genre = Genre.createFromIgdb(IDS.incrementAndGet(), "Changed genre");
+            var genre = Genre.createFromIgdb(IDS.incrementAndGet(), "Changed genre " + IDS.get());
             em.persist(genre); em.flush(); genres.add(genre.getId()); return genre.getId();
         });
     }
