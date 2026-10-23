@@ -64,6 +64,9 @@ class ReviewServiceTest {
     @Mock
     private Game game;
 
+    @org.mockito.Mock
+    com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder changeRecorder;
+
     @InjectMocks
     private ReviewService reviewService;
 

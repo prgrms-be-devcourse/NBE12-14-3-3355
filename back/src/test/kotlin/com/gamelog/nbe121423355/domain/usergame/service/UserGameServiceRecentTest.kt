@@ -38,6 +38,9 @@ class UserGameServiceRecentTest {
     @Mock
     private lateinit var userFavoriteGameRepository: UserFavoriteGameRepository
 
+    @Mock
+    private lateinit var changeRecorder: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+
     @InjectMocks
     private lateinit var userGameService: UserGameService
 

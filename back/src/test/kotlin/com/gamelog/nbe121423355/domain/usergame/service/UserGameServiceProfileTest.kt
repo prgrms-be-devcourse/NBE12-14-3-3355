@@ -24,6 +24,9 @@ import org.mockito.junit.jupiter.MockitoExtension
 
 @ExtendWith(MockitoExtension::class)
 class UserGameServiceProfileTest {
+    @Mock
+    private lateinit var changeRecorder: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+
     @InjectMocks
     private lateinit var userGameService: UserGameService
 

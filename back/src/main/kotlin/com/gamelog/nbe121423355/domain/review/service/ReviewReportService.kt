@@ -1,5 +1,7 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
+import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportGroupResponse
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewReportService
 constructor(
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewReportRepository: ReviewReportRepository,
     private val reviewRepository: ReviewRepository,
     private val userRepository: UserRepository,
@@ -92,6 +95,7 @@ constructor(
         }
         if (request.status == ReportStatus.APPROVED) {
             report.review.hideByAdmin()
+            changeRecorder.record(requireNotNull(report.review.userGame.game.id), RelatedGameChangeReason.REVIEW)
             userGameService.synchronizeLibraryState(report.review.userGame)
         }
         pendingReports.forEach({ pendingReport -> pendingReport.changeStatus(request.status) })

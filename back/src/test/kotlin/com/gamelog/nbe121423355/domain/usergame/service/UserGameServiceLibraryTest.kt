@@ -47,6 +47,9 @@ class UserGameServiceLibraryTest {
     @Mock
     private lateinit var reviewRepository: ReviewRepository
 
+    @Mock
+    private lateinit var changeRecorder: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+
     @InjectMocks
     private lateinit var userGameService: UserGameService
 

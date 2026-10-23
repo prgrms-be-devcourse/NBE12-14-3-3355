@@ -44,6 +44,9 @@ class ReviewReportServiceTest {
     @Mock
     private com.gamelog.nbe121423355.domain.usergame.service.UserGameService userGameService;
 
+    @org.mockito.Mock
+    com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder changeRecorder;
+
     @InjectMocks ReviewReportService reviewReportService;
 
     private User writer;
