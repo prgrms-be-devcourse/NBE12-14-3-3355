@@ -131,8 +131,8 @@ class SecurityConfig {
         val config = CorsConfiguration()
         config.allowedOrigins = corsProperties.allowedOrigins
         config.allowedMethods =
-            java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        config.allowedHeaders = java.util.List.of("*")
+            listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        config.allowedHeaders = listOf("*")
         config.allowCredentials = true
 
         val source = UrlBasedCorsConfigurationSource()

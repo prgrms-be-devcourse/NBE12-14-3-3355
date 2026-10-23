@@ -17,7 +17,6 @@ import com.gamelog.nbe121423355.global.upload.ImageUploadService
 import jakarta.transaction.Transactional
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.util.Optional
 import java.util.UUID
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -68,11 +67,10 @@ class UserService(
 
     // 로그인 메소드
     fun login(loginRequestDto: LoginRequestDto): LoginResult {
-        val userOptional: Optional<User> = userRepository.findByEmail(loginRequestDto.email)
-        if (userOptional.isEmpty()) {
-            throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
-        }
-        val user = userOptional.get()
+        val user =
+            userRepository
+                .findByEmail(loginRequestDto.email)
+                .orElseThrow { ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.") }
         if (!passwordEncoder.matches(loginRequestDto.password, user.password)) {
             throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
         }
@@ -166,7 +164,7 @@ class UserService(
                 .findById(userId)
                 .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
         if (
-            !user.nickname.equals(updateProfileRequestDto.nickname) &&
+            user.nickname != updateProfileRequestDto.nickname &&
                 userRepository.existsByNickname(updateProfileRequestDto.nickname)
         ) {
             throw ServiceException("409-2", "이미 존재하는 닉네임 입니다.")
@@ -179,7 +177,7 @@ class UserService(
         )
         if (
             oldProfileImageUrl != null &&
-                !oldProfileImageUrl.equals(updateProfileRequestDto.profileImageUrl)
+                oldProfileImageUrl != updateProfileRequestDto.profileImageUrl
         ) {
             imageUploadService.deleteImage(oldProfileImageUrl)
         }
@@ -226,7 +224,7 @@ class UserService(
             userRepository
                 .findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow { ServiceException("404-1", "존재하지 않는 유저 입니다.") }
-        if ("ADMIN".equals(user.role)) {
+        if (user.role == "ADMIN") {
             throw ServiceException("403-2", "관리자 계정은 탈퇴할 수 없습니다.")
         }
         if (!passwordEncoder.matches(requestDto.password, user.password)) {

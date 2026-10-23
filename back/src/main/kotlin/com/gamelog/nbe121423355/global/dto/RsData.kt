@@ -17,7 +17,7 @@ class RsData<T> {
 
     @get:JsonIgnore
     val statusCode: Int
-        get() = java.lang.Integer.parseInt(resultCode.split("-")[0])
+        get() = resultCode.split("-")[0].toInt()
 
     constructor(resultCode: String, msg: String?, data: T?) {
         this.resultCode = resultCode

@@ -58,7 +58,7 @@ class TokenReissueService(
         // DB 조회 전에 먼저 비교 (불일치면 쿼리 없이 종료)
         if (
             expectedUserId != null &&
-                !expectedUserId.equals(java.lang.Long.parseLong(claims.subject))
+                expectedUserId != claims.subject.toLong()
         ) {
             throw ServiceException("401-2", "토큰의 사용자 정보가 일치하지 않습니다.")
         }
@@ -114,7 +114,7 @@ class TokenReissueService(
         jti: String,
         now: LocalDateTime,
     ): Boolean {
-        return jti.equals(session.prevJti) &&
+        return jti == session.prevJti &&
             session.rotatedAt?.isAfter(now.minus(GRACE_PERIOD)) == true
     }
 
