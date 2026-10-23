@@ -1,11 +1,12 @@
 package com.gamelog.nbe121423355.global.exceptionHandler;
 
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -15,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // 인증 없이 호출 가능한(permitAll) 경로로 테스트
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 class GlobalExceptionHandlerTest {
 
     @Autowired
