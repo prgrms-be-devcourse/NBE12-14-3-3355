@@ -9,12 +9,12 @@ import com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Body;
 import com.gamelog.nbe121423355.domain.user.entity.User;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
 import com.gamelog.nbe121423355.global.security.jwt.JwtProvider;
+import com.gamelog.nbe121423355.support.MySqlIntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.MediaType;
@@ -24,9 +24,9 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:comments-test;MODE=MySQL;NON_KEYWORDS=USER")
+@SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
+@MySqlIntegrationTest
 @Transactional
 class ReviewCommentControllerTest {
     @Autowired EntityManager em;

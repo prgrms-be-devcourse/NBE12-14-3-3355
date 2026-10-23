@@ -10,4 +10,4 @@ data class CloudinaryProperties(
     val cloudName: String?,
     val apiKey: String?,
     val apiSecret: String?,
-) {}
+)

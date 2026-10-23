@@ -12,4 +12,4 @@ data class WithdrawRequestDto(
     @field:NotBlank
     @field:Schema(description = "현재 비밀번호", example = "currentPassword123!")
     val password: String?
-) {}
+)

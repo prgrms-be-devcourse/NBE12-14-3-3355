@@ -49,16 +49,10 @@ constructor(
                 )
             // 마지막 부분 페이지는 크기로 총 개수를 알 수 있습니다.
             // 범위를 벗어난 빈 페이지는 COUNT를 실행하여 실제 총 개수를 유지합니다.
-            return PageableExecutionUtils.getPage(
-                    content,
-                    pageable,
-                    java.util.function.LongSupplier {
-                        gameRepository.countDefaultSearch(keywordPattern, minDate, maxDate)
-                    },
-                )
-                .map<GameListResponse>(
-                    java.util.function.Function { value -> GameListResponse(value) }
-                )
+            return PageableExecutionUtils.getPage(content, pageable) {
+                    gameRepository.countDefaultSearch(keywordPattern, minDate, maxDate)
+                }
+                .map(::GameListResponse)
         }
         return gameFilteredQueryRepository
             .findPage(
@@ -70,7 +64,7 @@ constructor(
                 LocalDate.now(GameService.CATALOG_ZONE).plusDays(1),
                 request.toPageable(),
             )
-            .map<GameListResponse>(java.util.function.Function { value -> GameListResponse(value) })
+            .map(::GameListResponse)
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +75,7 @@ constructor(
         return gameRepository
             .findSuggestions(
                 normalized,
-                escaped.toString() + "%",
+                escaped + "%",
                 "%" + escaped + "%",
                 GameService.MIN_RELEASE_DATE,
                 LocalDate.now(GameService.CATALOG_ZONE).plusDays(1),
@@ -100,7 +94,7 @@ constructor(
     }
 
     companion object {
-        private val MIN_RELEASE_DATE: LocalDate? = LocalDate.of(1970, 1, 1)
-        private val CATALOG_ZONE: ZoneId? = ZoneId.of("Asia/Seoul")
+        private val MIN_RELEASE_DATE: LocalDate = LocalDate.of(1970, 1, 1)
+        private val CATALOG_ZONE: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }

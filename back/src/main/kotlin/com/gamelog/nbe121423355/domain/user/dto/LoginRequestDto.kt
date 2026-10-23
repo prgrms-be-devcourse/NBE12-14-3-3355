@@ -14,4 +14,4 @@ data class LoginRequestDto(
     @field:NotBlank
     @field:Schema(description = "비밀번호", example = "password123!")
     val password: String?,
-) {}
+)

@@ -43,8 +43,7 @@ constructor(
 
     @JvmRecord
     data class Page(
-        val comments:
-            MutableList<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item>,
+        val comments: MutableList<Item>,
         val nextCursor: Long?,
         val totalCount: Long,
     ) {}
@@ -73,7 +72,7 @@ constructor(
     }
 
     private fun validate(
-        body: com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Body
+        body: Body
     ) {
         if (body.content == null || body.content.javaIsBlank() || body.content.length > 1000)
             throw ServiceException(
@@ -87,7 +86,7 @@ constructor(
         viewer: Long?,
         parentId: Long?,
         after: Long?,
-    ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Page {
+    ): Page {
         val review: Review = review(reviewId, false)
         if (after != null && after < 1)
             throw ServiceException(
@@ -109,7 +108,7 @@ constructor(
             comments.list(reviewId, parentId, after, PageRequest.of(0, size + 1))
         val more = rows.size > size
         val visible = rows.subList(0, Math.min(size, rows.size))
-        return com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Page(
+        return Page(
             items(review, visible, viewer),
             if (more) visible.last().id else null,
             comments.countByReview_IdAndDeletedFalse(reviewId),
@@ -125,7 +124,7 @@ constructor(
         reviewId: Long?,
         id: Long,
         viewer: Long?,
-    ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item {
+    ): Item {
         val review: Review = review(reviewId, false)
         return items(review, java.util.List.of(comment(reviewId, id, false)), viewer).first()
     }
@@ -134,8 +133,8 @@ constructor(
     fun create(
         reviewId: Long?,
         userId: Long,
-        body: com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Body,
-    ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item {
+        body: Body,
+    ): Item {
         val review: Review = review(reviewId, true)
         validate(body)
         val parent: ReviewComment? =
@@ -157,8 +156,8 @@ constructor(
         reviewId: Long?,
         id: Long,
         userId: Long?,
-        body: com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Body,
-    ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item {
+        body: Body,
+    ): Item {
         val review: Review = review(reviewId, true)
         val c: ReviewComment = comment(reviewId, id, true)
         owner(c, userId)
@@ -182,7 +181,7 @@ constructor(
         id: Long,
         userId: Long,
         value: Boolean,
-    ): com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item {
+    ): Item {
         val review: Review = review(reviewId, true)
         val c: ReviewComment = comment(reviewId, id, true)
         val key: ReviewCommentLikeId = ReviewCommentLikeId(userId, id)
@@ -213,7 +212,7 @@ constructor(
         review: Review,
         rows: MutableList<ReviewComment>,
         viewer: Long?,
-    ): MutableList<com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item> {
+    ): MutableList<Item> {
         if (rows.isEmpty()) return java.util.List.of()
         val ids = rows.map { requireNotNull(it.id) }.toMutableList()
         val counts =
@@ -232,7 +231,7 @@ constructor(
             .map({ c ->
                 val l = counts.get(c.id)
                 val deleted: Boolean = c.isDeleted
-                com.gamelog.nbe121423355.domain.review.service.ReviewCommentService.Item(
+                Item(
                     c.id,
                     c.parent?.id,
                     if (deleted) null else c.user.id,

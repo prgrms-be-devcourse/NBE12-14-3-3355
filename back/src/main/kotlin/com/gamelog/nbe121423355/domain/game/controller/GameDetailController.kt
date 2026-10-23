@@ -43,8 +43,8 @@ class GameDetailController constructor(private val gameDetailService: GameDetail
         )
         @PathVariable("gameId")
         gameId: Long
-    ): RsData<MutableList<RelatedGameResponse>> {
+    ): RsData<List<RelatedGameResponse>> {
         val response = gameDetailService.getRelatedGames(gameId)
-        return RsData<MutableList<RelatedGameResponse>>("200-1", "연관 추천 게임을 조회했습니다.", response)
+        return RsData<List<RelatedGameResponse>>("200-1", "연관 추천 게임을 조회했습니다.", response)
     }
 }

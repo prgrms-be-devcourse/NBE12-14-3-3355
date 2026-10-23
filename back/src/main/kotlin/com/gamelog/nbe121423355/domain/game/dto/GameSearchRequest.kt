@@ -90,8 +90,8 @@ class GameSearchRequest(
 
     override fun hashCode(): Int {
         var result = 0
-        result = 31 * result + (page?.hashCode() ?: 0)
-        result = 31 * result + (size?.hashCode() ?: 0)
+        result = 31 * result + page.hashCode()
+        result = 31 * result + size.hashCode()
         result = 31 * result + (sort?.hashCode() ?: 0)
         result = 31 * result + (keyword?.hashCode() ?: 0)
         result = 31 * result + (genreIds?.hashCode() ?: 0)

@@ -99,18 +99,14 @@ constructor(
         contentQuery.setParameter("pageOffset", pageable.offset)
         val content = contentQuery.getResultList().map { it as Game }.toMutableList()
         // COUNT는 같은 필터를 사용하되 정렬용 사용자 통계는 계산하지 않습니다.
-        return PageableExecutionUtils.getPage(
-            content,
-            pageable,
-            java.util.function.LongSupplier {
-                val countQuery =
-                    entityManager.createNativeQuery(
-                        "SELECT " + hint + "COUNT(*) FROM games g " + where
-                    )
-                bind(countQuery, parameters)
-                (countQuery.getSingleResult() as Number).toLong()
-            },
-        )
+        return PageableExecutionUtils.getPage(content, pageable) {
+            val countQuery =
+                entityManager.createNativeQuery(
+                    "SELECT " + hint + "COUNT(*) FROM games g " + where
+                )
+            bind(countQuery, parameters)
+            (countQuery.getSingleResult() as Number).toLong()
+        }
     }
 
     private fun bind(query: Query, parameters: MutableMap<String, Any?>) {
@@ -167,5 +163,5 @@ constructor(
     }
 
     @JvmRecord
-    private data class OrderPlan(val join: String?, val value: String?, val direction: String?) {}
+    private data class OrderPlan(val join: String, val value: String, val direction: String)
 }

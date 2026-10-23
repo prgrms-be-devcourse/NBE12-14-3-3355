@@ -18,19 +18,18 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 토큰 제공 클래스
     init {
-
-        val KeyBytes = Decoders.BASE64.decode(jwtProperties.secret)
-        this.secretKey = Keys.hmacShaKeyFor(KeyBytes)
+        val keyBytes = Decoders.BASE64.decode(jwtProperties.secret)
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes)
     }
 
     // accesstoken 생성 메소드
-    fun generateAccessToken(userId: Long?, role: String?): String? {
+    fun generateAccessToken(userId: Long?, role: String?): String {
         val now = Date()
-        val expiration = Date(now.getTime() + jwtProperties.accessTokenValidity)
+        val expiration = Date(now.time + jwtProperties.accessTokenValidity)
 
         return Jwts.builder()
             .subject(java.lang.String.valueOf(userId))
-            .claim(JwtProvider.TOKEN_TYPE, JwtProvider.ACCESS)
+            .claim(TOKEN_TYPE, ACCESS)
             .claim("role", role)
             .issuedAt(now)
             .expiration(expiration)
@@ -49,8 +48,8 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
         return Jwts.builder()
             .subject(java.lang.String.valueOf(userId))
             .id(jti)
-            .claim(JwtProvider.TOKEN_TYPE, JwtProvider.REFRESH)
-            .claim(JwtProvider.FAMILY_ID, familyId)
+            .claim(TOKEN_TYPE, REFRESH)
+            .claim(FAMILY_ID, familyId)
             .issuedAt(Date())
             .expiration(expiration)
             .signWith(secretKey)
@@ -64,12 +63,12 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // refreshToken의 세션 식별자 (fid가 없는 기존 토큰은 null)
     fun getFamilyId(claims: Claims): String? {
-        return claims.get(JwtProvider.FAMILY_ID, String::class.java)
+        return claims.get(FAMILY_ID, String::class.java)
     }
 
     // 클레임에서 userId 추출
     fun getUserId(token: String?): Long {
-        return java.lang.Long.parseLong(parseClaims(token).getSubject())
+        return java.lang.Long.parseLong(parseClaims(token).subject)
     }
 
     // 토큰의 클레임 전체 파싱 (서명 검증 포함)
@@ -109,16 +108,11 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 토큰 종류 판별 (token_type 클레임이 없는 기존 토큰은 false)
     fun isAccessToken(claims: Claims): Boolean {
-        return JwtProvider.ACCESS.equals(claims.get(JwtProvider.TOKEN_TYPE, String::class.java))
+        return ACCESS.equals(claims.get(TOKEN_TYPE, String::class.java))
     }
 
     fun isRefreshToken(claims: Claims): Boolean {
-        return JwtProvider.REFRESH.equals(
-            claims.get(
-                JwtProvider.TOKEN_TYPE,
-                String::class.java,
-            )
-        )
+        return REFRESH.equals(claims.get(TOKEN_TYPE, String::class.java))
     }
 
     companion object {

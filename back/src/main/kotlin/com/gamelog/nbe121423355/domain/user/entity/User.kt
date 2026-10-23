@@ -5,24 +5,24 @@ import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
-@jakarta.persistence.Entity
-@jakarta.persistence.Table(name = "users")
+@Entity
+@Table(name = "users")
 class User : BaseEntity {
-    @jakarta.persistence.Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
         protected set
 
-    @jakarta.persistence.Column(unique = true, nullable = false)
-    var email: String? = null
+    @Column(unique = true, nullable = false)
+    lateinit var email: String
         protected set
 
-    @jakarta.persistence.Column(nullable = false)
-    var password: String? = null
+    @Column(nullable = false)
+    lateinit var password: String
         protected set
 
-    @jakarta.persistence.Column(unique = true)
-    var nickname: String? = null
+    @Column(unique = true)
+    lateinit var nickname: String
         protected set
 
     var profileImageUrl: String? = null
@@ -31,11 +31,11 @@ class User : BaseEntity {
     var bio: String? = null
         protected set
 
-    @jakarta.persistence.Column(nullable = false)
+    @Column(nullable = false)
     var onboardingCompleted: Boolean = false
         protected set
 
-    var role: String? = null
+    lateinit var role: String
         protected set
 
     // 회원탈퇴 시각 (null이면 활성 회원)
@@ -72,8 +72,8 @@ class User : BaseEntity {
     }
 
     fun withdraw(encodedRandomPassword: String?) {
-        this.email = "deleted_" + id + "@deleted.local"
-        this.nickname = "탈퇴한사용자_" + id
+        this.email = "deleted_$id@deleted.local"
+        this.nickname = "탈퇴한사용자_$id"
         this.password = javaNonNull(encodedRandomPassword, "password")
         this.profileImageUrl = null
         this.bio = null
@@ -85,13 +85,13 @@ class User : BaseEntity {
 
     constructor(
         id: Long?,
-        email: String?,
-        password: String?,
-        nickname: String?,
+        email: String,
+        password: String,
+        nickname: String,
         profileImageUrl: String?,
         bio: String?,
         onboardingCompleted: Boolean,
-        role: String?,
+        role: String,
         deletedAt: LocalDateTime?,
     ) {
         this.id = id

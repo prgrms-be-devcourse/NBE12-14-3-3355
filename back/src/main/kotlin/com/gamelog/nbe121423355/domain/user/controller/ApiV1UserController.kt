@@ -21,8 +21,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/v1/users")
 @Tag(name = "api-v1-user-controller", description = "회원가입·로그인·프로필·온보딩 API")
-class ApiV1UserController
-constructor(
+class ApiV1UserController(
     private val userService: UserService,
     private val userPreferenceGenreService: UserPreferenceGenreService,
     private val userPreferenceGameService: UserPreferenceGameService,
