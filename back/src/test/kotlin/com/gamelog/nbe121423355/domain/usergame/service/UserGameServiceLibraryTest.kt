@@ -149,71 +149,6 @@ class UserGameServiceLibraryTest {
     }
 
     @Test
-    @DisplayName("등록된 게임의 플레이 기록을 수정할 수 있다")
-    fun updatePlayRecord() {
-        val userId = 1L
-        val gameId = 1L
-        val platformId = 1L
-
-        val user = User("테스트", "test@test.com", "password")
-        val game = mock(Game::class.java)
-        val platform = mock(Platform::class.java)
-        val userGame = UserGame(user, game)
-
-        val request = createRequest(
-            playStatus = PlayStatus.PLAYED,
-            isPlaying = true,
-            isLiked = true,
-            platformId = platformId,
-            playTimeHours = BigDecimal("50.0"),
-            finishTimeHours = BigDecimal("40.0"),
-            masterTimeHours = BigDecimal("80.0"),
-            startedAt = LocalDate.of(2026, 8, 1),
-            completedAt = LocalDate.of(2026, 8, 20),
-            lastPlayedAt = LocalDateTime.of(2026, 8, 20, 21, 30),
-        )
-
-        given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-            .willReturn(userGame)
-        given(platformRepository.findById(platformId))
-            .willReturn(Optional.of(platform))
-
-        val result = userGameService.updatePlayRecord(
-            userId,
-            gameId,
-            request
-        )
-
-        assertThat(result).isSameAs(userGame)
-        assertThat(result.playStatus).isEqualTo(PlayStatus.PLAYED)
-        assertThat(result.playing).isTrue()
-        assertThat(result.liked).isTrue()
-    }
-
-    @Test
-    @DisplayName("등록되지 않은 게임의 플레이 기록을 수정하면 예외가 발생한다")
-    fun updatePlayRecordWithoutLibrary() {
-        val userId = 1L
-        val gameId = 1L
-
-        val request = createRequest(
-            playStatus = PlayStatus.PLAYED,
-            playTimeHours = BigDecimal.ZERO,
-            finishTimeHours = BigDecimal.ZERO,
-            masterTimeHours = BigDecimal.ZERO,
-        )
-
-        given(userGameRepository.findByUser_IdAndGame_Id(userId, gameId))
-            .willReturn(null)
-
-        assertThatThrownBy {
-            userGameService.updatePlayRecord(userId, gameId, request)
-        }
-            .isInstanceOf(ServiceException::class.java)
-            .hasMessage("라이브러리에 등록되지 않은 게임입니다.")
-    }
-
-    @Test
     @DisplayName("완료일이 시작일보다 빠르면 저장할 수 없다")
     fun rejectCompletedDateBeforeStartedDate() {
         val startedAt = LocalDate.now().minusDays(1)
@@ -382,48 +317,6 @@ class UserGameServiceLibraryTest {
     }
 
     @Test
-    @DisplayName("wishlist를 변경할 수 있다")
-    fun changeWishlist() {
-        val userGame = createUserGame()
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changeWishlist(1L, 1L, true)
-
-        assertThat(result).isTrue()
-        assertThat(userGame.wishlist).isTrue()
-    }
-
-    @Test
-    @DisplayName("backlog를 변경할 수 있다")
-    fun changeBacklog() {
-        val userGame = createUserGame()
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changeBacklog(1L, 1L, true)
-
-        assertThat(result).isTrue()
-        assertThat(userGame.backlog).isTrue()
-    }
-
-    @Test
-    @DisplayName("liked를 변경할 수 있다")
-    fun changeLiked() {
-        val userGame = createUserGame()
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changeLiked(1L, 1L, true)
-
-        assertThat(result).isTrue()
-        assertThat(userGame.liked).isTrue()
-    }
-
-    @Test
     @DisplayName("같은 playing 상태를 반복해서 변경해도 상태가 유지된다")
     fun repeatPlayingChange() {
         val userGame = createUserGame()
@@ -440,21 +333,6 @@ class UserGameServiceLibraryTest {
         ).isTrue()
 
         assertThat(userGame.playing).isTrue()
-    }
-
-    @Test
-    @DisplayName("플레이 상태가 null이면 기존 플레이 상태를 초기화한다")
-    fun clearPlayStatus() {
-        val userGame = createUserGame()
-        userGame.changePlayStatus(PlayStatus.PLAYED)
-
-        given(userGameRepository.findByUser_IdAndGame_Id(1L, 1L))
-            .willReturn(userGame)
-
-        val result = userGameService.changePlayed(1L, 1L, null)
-
-        assertThat(result).isNull()
-        assertThat(userGame.playStatus).isNull()
     }
 
     @Test

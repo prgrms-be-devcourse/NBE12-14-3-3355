@@ -10,28 +10,19 @@ import com.gamelog.nbe121423355.domain.usergame.dto.UserGameSort
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameTab
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
-import com.gamelog.nbe121423355.global.security.SecurityUser
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.data.domain.Page
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @MySqlIntegrationTest
 @Transactional
 class UserGameSearchTest {
@@ -39,8 +30,6 @@ class UserGameSearchTest {
     private lateinit var em: EntityManager
     @Autowired
     private lateinit var service: UserGameService
-    @Autowired
-    private lateinit var mockMvc: MockMvc
     private lateinit var owner: User
     private lateinit var other: User
     private lateinit var pc: Platform
@@ -171,96 +160,9 @@ class UserGameSearchTest {
             .containsExactly("나 게임", "가 게임", "다 100%_!")
     }
 
-    @Test
-    fun endpointBindsFiltersAndPreservesResponseShape() {
-        mockMvc.perform(get("/api/v1/library/games")
-            .with(ownerAuthentication())
-            .param("status", "PLAYED").param("sort", "RATING")
-            .param("genreIds", "${checkNotNull(rpg.id)},${checkNotNull(action.id)}")
-            .param("platformIds", checkNotNull(pc.id).toString()))
-            .andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(1))
-            .andExpect(jsonPath("$.data.totalPages").value(1))
-            .andExpect(jsonPath("$.data.userGames[0].title").value("가 게임"))
-    }
-
-    @Test
-    @DisplayName("비로그인 사용자도 다른 사용자의 프로필 통계를 조회할 수 있다")
-    fun publicProfileAllowsAnonymousUser() {
-        val targetUserId = checkNotNull(other.id)
-
-        mockMvc.perform(get(
-            "/api/v1/library/games/profile/{userId}",
-            targetUserId
-        ))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.resultCode").value("200-1"))
-            .andExpect(jsonPath("$.data.userId")
-                .value(targetUserId))
-            .andExpect(jsonPath("$.data.isMe").value(false))
-            .andExpect(jsonPath("$.data.isFollowing").value(false))
-            .andExpect(jsonPath("$.data.stats.playedGameCount")
-                .value(1))
-    }
-
-    @Test
-    @DisplayName("본인이 사용자 ID 경로로 프로필을 조회하면 본인 여부를 반환한다")
-    fun publicProfileIdentifiesAuthenticatedOwner() {
-        mockMvc.perform(get(
-            "/api/v1/library/games/profile/{userId}",
-            checkNotNull(owner.id)
-        )
-            .with(ownerAuthentication()))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.userId")
-                .value(checkNotNull(owner.id)))
-            .andExpect(jsonPath("$.data.isMe").value(true))
-            .andExpect(jsonPath("$.data.isFollowing").value(false))
-    }
-
-    @Test
-    @DisplayName("비로그인 사용자도 다른 사용자의 게임 목록을 조회할 수 있다")
-    fun publicGameListAllowsAnonymousUser() {
-        val targetUserId = checkNotNull(other.id)
-
-        mockMvc.perform(get(
-            "/api/v1/library/games/profile/{userId}/games",
-            targetUserId
-        )
-            .param("status", "ALL")
-            .param("sort", "RECENT_PLAYED"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.totalElements").value(1))
-            .andExpect(jsonPath("$.data.totalPages").value(1))
-            .andExpect(jsonPath("$.data.userGames[0].title")
-                .value("Other"))
-    }
-
-    @Test
-    fun rejectsInvalidParameters() {
-        val invalidParameters = listOf(
-            "status" to "INVALID",
-            "sort" to "INVALID",
-            "page" to "-1",
-            "size" to "0",
-            "size" to "101",
-            "platformIds" to "-1",
-            "genreIds" to "text",
-        )
-        for ((name, value) in invalidParameters) {
-            mockMvc.perform(
-                get("/api/v1/library/games")
-                    .with(ownerAuthentication())
-                    .param(name, value),
-            ).andExpect(status().isBadRequest())
-        }
-    }
-
     private fun search(request: UserGameSearchRequest): Page<UserGameListResponse> {
         return service.getUserGameList(checkNotNull(owner.id), request)
     }
-
-    private fun ownerAuthentication() =
-        user(SecurityUser(checkNotNull(owner.id), emptyList()))
 
     private fun save(
         title: String,

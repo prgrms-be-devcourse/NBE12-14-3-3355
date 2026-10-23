@@ -19,8 +19,8 @@ usergame의 Java 테스트 9개를 동일 패키지의 `src/test/kotlin`으로 �
 ## 검증
 
 2026-10-23 Kotlin 전환 시 기존 테스트 메서드 74개와 표시명을 유지했다.
-이후 엔티티 테스트를 정리한 현재 메서드는 82개이며,
-파라미터 확장 후 전체 실행 수는 92개다.
+이후 테스트 정리와 Controller·E2E 추가를 반영한 현재 메서드는 99개이며,
+파라미터 확장 후 전체 실행 수는 109개다.
 
 | 테스트 | 실행 수 |
 | --- | ---: |
@@ -29,12 +29,14 @@ usergame의 Java 테스트 9개를 동일 패키지의 `src/test/kotlin`으로 �
 | UserGameRepositoryTest | 1 |
 | UserGameFavoriteTest | 10 |
 | UserGameReviewStatisticsTest | 4 |
-| UserGameSearchTest | 14 |
+| UserGameSearchTest | 9 |
+| UserGameControllerTest | 26 |
+| UserGameE2ETest | 2 |
 | UserGameServiceFavoriteTest | 4 |
-| UserGameServiceLibraryTest | 30 |
+| UserGameServiceLibraryTest | 24 |
 | UserGameServiceProfileTest | 13 |
 | UserGameServiceRecentTest | 2 |
-| 합계 | 92 |
+| 합계 | 109 |
 
 `back` 디렉터리에서 실행한다. MySQL 통합 테스트에는 Docker가 필요하다.
 
@@ -53,3 +55,5 @@ Kotlin 전환 직후에는 review·탈퇴 관련 테스트까지 함께 실행�
   --tests 'com.gamelog.nbe121423355.domain.review.*' \
   --tests '*UserWithdrawTest'
 ```
+
+Controller·실제 HTTP E2E의 범위와 실행 방법은 [usergame-api-tests.md](usergame-api-tests.md)를 참고한다.
