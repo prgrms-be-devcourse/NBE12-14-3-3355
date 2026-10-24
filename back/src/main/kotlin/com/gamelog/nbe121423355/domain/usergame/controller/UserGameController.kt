@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/v1/library/games")
 @Tag(name = "user-game-controller", description = "내 게임 라이브러리·플레이 상태·프로필 기록 API")
-class UserGameController constructor(private val userGameService: UserGameService) {
+class UserGameController(
+    private val userGameService: UserGameService,
+) {
 
     @GetMapping("")
     @Operation(
@@ -28,12 +30,21 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Valid @ModelAttribute request: UserGameSearchRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameLibraryResponse> {
-        val pages = userGameService.getUserGameList(user.id, request)
+        val pages =
+            userGameService.getUserGameList(
+                userId = user.id,
+                request = request,
+            )
 
         return RsData(
-            "200-1",
-            "라이브러리 게임 목록을 조회했습니다.",
-            UserGameLibraryResponse(pages.totalElements, pages.totalPages, pages.content),
+            resultCode = "200-1",
+            msg = "라이브러리 게임 목록을 조회했습니다.",
+            data =
+                UserGameLibraryResponse(
+                    totalElements = pages.totalElements,
+                    totalPages = pages.totalPages,
+                    userGames = pages.content,
+                ),
         )
     }
 
@@ -43,11 +54,20 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @PathVariable userId: Long,
         @Valid @ModelAttribute request: UserGameSearchRequest,
     ): RsData<UserGameLibraryResponse> {
-        val pages = userGameService.getPublicUserGameList(userId, request)
+        val pages =
+            userGameService.getPublicUserGameList(
+                userId = userId,
+                request = request,
+            )
         return RsData(
-            "200-1",
-            "라이브러리 게임 목록을 조회했습니다.",
-            UserGameLibraryResponse(pages.totalElements, pages.totalPages, pages.content),
+            resultCode = "200-1",
+            msg = "라이브러리 게임 목록을 조회했습니다.",
+            data =
+                UserGameLibraryResponse(
+                    totalElements = pages.totalElements,
+                    totalPages = pages.totalPages,
+                    userGames = pages.content,
+                ),
         )
     }
 
@@ -60,11 +80,20 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameDto> {
 
-        val result = userGameService.addOrUpdateGameToLibrary(user.id, gameId, reqBody)
+        val result =
+            userGameService.addOrUpdateGameToLibrary(
+                userId = user.id,
+                gameId = gameId,
+                reqBody = reqBody,
+            )
         val message = if (result.created) "라이브러리에 게임을 등록했습니다." else "게임 기록을 수정했습니다."
         val code = if (result.created) "201-1" else "200-1"
 
-        return RsData(code, message, UserGameDto(result.userGame))
+        return RsData(
+            resultCode = code,
+            msg = message,
+            data = UserGameDto(userGame = result.userGame),
+        )
     }
 
     // 수정만
@@ -76,8 +105,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameDto> {
 
-        val userGame = userGameService.updatePlayRecord(user.id, gameId, reqBody)
-        return RsData("200-1", "게임 기록을 수정했습니다.", UserGameDto(userGame))
+        val userGame =
+            userGameService.updatePlayRecord(
+                userId = user.id,
+                gameId = gameId,
+                reqBody = reqBody,
+            )
+        return RsData(
+            resultCode = "200-1",
+            msg = "게임 기록을 수정했습니다.",
+            data = UserGameDto(userGame = userGame),
+        )
     }
 
     @PutMapping("/{gameId}/play-status")
@@ -91,12 +129,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @RequestParam(required = false) status: PlayStatus?,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGamePlayStatusResponse> {
-        val playStatus = userGameService.changePlayed(user.id, gameId, status)
+        val playStatus =
+            userGameService.changePlayed(
+                userId = user.id,
+                gameId = gameId,
+                playStatus = status,
+            )
 
         return RsData(
-            "200-1",
-            "플레이 상태를 변경했습니다.",
-            UserGamePlayStatusResponse(playStatus),
+            resultCode = "200-1",
+            msg = "플레이 상태를 변경했습니다.",
+            data = UserGamePlayStatusResponse(playStatus = playStatus),
         )
     }
 
@@ -107,12 +150,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @RequestParam playing: Boolean,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameStatusResponse> {
-        val playingStatus = userGameService.changePlaying(user.id, gameId, playing)
+        val playingStatus =
+            userGameService.changePlaying(
+                userId = user.id,
+                gameId = gameId,
+                playing = playing,
+            )
 
         return RsData(
-            "200-1",
-            "플레이 중 상태를 변경했습니다.",
-            UserGameStatusResponse(playingStatus),
+            resultCode = "200-1",
+            msg = "플레이 중 상태를 변경했습니다.",
+            data = UserGameStatusResponse(status = playingStatus),
         )
     }
 
@@ -123,12 +171,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @RequestParam wishlist: Boolean,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameStatusResponse> {
-        val wishlistStatus = userGameService.changeWishlist(user.id, gameId, wishlist)
+        val wishlistStatus =
+            userGameService.changeWishlist(
+                userId = user.id,
+                gameId = gameId,
+                wishlist = wishlist,
+            )
 
         return RsData(
-            "200-1",
-            "위시리스트 상태를 변경했습니다.",
-            UserGameStatusResponse(wishlistStatus),
+            resultCode = "200-1",
+            msg = "위시리스트 상태를 변경했습니다.",
+            data = UserGameStatusResponse(status = wishlistStatus),
         )
     }
 
@@ -139,12 +192,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @RequestParam backlog: Boolean,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameStatusResponse> {
-        val backlogStatus = userGameService.changeBacklog(user.id, gameId, backlog)
+        val backlogStatus =
+            userGameService.changeBacklog(
+                userId = user.id,
+                gameId = gameId,
+                backlog = backlog,
+            )
 
         return RsData(
-            "200-1",
-            "백로그 상태를 변경했습니다.",
-            UserGameStatusResponse(backlogStatus),
+            resultCode = "200-1",
+            msg = "백로그 상태를 변경했습니다.",
+            data = UserGameStatusResponse(status = backlogStatus),
         )
     }
 
@@ -159,12 +217,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @RequestParam liked: Boolean,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameStatusResponse> {
-        val likedStatus = userGameService.changeLiked(user.id, gameId, liked)
+        val likedStatus =
+            userGameService.changeLiked(
+                userId = user.id,
+                gameId = gameId,
+                liked = liked,
+            )
 
         return RsData(
-            "200-1",
-            "좋아요 상태를 변경했습니다.",
-            UserGameStatusResponse(likedStatus),
+            resultCode = "200-1",
+            msg = "좋아요 상태를 변경했습니다.",
+            data = UserGameStatusResponse(status = likedStatus),
         )
     }
 
@@ -173,9 +236,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
     fun profileTab(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
     ): RsData<UserProfileResponse> {
-        val response = userGameService.profileTab(user.id, user.id)
+        val response =
+            userGameService.profileTab(
+                targetUserId = user.id,
+                currentUserId = user.id,
+            )
 
-        return RsData("200-1", "프로필 정보를 조회했습니다.", response)
+        return RsData(
+            resultCode = "200-1",
+            msg = "프로필 정보를 조회했습니다.",
+            data = response,
+        )
     }
 
     @GetMapping("/profile/{userId}")
@@ -185,9 +256,17 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser?,
     ): RsData<UserProfileResponse> {
         val currentUserId = user?.id
-        val response = userGameService.profileTab(userId, currentUserId)
+        val response =
+            userGameService.profileTab(
+                targetUserId = userId,
+                currentUserId = currentUserId,
+            )
 
-        return RsData("200-1", "프로필을 조회했습니다.", response)
+        return RsData(
+            resultCode = "200-1",
+            msg = "프로필을 조회했습니다.",
+            data = response,
+        )
     }
 
     @GetMapping("/recentGames")
@@ -196,9 +275,9 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
     ): RsData<List<UserGameListResponse>> {
         return RsData(
-            "200-1",
-            "최근 플레이한 게임을 불러왔습니다",
-            userGameService.getRecentPlayedGames(user.id),
+            resultCode = "200-1",
+            msg = "최근 플레이한 게임을 불러왔습니다",
+            data = userGameService.getRecentPlayedGames(userId = user.id),
         )
     }
 
@@ -213,7 +292,14 @@ class UserGameController constructor(private val userGameService: UserGameServic
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<List<UserFavoriteGameResponse>> {
         val response: List<UserFavoriteGameResponse> =
-            userGameService.updateFavoriteGames(user.id, requireNotNull(request.gameIds))
-        return RsData("200-1", "인생게임을 수정했습니다.", response)
+            userGameService.updateFavoriteGames(
+                userId = user.id,
+                gameIds = request.gameIds,
+            )
+        return RsData(
+            resultCode = "200-1",
+            msg = "인생게임을 수정했습니다.",
+            data = response,
+        )
     }
 }

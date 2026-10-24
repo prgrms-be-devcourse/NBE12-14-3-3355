@@ -11,9 +11,9 @@ data class UserFavoriteGameResponse(
     constructor(
         favoriteGame: UserFavoriteGame
     ) : this(
-        checkNotNull(favoriteGame.game.id) { "favoriteGame.game.id must be present in a persisted response" },
-        checkNotNull(favoriteGame.game.title) { "favoriteGame.game.title must be present in a persisted response" },
-        favoriteGame.game.coverImageUrl,
-        requireNotNull(favoriteGame.displayOrder),
+        gameId = checkNotNull(favoriteGame.game.id) { "favoriteGame.game.id must be present in a persisted response" },
+        title = checkNotNull(favoriteGame.game.title) { "favoriteGame.game.title must be present in a persisted response" },
+        coverImageUrl = favoriteGame.game.coverImageUrl,
+        displayOrder = requireNotNull(favoriteGame.displayOrder),
     )
 }

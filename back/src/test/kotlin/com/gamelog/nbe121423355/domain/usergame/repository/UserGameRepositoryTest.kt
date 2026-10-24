@@ -6,8 +6,8 @@ import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
+import com.gamelog.nbe121423355.domain.usergame.support.assertMySqlDuplicateEntry
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
-import java.sql.SQLException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.jdbc.core.JdbcTemplate
 
 @SpringBootTest
@@ -44,25 +44,13 @@ class UserGameRepositoryTest {
     @Test
     @DisplayName("MySQL UNIQUE 제약조건은 같은 사용자와 게임의 중복 행 저장을 거절한다")
     fun uniqueConstraintRejectsDuplicateRecord() {
-        val user = userRepository.findById(checkNotNull(userId)).orElseThrow()
-        val game = gameRepository.findById(checkNotNull(gameId)).orElseThrow()
+        val user = checkNotNull(userRepository.findByIdOrNull(checkNotNull(userId)))
+        val game = checkNotNull(gameRepository.findByIdOrNull(checkNotNull(gameId)))
         userGameRepository.saveAndFlush(UserGame(user, game))
 
         assertThatThrownBy { userGameRepository.saveAndFlush(UserGame(user, game)) }
-            .satisfies(::assertDuplicateEntry)
+            .satisfies(Throwable::assertMySqlDuplicateEntry)
         assertThat(recordCount()).isEqualTo(1L)
-    }
-
-    private fun assertDuplicateEntry(failure: Throwable) {
-        assertThat(failure).isInstanceOf(DataIntegrityViolationException::class.java)
-        var rootCause = failure
-        while (true) {
-            rootCause = rootCause.cause ?: break
-        }
-        assertThat(rootCause).isInstanceOfSatisfying(SQLException::class.java) { sqlException ->
-            assertThat(sqlException.errorCode).isEqualTo(1062)
-            assertThat(sqlException.sqlState).isEqualTo("23000")
-        }
     }
 
     private fun recordCount(): Long = checkNotNull(jdbcTemplate.queryForObject(

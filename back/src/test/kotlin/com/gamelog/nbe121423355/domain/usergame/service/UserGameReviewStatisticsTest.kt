@@ -14,6 +14,7 @@ import com.gamelog.nbe121423355.domain.usergame.dto.*
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
+import com.gamelog.nbe121423355.domain.usergame.support.recordRequest
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
@@ -51,24 +53,14 @@ class UserGameReviewStatisticsTest {
         val game = games.save(Game.createFromIgdb(IgdbGameResponse(nextGameId++, "game-$nextGameId", "test",
             null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
         em.persist(GameGenre(game, genre))
-        val record = UserGameReqBody(
+        val record = recordRequest(
             playStatus = status,
-            isPlaying = false,
-            isBacklog = false,
-            isWishlist = false,
-            isLiked = false,
-            platformId = null,
-            playTimeHours = hours?.let(::BigDecimal),
-            finishTimeHours = null,
-            masterTimeHours = null,
-            startedAt = null,
-            completedAt = null,
-            lastPlayedAt = null,
+            hours = hours?.let(::BigDecimal),
         )
         val review = if (rating == null && content == null) null
         else ReviewSaveRequest(rating?.let(::BigDecimal), content, false)
         val response = gameRecordReviewService.saveDetailedReview(userId, checkNotNull(game.id), DetailedReviewSaveRequest(record, review))
-        return records.findById(checkNotNull(response.userGame).id).orElseThrow()
+        return checkNotNull(records.findByIdOrNull(checkNotNull(response.userGame).id))
     }
 
     private fun review(game: UserGame): Review { return reviews.findByUserGame_Id(checkNotNull(game.id)).orElseThrow() }
@@ -127,9 +119,10 @@ class UserGameReviewStatisticsTest {
         val firstGame = checkNotNull(active.game.id)
         em.flush()
         em.clear()
-        val request = UserGameSearchRequest()
-        request.sort = UserGameSort.RATING
-        request.size = 1
+        val request = UserGameSearchRequest().apply {
+            sort = UserGameSort.RATING
+            size = 1
+        }
         val firstPage = library.getUserGameList(userId, request)
         assertThat(firstPage.totalElements).isEqualTo(4L)
         assertThat(firstPage.content.map { it.gameId }).containsExactly(firstGame)
@@ -151,13 +144,12 @@ class UserGameReviewStatisticsTest {
             .setParameter("id", recordId).executeUpdate()
         em.clear()
         library.changeLiked(userId, gameId, true)
-        assertThat(records.findById(recordId).orElseThrow().inLibrary).isTrue()
+        assertThat(checkNotNull(records.findByIdOrNull(recordId)).inLibrary).isTrue()
         val profile = library.profileTab(userId, userId)
         assertThat(profile.stats.playedGameCount).isEqualTo(2L)
         assertThat(profile.stats.averageRating).isEqualByComparingTo("3.0")
         assertThat(profile.scatterData.map { it.gameId }).containsExactly(gameId)
-        val request = UserGameSearchRequest()
-        request.sort = UserGameSort.RATING
+        val request = UserGameSearchRequest().apply { sort = UserGameSort.RATING }
         assertThat(library.getUserGameList(userId, request).content.first().gameId).isEqualTo(gameId)
     }
 

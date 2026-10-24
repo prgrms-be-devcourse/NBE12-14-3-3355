@@ -23,8 +23,6 @@ import com.gamelog.nbe121423355.global.interop.strip
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
-import java.util.stream.Collectors
-import java.util.stream.IntStream
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -76,9 +74,7 @@ class UserGameService(
                 requireNotNull(request.sort).name,
                 PageRequest.of(request.page, request.size),
             )
-            .map(
-                java.util.function.Function { value -> UserGameListResponse(value) }
-            )
+            .map(::UserGameListResponse)
     }
 
     @Transactional(readOnly = true)
@@ -165,20 +161,20 @@ class UserGameService(
         val game: Game = findGame(gameId)
         val userGame =
             UserGame(
-                user,
-                game,
-                reqBody.playStatus,
-                reqBody.isPlaying,
-                reqBody.isBacklog,
-                reqBody.isWishlist,
-                reqBody.isLiked,
-                platform,
-                reqBody.playTimeHours,
-                reqBody.finishTimeHours,
-                reqBody.masterTimeHours,
-                reqBody.startedAt,
-                reqBody.completedAt,
-                reqBody.lastPlayedAt,
+                user = user,
+                game = game,
+                playStatus = reqBody.playStatus,
+                playing = reqBody.isPlaying,
+                backlog = reqBody.isBacklog,
+                wishlist = reqBody.isWishlist,
+                liked = reqBody.isLiked,
+                platform = platform,
+                playTimeHours = reqBody.playTimeHours,
+                finishTimeHours = reqBody.finishTimeHours,
+                masterTimeHours = reqBody.masterTimeHours,
+                startedAt = reqBody.startedAt,
+                completedAt = reqBody.completedAt,
+                lastPlayedAt = reqBody.lastPlayedAt,
             )
         return userGameRepository.save(userGame)
     }
@@ -189,18 +185,18 @@ class UserGameService(
         platform: Platform?,
     ) {
         userGame.updatePlayRecord(
-            reqBody.playStatus,
-            reqBody.isPlaying,
-            reqBody.isBacklog,
-            reqBody.isWishlist,
-            reqBody.isLiked,
-            platform,
-            reqBody.playTimeHours,
-            reqBody.finishTimeHours,
-            reqBody.masterTimeHours,
-            reqBody.startedAt,
-            reqBody.completedAt,
-            reqBody.lastPlayedAt,
+            playStatus = reqBody.playStatus,
+            playing = reqBody.isPlaying,
+            backlog = reqBody.isBacklog,
+            wishlist = reqBody.isWishlist,
+            liked = reqBody.isLiked,
+            platform = platform,
+            playTimeHours = reqBody.playTimeHours,
+            finishTimeHours = reqBody.finishTimeHours,
+            masterTimeHours = reqBody.masterTimeHours,
+            startedAt = reqBody.startedAt,
+            completedAt = reqBody.completedAt,
+            lastPlayedAt = reqBody.lastPlayedAt,
         )
     }
 
@@ -273,33 +269,19 @@ class UserGameService(
             ?: throw ServiceException("404-3", "라이브러리에 등록되지 않은 게임입니다.")
     }
 
-    private fun findPlatform(platformId: Long?): Platform? {
-        if (platformId == null) {
-            return null
+    private fun findPlatform(platformId: Long?): Platform? =
+        platformId?.let {
+            platformRepository
+                .findById(it)
+                .orElseThrow { ServiceException("404-4", "플랫폼을 찾을 수 없습니다.") }
         }
-        return platformRepository
-            .findById(platformId)
-            .orElseThrow { ServiceException("404-4", "플랫폼을 찾을 수 없습니다.") }
-    }
 
     private fun createUserGame(userId: Long, gameId: Long): UserGame {
         val user = findUser(userId)
         val game = findGame(gameId)
         return UserGame(
-            user,
-            game,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
+            user = user,
+            game = game,
         )
     }
 
@@ -426,11 +408,9 @@ class UserGameService(
         val averageRating = reviewRepository.findAverageRating(targetUserId)
         val totalPlayTime =
             playedGames
-                .stream()
-                .map { obj: UserGame -> obj.playTimeHours }
-                .filter { time -> time != null && time.signum() > 0 }
-                .map { requireNotNull(it) }
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .mapNotNull(UserGame::playTimeHours)
+                .filter { it.signum() > 0 }
+                .fold(BigDecimal.ZERO, BigDecimal::add)
         // 산점도
         val scatterData = userGameRepository.findPlayedGameScatterData(targetUserId)
         // 내 게임 취향 한번에 보기
@@ -454,29 +434,36 @@ class UserGameService(
                     currentUserId,
                     targetUserId,
                 )
-        val statsResponse = ProfileStatsDto(playedGameCount.toLong(), averageRating, totalPlayTime)
-        val tasteResponse = UserGameTasteDto(longPlay, rating, completion)
+        val statsResponse =
+            ProfileStatsDto(
+                playedGameCount = playedGameCount.toLong(),
+                averageRating = averageRating,
+                totalPlayTime = totalPlayTime,
+            )
+        val tasteResponse =
+            UserGameTasteDto(
+                longPlay = longPlay,
+                rating = rating,
+                completion = completion,
+            )
         return UserProfileResponse(
-            targetUserId,
-            isMe,
-            isFollowing,
-            favoriteGames,
-            statsResponse,
-            scatterData,
-            tasteResponse,
-            genreDistribution,
-            recentPlayedGames,
-            recentReviews,
+            userId = targetUserId,
+            isMe = isMe,
+            isFollowing = isFollowing,
+            favorite = favoriteGames,
+            stats = statsResponse,
+            scatterData = scatterData,
+            tasteResponse = tasteResponse,
+            genreDistribution = genreDistribution,
+            recentGames = recentPlayedGames,
+            recentReviews = recentReviews,
         )
     }
 
-    fun getFavoriteGames(userId: Long): List<UserFavoriteGameResponse> {
-        return userFavoriteGameRepository
+    fun getFavoriteGames(userId: Long): List<UserFavoriteGameResponse> =
+        userFavoriteGameRepository
             .findAllByUserIdOrderByDisplayOrderAsc(userId)
-            .stream()
-            .map { value -> UserFavoriteGameResponse(value) }
-            .toList()
-    }
+            .map(::UserFavoriteGameResponse)
 
     @Transactional
     fun updateFavoriteGames(
@@ -486,7 +473,7 @@ class UserGameService(
         // 1. 최대 5개 검증
         require(gameIds.size <= 5) { "인생게임은 최대 5개까지 등록할 수 있습니다." }
         // 2. 중복 게임 검증
-        require(gameIds.stream().distinct().count() == gameIds.size.toLong()) {
+        require(gameIds.distinct().size == gameIds.size) {
             "같은 게임을 중복해서 등록할 수 없습니다."
         }
         val user: User =
@@ -505,88 +492,87 @@ class UserGameService(
         }
         // 5. gameId -> Game 매핑
         val gameMap =
-            userGames
-                .stream()
-                .collect(Collectors.toMap({ ug -> ug.game.id }, { obj: UserGame -> obj.game }))
+            userGames.associate { userGame ->
+                checkNotNull(userGame.game.id) to userGame.game
+            }
         // 6. 기존 인생게임 목록 삭제
         userFavoriteGameRepository.deleteAllByUserId(userId)
         // 7. 요청 순서대로 새 인생게임 생성
         val favoriteGames =
-            IntStream.range(0, gameIds.size)
-                .mapToObj { index ->
-                    val gameId = gameIds[index]
-                    UserFavoriteGame(user, gameMap.getValue(gameId), index + 1)
-                }
-                .toList()
+            gameIds.mapIndexed { index, gameId ->
+                UserFavoriteGame(
+                    user = user,
+                    game = gameMap.getValue(gameId),
+                    displayOrder = index + 1,
+                )
+            }
         userFavoriteGameRepository.saveAll(favoriteGames)
         log.info("인생게임 수정 완료 - userId={}, gameCount={}", userId, gameIds.size)
-        return favoriteGames.stream().map { value -> UserFavoriteGameResponse(value) }.toList()
+        return favoriteGames.map(::UserFavoriteGameResponse)
     }
 
     private fun calculateLongPlay(playedGames: List<UserGame>): TasteMetricDto {
         val playTimes =
             playedGames
-                .stream()
-                .map { obj: UserGame -> obj.playTimeHours }
-                .filter { time -> time != null && time.signum() > 0 }
-                .toList()
+                .mapNotNull(UserGame::playTimeHours)
+                .filter { it.signum() > 0 }
         if (playTimes.size < MIN_DATA_COUNT) {
-            return TasteMetricDto(null, "아직 플레이 기록이 부족해요.", "플레이 시간 기록이 3개 이상 쌓이면 확인할 수 있어요.")
+            return TasteMetricDto(
+                ratio = null,
+                message = "아직 플레이 기록이 부족해요.",
+                description = "플레이 시간 기록이 3개 이상 쌓이면 확인할 수 있어요.",
+            )
         }
         val longPlayCount =
             playTimes
-                .stream()
-                .filter { playTime ->
-                    requireNotNull(playTime) >= LONG_PLAY_HOURS
-                }
-                .count()
+                .count { playTime -> playTime >= LONG_PLAY_HOURS }
+                .toLong()
         val longPlayRatio = calculateRatio(longPlayCount, playTimes.size)
         // 70% 이상
         if (longPlayRatio >= HIGH_RATIO) {
             return TasteMetricDto(
-                longPlayRatio,
-                "장시간 플레이하는 게임이 많아요.",
-                createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
+                ratio = longPlayRatio,
+                message = "장시간 플레이하는 게임이 많아요.",
+                description = createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
             )
         }
         // 40% 이상
         if (longPlayRatio >= MEDIUM_RATIO) {
             return TasteMetricDto(
-                longPlayRatio,
-                "장시간 플레이와 짧은 게임을 골고루 즐겨요.",
-                createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
+                ratio = longPlayRatio,
+                message = "장시간 플레이와 짧은 게임을 골고루 즐겨요.",
+                description = createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
             )
         }
         // 40% 미만이면 짧은 게임 비율을 보여준다.
         val shortPlayRatio = BigDecimal.ONE.subtract(longPlayRatio)
         return TasteMetricDto(
-            shortPlayRatio,
-            "짧게 플레이하는 게임이 많아요.",
-            createPercentageDescription(shortPlayRatio, "30시간 미만 플레이한 게임이"),
+            ratio = shortPlayRatio,
+            message = "짧게 플레이하는 게임이 많아요.",
+            description = createPercentageDescription(shortPlayRatio, "30시간 미만 플레이한 게임이"),
         )
     }
 
     private fun calculateRating(ratings: List<BigDecimal>): TasteMetricDto {
         if (ratings.size < MIN_DATA_COUNT) {
-            return TasteMetricDto(null, "아직 평가 기록이 부족해요.", "게임 평가가 3개 이상 쌓이면 확인할 수 있어요.")
+            return TasteMetricDto(
+                ratio = null,
+                message = "아직 평가 기록이 부족해요.",
+                description = "게임 평가가 3개 이상 쌓이면 확인할 수 있어요.",
+            )
         }
         val highRatingCount: Long =
             ratings
-                .stream()
-                .filter { rating -> rating >= HIGH_RATING }
-                .count()
+                .count { rating -> rating >= HIGH_RATING }
+                .toLong()
         val mediumRatingCount =
             ratings
-                .stream()
-                .filter { rating ->
-                    rating in LOW_RATING..<HIGH_RATING
-                }
-                .count()
+                .count { rating -> rating in LOW_RATING..<HIGH_RATING }
+                .toLong()
         val lowRatingCount: Long =
             ratings
-                .stream()
-                .filter { rating -> rating < LOW_RATING }
-                .count()
+                .count { rating -> rating < LOW_RATING }
+                .toLong()
         val highRatingRatio = calculateRatio(highRatingCount, ratings.size)
         val mediumRatingRatio = calculateRatio(mediumRatingCount, ratings.size)
         val lowRatingRatio = calculateRatio(lowRatingCount, ratings.size)
@@ -596,57 +582,60 @@ class UserGameService(
             mediumRatingRatio >= lowRatingRatio
         ) {
             return TasteMetricDto(
-                mediumRatingRatio,
-                "게임을 비교적 후하게 평가하는 편이에요.",
-                createPercentageDescription(mediumRatingRatio, "2.5점 이상 4.0점 미만으로 평가한 게임이"),
+                ratio = mediumRatingRatio,
+                message = "게임을 비교적 후하게 평가하는 편이에요.",
+                description = createPercentageDescription(mediumRatingRatio, "2.5점 이상 4.0점 미만으로 평가한 게임이"),
             )
         }
         // ② 4.0 이상 구간이 가장 큰 경우
         if (highRatingRatio >= lowRatingRatio) {
             return TasteMetricDto(
-                highRatingRatio,
-                "높은 평점을 주는 게임이 많아요.",
-                createPercentageDescription(highRatingRatio, "4.0점 이상 평가한 게임이"),
+                ratio = highRatingRatio,
+                message = "높은 평점을 주는 게임이 많아요.",
+                description = createPercentageDescription(highRatingRatio, "4.0점 이상 평가한 게임이"),
             )
         }
         // ③ 2.5 미만 구간이 가장 큰 경우
         return TasteMetricDto(
-            lowRatingRatio,
-            "평점을 신중하게 주는 편이에요.",
-            createPercentageDescription(lowRatingRatio, "2.5점 미만으로 평가한 게임이"),
+            ratio = lowRatingRatio,
+            message = "평점을 신중하게 주는 편이에요.",
+            description = createPercentageDescription(lowRatingRatio, "2.5점 미만으로 평가한 게임이"),
         )
     }
 
     private fun calculateCompletion(playedGames: List<UserGame>): TasteMetricDto {
         if (playedGames.size < MIN_DATA_COUNT) {
-            return TasteMetricDto(null, "아직 게임 기록이 부족해요.", "플레이한 게임이 3개 이상 쌓이면 확인할 수 있어요.")
+            return TasteMetricDto(
+                ratio = null,
+                message = "아직 게임 기록이 부족해요.",
+                description = "플레이한 게임이 3개 이상 쌓이면 확인할 수 있어요.",
+            )
         }
         val completedCount: Long =
             playedGames
-                .stream()
-                .filter { ug -> PlayStatus.COMPLETED == ug.playStatus }
-                .count()
+                .count { userGame -> userGame.playStatus == PlayStatus.COMPLETED }
+                .toLong()
         val completionRatio = calculateRatio(completedCount, playedGames.size)
         // 70% 이상
         if (completionRatio >= HIGH_RATIO) {
             return TasteMetricDto(
-                completionRatio,
-                "게임을 끝까지 플레이하는 편이에요.",
-                createPercentageDescription(completionRatio, "완료한 게임이"),
+                ratio = completionRatio,
+                message = "게임을 끝까지 플레이하는 편이에요.",
+                description = createPercentageDescription(completionRatio, "완료한 게임이"),
             )
         }
         // 40% 이상
         if (completionRatio >= MEDIUM_RATIO) {
             return TasteMetricDto(
-                completionRatio,
-                "플레이한 게임 중 절반 정도를 완료했어요.",
-                createPercentageDescription(completionRatio, "완료한 게임이"),
+                ratio = completionRatio,
+                message = "플레이한 게임 중 절반 정도를 완료했어요.",
+                description = createPercentageDescription(completionRatio, "완료한 게임이"),
             )
         }
         return TasteMetricDto(
-            completionRatio,
-            "끝까지 완료하기보다 여러 게임을 플레이하는 편이에요.",
-            createPercentageDescription(completionRatio, "완료한 게임이"),
+            ratio = completionRatio,
+            message = "끝까지 완료하기보다 여러 게임을 플레이하는 편이에요.",
+            description = createPercentageDescription(completionRatio, "완료한 게임이"),
         )
     }
 
@@ -662,38 +651,30 @@ class UserGameService(
 
     fun getGenreDistribution(userId: Long): List<UserGameGenreDistributionResponse> {
         val distributions = userGameRepository.findGenreDistribution(userId)
-        if (distributions.isEmpty()) {
-            return listOf()
-        }
-        val totalGenreGameCount =
-            distributions.stream().mapToLong(UserGameGenreDTO::gameCount).sum()
-        return distributions
-            .stream()
-            .map { dto ->
+        val totalGenreGameCount = distributions.sumOf(UserGameGenreDTO::gameCount)
+        return distributions.map { dto ->
                 val ratio =
                     BigDecimal.valueOf(dto.gameCount)
                         .divide(BigDecimal.valueOf(totalGenreGameCount), 4, RoundingMode.HALF_UP)
-                UserGameGenreDistributionResponse(dto.genreName, ratio)
+                UserGameGenreDistributionResponse(
+                    genreName = dto.genreName,
+                    ratio = ratio,
+                )
             }
-            .toList()
     }
 
     fun getRecentPlayedGames(userId: Long): List<UserGameListResponse> {
         val pageable = PageRequest.of(0, 5)
         return userGameRepository
             .findRecentPlayedGames(userId, pageable)
-            .stream()
-            .map { value -> UserGameListResponse(value) }
-            .toList()
+            .map(::UserGameListResponse)
     }
 
     fun getRecentReviews(userId: Long): List<RecentReviewResponse> {
         val pageable = PageRequest.of(0, 3)
         return reviewRepository
-            .findRecentReviews(requireNotNull(userId), pageable)
-            .stream()
-            .map { value -> RecentReviewResponse(value) }
-            .toList()
+            .findRecentReviews(userId, pageable)
+            .map(::RecentReviewResponse)
     }
 
     companion object {
