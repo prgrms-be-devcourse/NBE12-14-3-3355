@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NotificationBell from "@/features/notifications/notification-bell";
 import { useAuth } from "@/features/auth/auth-context";
 
 export default function AuthNav() {
@@ -12,12 +13,14 @@ export default function AuthNav() {
     if (auth.user?.role === "ADMIN") {
       return (
         <div className="auth-nav">
+          <NotificationBell key={auth.user?.id} />
           <Link href="/admin/reports">관리자 페이지</Link>
         </div>
       );
     }
     return (
       <div className="auth-nav">
+<NotificationBell key={auth.user?.id} />
 <Link href="/profile" className="auth-nav-avatar-link" aria-label="프로필">
   {auth.user?.profileImageUrl ? (
     // eslint-disable-next-line @next/next/no-img-element

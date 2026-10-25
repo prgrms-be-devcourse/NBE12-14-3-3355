@@ -47,6 +47,8 @@ class ReviewReportServiceTest {
     @org.mockito.Mock
     com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder changeRecorder;
 
+    @Mock org.springframework.context.ApplicationEventPublisher events;
+
     @InjectMocks ReviewReportService reviewReportService;
 
     private User writer;
