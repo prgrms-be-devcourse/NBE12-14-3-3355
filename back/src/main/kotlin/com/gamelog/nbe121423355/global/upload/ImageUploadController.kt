@@ -30,6 +30,6 @@ class ImageUploadController(private val imageUploadService: ImageUploadService) 
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser?,
     ): RsData<String> {
         val url = imageUploadService.uploadImage(file)
-        return RsData<String>("200-1", "이미지를 업로드했습니다.", url)
+        return RsData("200-1", "이미지를 업로드했습니다.", url)
     }
 }

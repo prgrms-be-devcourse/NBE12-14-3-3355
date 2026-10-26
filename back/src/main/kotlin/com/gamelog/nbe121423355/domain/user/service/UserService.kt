@@ -103,9 +103,7 @@ class UserService(
     // 토큰 갱신 메소드 (재발급 로직은 TokenReissueService에서 필터와 공유)
     // 교체된 refreshToken도 쿠키로 내려줘야 하므로 결과 전체를 Controller에 전달
     // 주의: @Transactional을 붙이면 재사용 감지 시 세션 삭제가 바깥 트랜잭션 롤백으로 취소됨
-    fun refresh(refreshToken: String?): ReissueResult {
-        return tokenReissueService.reissue(refreshToken)
-    }
+    fun refresh(refreshToken: String?): ReissueResult = tokenReissueService.reissue(refreshToken)
 
     // 내정보 가져오기 - 온보딩 확인 여부
     fun getMe(userId: Long): UserDto {
@@ -135,13 +133,10 @@ class UserService(
         return UserDto(user)
     }
 
-    fun checkEmailDuplicate(email: String?): Boolean {
-        return userRepository.existsByEmail(email)
-    }
+    fun checkEmailDuplicate(email: String?): Boolean = userRepository.existsByEmail(email)
 
-    fun checkNicknameDuplicate(nickname: String?): Boolean {
-        return userRepository.existsByNickname(nickname)
-    }
+    fun checkNicknameDuplicate(nickname: String?): Boolean =
+        userRepository.existsByNickname(nickname)
 
     @Transactional
     fun updateProfile(userId: Long, updateProfileRequestDto: UpdateProfileRequestDto): UserDto {

@@ -20,9 +20,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException
 class GlobalExceptionHandler {
     @ExceptionHandler(NoSuchElementException::class)
     @ResponseBody
-    fun noSuchElementException(): RsData<Void> {
-        return RsData<Void>("404-1", "존재하지 않는 데이터입니다.")
-    }
+    fun noSuchElementException(): RsData<Void> =
+        RsData("404-1", "존재하지 않는 데이터입니다.")
 
     // DTO 검증 실패(@Valid)
     @ExceptionHandler(MethodArgumentNotValidException::class)
@@ -35,36 +34,33 @@ class GlobalExceptionHandler {
                 .map { error -> "${error.field}-${error.code}-${error.defaultMessage}" }
                 .sorted()
                 .joinToString("\n")
-        return RsData<Void>("400-1", message)
+        return RsData("400-1", message)
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     @ResponseBody
-    fun handleException(e: HttpMessageNotReadableException?): RsData<Void> {
-        return RsData<Void>("400-2", "잘못된 형식의 요청 데이터입니다.")
-    }
+    fun handleException(e: HttpMessageNotReadableException?): RsData<Void> =
+        RsData("400-2", "잘못된 형식의 요청 데이터입니다.")
 
     // PathVariable/RequestParam 타입 불일치 (예: /games/abc)
     // ErrorResponse를 구현하지 않는 예외라 아래 Exception 핸들러의 4xx 분기에 걸리지 않아 별도 처리
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
     @ResponseBody
-    fun handleException(e: MethodArgumentTypeMismatchException?): RsData<Void> {
-        return RsData<Void>("400-0", "잘못된 요청입니다.")
-    }
+    fun handleException(e: MethodArgumentTypeMismatchException?): RsData<Void> =
+        RsData("400-0", "잘못된 요청입니다.")
 
     // 이미지 파일 크기 초과시 예외사항
     @ExceptionHandler(MaxUploadSizeExceededException::class)
     @ResponseBody
-    fun handleException(e: MaxUploadSizeExceededException?): RsData<Void> {
-        return RsData<Void>("400-3", "파일 크기가 너무 큽니다. 5MB 이하 파일만 업로드할 수 있습니다.")
-    }
+    fun handleException(e: MaxUploadSizeExceededException?): RsData<Void> =
+        RsData("400-3", "파일 크기가 너무 큽니다. 5MB 이하 파일만 업로드할 수 있습니다.")
 
     // 동시 요청으로 인한 DB 유니크 제약조건 위반 (중복확인 직후 동시 가입 경합)
     @ExceptionHandler(DataIntegrityViolationException::class)
     @ResponseBody
     fun handleException(e: DataIntegrityViolationException?): RsData<Void> {
         log.warn("DB 제약조건 위반", e)
-        return RsData<Void>("409-3", "이미 존재하거나 처리 중인 데이터입니다. 잠시 후 다시 시도해 주세요.")
+        return RsData("409-3", "이미 존재하거나 처리 중인 데이터입니다. 잠시 후 다시 시도해 주세요.")
     }
 
     @ExceptionHandler(ServiceException::class)
@@ -73,14 +69,14 @@ class GlobalExceptionHandler {
         if (e.resultCode.startsWith("500")) {
             log.error("서비스 오류 발생: resultCode={}", e.resultCode, e)
         }
-        return RsData<Void>(e.resultCode, e.msg)
+        return RsData(e.resultCode, e.msg)
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException::class)
     @ResponseBody
     fun handleException(e: ObjectOptimisticLockingFailureException?): RsData<Void> {
         log.warn("동시에 변경된 데이터로 인한 낙관적 락 충돌", e)
-        return RsData<Void>("409-6", "다른 곳에서 리뷰가 변경되었습니다. 최신 내용을 다시 불러온 후 시도해 주세요.")
+        return RsData("409-6", "다른 곳에서 리뷰가 변경되었습니다. 최신 내용을 다시 불러온 후 시도해 주세요.")
     }
 
     // 위에서 처리하지 못한 나머지 모든 예외 (500)
@@ -91,10 +87,10 @@ class GlobalExceptionHandler {
     fun handleException(e: Exception?): RsData<Void> {
         if (e is ErrorResponse && e.statusCode.is4xxClientError()) {
             val status = e.statusCode.value()
-            return RsData<Void>("$status-0", clientErrorMessage(status))
+            return RsData("$status-0", clientErrorMessage(status))
         }
         log.error("처리되지 않은 예외 발생", e)
-        return RsData<Void>("500-1", "서버 내부 오류가 발생했습니다.")
+        return RsData("500-1", "서버 내부 오류가 발생했습니다.")
     }
 
     private fun clientErrorMessage(status: Int): String {

@@ -35,7 +35,7 @@ class UserFollowController(private val userFollowService: UserFollowService) {
         @RequestParam(defaultValue = "10")
         size: Int,
     ): RsData<FollowPageResponseDto> {
-        return RsData<FollowPageResponseDto>(
+        return RsData(
             "200-18",
             "사용자 검색 결과를 조회했습니다.",
             userFollowService.searchUsers(
@@ -58,7 +58,7 @@ class UserFollowController(private val userFollowService: UserFollowService) {
         @Parameter(description = "팔로우할 사용자 ID", example = "2") @PathVariable targetUserId: Long,
     ): RsData<FollowStatusResponseDto> {
         val response = userFollowService.follow(securityUser.id, targetUserId)
-        return RsData<FollowStatusResponseDto>("200-14", "사용자를 팔로우했습니다.", response)
+        return RsData("200-14", "사용자를 팔로우했습니다.", response)
     }
 
     @DeleteMapping("/me/following/{targetUserId}")
@@ -72,7 +72,7 @@ class UserFollowController(private val userFollowService: UserFollowService) {
         @Parameter(description = "팔로우를 취소할 사용자 ID", example = "2") @PathVariable targetUserId: Long,
     ): RsData<FollowStatusResponseDto> {
         val response = userFollowService.unfollow(securityUser.id, targetUserId)
-        return RsData<FollowStatusResponseDto>("200-15", "사용자 팔로우를 취소했습니다.", response)
+        return RsData("200-15", "사용자 팔로우를 취소했습니다.", response)
     }
 
     @GetMapping("/{userId}/following")
@@ -92,7 +92,7 @@ class UserFollowController(private val userFollowService: UserFollowService) {
     ): RsData<FollowPageResponseDto> {
         val loginUserId = securityUser?.id
         val response = userFollowService.getFollowing(loginUserId, userId, page, size)
-        return RsData<FollowPageResponseDto>("200-16", "팔로잉 목록을 조회했습니다.", response)
+        return RsData("200-16", "팔로잉 목록을 조회했습니다.", response)
     }
 
     @GetMapping("/{userId}/followers")
@@ -112,6 +112,6 @@ class UserFollowController(private val userFollowService: UserFollowService) {
     ): RsData<FollowPageResponseDto> {
         val loginUserId = securityUser?.id
         val response = userFollowService.getFollowers(loginUserId, userId, page, size)
-        return RsData<FollowPageResponseDto>("200-17", "팔로워 목록을 조회했습니다.", response)
+        return RsData("200-17", "팔로워 목록을 조회했습니다.", response)
     }
 }
