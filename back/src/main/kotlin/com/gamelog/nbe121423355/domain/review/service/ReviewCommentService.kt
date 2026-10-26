@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.notification.*
 import com.gamelog.nbe121423355.domain.review.entity.*
 import com.gamelog.nbe121423355.domain.review.repository.*
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
@@ -7,6 +8,7 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewCommentService
 constructor(
+    private val events: ApplicationEventPublisher,
     private val reviews: ReviewRepository,
     private val comments: ReviewCommentRepository,
     private val likes: ReviewCommentLikeRepository,
@@ -146,6 +149,19 @@ constructor(
             users.findById(userId).orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
         val c: ReviewComment =
             comments.saveAndFlush(ReviewComment(review, user, body.content, body.spoiler, parent))
+        val recipients = setOfNotNull(review.userGame.user.id, parent?.user?.id)
+        events.publishEvent(
+            NotificationRequested(
+                recipients = recipients,
+                actorId = userId,
+                kind = if (parent == null) NotificationKind.REVIEW_COMMENT else NotificationKind.REVIEW_REPLY,
+                targetType = NotificationTarget.REVIEW_COMMENT,
+                targetId = requireNotNull(c.id),
+                sourceKey = "comment:${c.id}",
+                reviewId = reviewId,
+                gameTitle = review.userGame.game.title,
+            )
+        )
         return items(review, listOf(c), userId).first()
     }
 
@@ -171,6 +187,7 @@ constructor(
         owner(c, userId)
         likes.deleteForComment(id)
         c.delete()
+        events.publishEvent(CommentNotificationsCancelled(id))
     }
 
     @Transactional
@@ -194,7 +211,22 @@ constructor(
                         )
                     })
             likes.save(ReviewCommentLike(c, user))
-        } else if (!value) likes.deleteById(key)
+            events.publishEvent(
+                NotificationRequested(
+                    recipients = setOf(requireNotNull(c.user.id)),
+                    actorId = userId,
+                    kind = NotificationKind.REVIEW_COMMENT_LIKE,
+                    targetType = NotificationTarget.REVIEW_COMMENT,
+                    targetId = id,
+                    sourceKey = "comment-like:$id:$userId",
+                    reviewId = reviewId,
+                    gameTitle = review.userGame.game.title,
+                )
+            )
+        } else if (!value) {
+            likes.deleteById(key)
+            events.publishEvent(NotificationCancelled("comment-like:$id:$userId"))
+        }
         likes.flush()
         return items(review, listOf(c), userId).first()
     }

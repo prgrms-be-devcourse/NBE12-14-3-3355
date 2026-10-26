@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { createReviewReport, deleteReview, getLikeStatus, getMyDetailedReview, ReviewApiError, setReviewLike } from "@/features/reviews/api";
+import { useSearchParams } from "next/navigation";
+import { acceptRefreshedToken } from "@/features/auth/api";
 import type { DetailedReview } from "@/features/reviews/types";
 import type { Review, ReviewPage } from "@/features/reviews/list-types";
 import { getPlayLabel } from "../play-label";
 import styles from "./game-reviews.module.css";
 import ReviewComments from "./review-comments";
-import CommentReturn from "./comment-return";
 
 type ReviewSort = "newest" | "rating";
 type ReviewResponse = { data?: ReviewPage; msg?: string };
@@ -80,6 +81,8 @@ function ReviewCard({
   deleting = false,
   onDelete,
   onReport,
+  targetKey,
+  targetCommentId,
 }: {
   review: Review;
   accessToken?: string;
@@ -87,7 +90,15 @@ function ReviewCard({
   deleting?: boolean;
   onDelete?: () => void;
   onReport?: () => void;
+  targetKey?: string;
+  targetCommentId?: number;
 }) {
+  const card = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!targetKey) return;
+    const frame = requestAnimationFrame(() => card.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [targetKey]);
   const [revealed, setRevealed] = useState(false);
   const hidden = review.spoiler && !revealed;
   const nickname = review.nickname?.trim() || `플레이어 ${review.userId}`;
@@ -96,7 +107,7 @@ function ReviewCard({
     ? { backgroundImage: `url(${JSON.stringify(review.profileImageUrl)})` }
     : undefined;
 
-  return <article className={styles.card}>
+  return <article ref={card} id={`review-${review.reviewId}`} className={styles.card}>
     <div className={styles.cardHeader}>
       <div className={styles.reviewIdentity}>
         <Link className={styles.reviewerAvatarLink} href={`/profile/${review.userId}`} aria-label={`${nickname}님의 프로필`}>
@@ -139,22 +150,34 @@ function ReviewCard({
         {!mine && accessToken && onReport && <button type="button" className={styles.reportButton} onClick={onReport}>신고</button>}
       </div>
     </div>
-    <ReviewComments reviewId={review.reviewId} locked={hidden} />
+    <ReviewComments key={targetKey ?? "default"} reviewId={review.reviewId} locked={hidden} autoOpen={Boolean(targetKey)} targetCommentId={targetCommentId} />
   </article>;
 }
 
 // 게임 상세 화면의 리뷰 목록과 좋아요 액션
-export default function GameReviews({
-  gameId,
-  accessToken,
-  refreshKey = 0,
-  onDeleted,
-}: {
+type GameReviewsProps = {
   gameId: string;
   accessToken?: string;
   refreshKey?: number;
   onDeleted?: () => void;
-}) {
+};
+
+export default function GameReviews(props: GameReviewsProps) {
+  return <Suspense fallback={<p role="status">리뷰를 불러오는 중...</p>}><GameReviewsContent {...props} /></Suspense>;
+}
+
+function GameReviewsContent({
+  gameId,
+  accessToken,
+  refreshKey = 0,
+  onDeleted,
+}: GameReviewsProps) {
+  const params = useSearchParams();
+  const target = params.get("commentReview");
+  const targetReviewId = target && /^[1-9]\d*$/.test(target) ? Number(target) : null;
+  const comment = params.get("notificationComment");
+  const targetCommentId = comment && /^[1-9]\d*$/.test(comment) ? Number(comment) : undefined;
+  const targetKey = targetReviewId ? `${targetReviewId}:${targetCommentId ?? ""}:${params.get("notificationVisit") ?? ""}` : undefined;
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const [sort, setSort] = useState<ReviewSort>("newest");
   const [sortOpen, setSortOpen] = useState(false);
@@ -172,6 +195,26 @@ export default function GameReviews({
   const [reportError, setReportError] = useState("");
   const [reporting, setReporting] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [targetResult, setTargetResult] = useState<{ id: number; review?: Review; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (!targetReviewId || loading || !result) return;
+    if (myDetail?.review?.reviewId === targetReviewId || result.reviews.some(review => review.reviewId === targetReviewId)) return;
+    const controller = new AbortController();
+    fetch(`/api/review-api/reviews/${targetReviewId}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      signal: controller.signal, cache: "no-store",
+    }).then(async response => {
+      acceptRefreshedToken(response);
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.msg || "대상 리뷰를 불러오지 못했습니다.");
+      if (String(body.data.gameId) !== gameId) throw new Error("이 게임의 리뷰가 아닙니다.");
+      if (!controller.signal.aborted) setTargetResult({ id: targetReviewId, review: body.data });
+    }).catch(reason => {
+      if (!controller.signal.aborted) setTargetResult({ id: targetReviewId, error: reason.message });
+    });
+    return () => controller.abort();
+  }, [targetReviewId, loading, result, myDetail, accessToken, gameId]);
 
   useEffect(() => {
     if (!sortOpen) return;
@@ -276,11 +319,17 @@ export default function GameReviews({
   }
 
   const myReview = myDetail?.review;
-  const visibleReviews = result
+  const pageReviews = result
     ? page === 0 && myReview
       ? [myReview, ...result.reviews.filter((review) => review.reviewId !== myReview.reviewId)]
       : result.reviews
     : [];
+  const targetReview = myReview?.reviewId === targetReviewId ? myReview
+    : targetResult?.id === targetReviewId ? targetResult.review : undefined;
+  // Integrate an off-page target into the same list, never render a second review card.
+  const visibleReviews = targetReview && !pageReviews.some(review => review.reviewId === targetReview.reviewId)
+    ? [targetReview, ...pageReviews] : pageReviews;
+  const targetError = targetResult?.id === targetReviewId ? targetResult.error : undefined;
 
   return <section className={styles.section} aria-labelledby="reviews-title" aria-busy={loading}>
     <div className={styles.heading}>
@@ -300,7 +349,7 @@ export default function GameReviews({
       </div></div>
     </div>
 
-    <CommentReturn gameId={gameId} />
+    {targetError && <p className={styles.actionError} role="alert">{targetError} 삭제되거나 숨겨진 리뷰는 열 수 없습니다.</p>}
     {actionError && <p className={styles.actionError} role="alert">{actionError}</p>}
     {actionNotice && <p className={styles.actionNotice} role="status">{actionNotice}</p>}
 
@@ -312,6 +361,8 @@ export default function GameReviews({
           {reportedReviewId === review.reviewId && <p className={styles.actionNotice} role="status">리뷰 신고가 접수되었습니다. 관리자가 내용을 확인할 예정입니다.</p>}
           <ReviewCard
           review={review}
+          targetKey={review.reviewId === targetReviewId ? targetKey : undefined}
+          targetCommentId={review.reviewId === targetReviewId ? targetCommentId : undefined}
           accessToken={accessToken}
           mine={myReview?.reviewId === review.reviewId}
           deleting={deletingReviewId === review.reviewId}

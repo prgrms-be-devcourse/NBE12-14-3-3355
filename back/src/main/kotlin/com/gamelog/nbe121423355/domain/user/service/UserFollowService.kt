@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.user.service
 
+import com.gamelog.nbe121423355.domain.notification.*
 import com.gamelog.nbe121423355.domain.user.dto.FollowPageResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowStatusResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowUserResponseDto
@@ -15,12 +16,14 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Order
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
 class UserFollowService(
+    private val events: ApplicationEventPublisher,
     private val userFollowRepository: UserFollowRepository,
     private val userRepository: UserRepository,
 ) {
@@ -85,6 +88,16 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (!userFollowRepository.existsById(followId)) {
             userFollowRepository.save(UserFollow(follower, followee))
+            events.publishEvent(
+                NotificationRequested(
+                    recipients = setOf(requireNotNull(targetUserId)),
+                    actorId = followerId,
+                    kind = NotificationKind.FOLLOW,
+                    targetType = NotificationTarget.USER,
+                    targetId = followerId,
+                    sourceKey = "follow:$followerId:$targetUserId",
+                )
+            )
         }
         return FollowStatusResponseDto(targetUserId, true)
     }
@@ -96,6 +109,7 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (userFollowRepository.existsById(followId)) {
             userFollowRepository.deleteById(followId)
+            events.publishEvent(NotificationCancelled("follow:$followerId:$targetUserId"))
         }
         return FollowStatusResponseDto(targetUserId, false)
     }

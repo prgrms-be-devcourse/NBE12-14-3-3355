@@ -47,6 +47,9 @@ class UserFollowServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher events;
+
     @InjectMocks
     private UserFollowService userFollowService;
 
