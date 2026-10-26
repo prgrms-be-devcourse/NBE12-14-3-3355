@@ -17,6 +17,9 @@ import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.mockito.ArgumentMatchers.anyList
+import org.mockito.Mockito.doAnswer
+import org.mockito.Mockito.reset
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -24,6 +27,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
@@ -35,7 +41,8 @@ class UserGameFavoriteTest {
     @Autowired private lateinit var users: UserRepository
     @Autowired private lateinit var games: GameRepository
     @Autowired private lateinit var records: UserGameRepository
-    @Autowired private lateinit var favorites: UserFavoriteGameRepository
+    @MockitoSpyBean private lateinit var favorites: UserFavoriteGameRepository
+    @Autowired private lateinit var transactions: TransactionTemplate
     @Autowired private lateinit var em: EntityManager
     private lateinit var user: User
     private lateinit var game: Game
@@ -173,5 +180,89 @@ class UserGameFavoriteTest {
 
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid).map { it.game.id })
             .containsExactly(otherId)
+    }
+
+    @Test
+    @DisplayName("인생게임 교체·재정렬·전체 해제 결과가 DB에 반영된다")
+    fun replacingReorderingAndClearingFavoritesPersists() {
+        val uid = checkNotNull(user.id)
+        val firstId = checkNotNull(game.id)
+        val extraGames = (1L..2L).map { index ->
+            games.save(Game.createFromIgdb(IgdbGameResponse(987660L + index, "favorite-$index", "test",
+                null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
+        }
+        (listOf(game) + extraGames).forEach { candidate ->
+            records.save(UserGame(user, candidate).apply { changeWishlist(true) })
+        }
+        val secondId = checkNotNull(extraGames[0].id)
+        val thirdId = checkNotNull(extraGames[1].id)
+
+        profileService.updateFavoriteGames(uid, listOf(firstId, secondId))
+        em.flush()
+        em.clear()
+
+        fun assertStored(expected: List<Long>) {
+            em.flush()
+            em.clear()
+            val stored = favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)
+            assertThat(stored.map { it.game.id }).containsExactlyElementsOf(expected)
+            assertThat(stored.map { it.displayOrder }).containsExactlyElementsOf((1..expected.size).toList())
+        }
+
+        profileService.updateFavoriteGames(uid, listOf(thirdId, secondId))
+        assertStored(listOf(thirdId, secondId))
+        profileService.updateFavoriteGames(uid, listOf(secondId, thirdId))
+        assertStored(listOf(secondId, thirdId))
+        profileService.updateFavoriteGames(uid, emptyList())
+        assertStored(emptyList())
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DisplayName("기존 인생게임 삭제를 flush한 뒤 저장이 실패하면 기존 목록과 순서가 롤백된다")
+    fun failedReplacementRollsBackDeletedFavorites() {
+        val uid = checkNotNull(user.id)
+        val gid = checkNotNull(game.id)
+        val fixtureGameIds = mutableListOf(gid)
+        try {
+            val second = games.save(Game.createFromIgdb(IgdbGameResponse(987670L, "rollback-favorite", "test",
+                null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
+            val secondId = checkNotNull(second.id)
+            fixtureGameIds += secondId
+            transactions.executeWithoutResult {
+                records.save(UserGame(user, game).apply { changeWishlist(true) })
+                records.save(UserGame(user, second).apply { changeWishlist(true) })
+                favorites.save(UserFavoriteGame(user, game, 1))
+                favorites.save(UserFavoriteGame(user, second, 2))
+            }
+            // 저장 단계의 장애만 주입한다. 삭제 SQL과 서비스 트랜잭션은 실제 MySQL에서 실행한다.
+            doAnswer {
+                em.flush()
+                val count = em.createQuery(
+                    "select count(f) from UserFavoriteGame f where f.user.id = :uid", Long::class.javaObjectType,
+                ).setParameter("uid", uid).singleResult
+                assertThat(count.toLong()).isZero()
+                throw IllegalStateException("인생게임 저장 실패")
+            }.`when`(favorites).saveAll(anyList<UserFavoriteGame>())
+
+            assertThatThrownBy { profileService.updateFavoriteGames(uid, listOf(secondId, gid)) }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessage("인생게임 저장 실패")
+
+            transactions.executeWithoutResult {
+                val restored = favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)
+                assertThat(restored.map { it.game.id }).containsExactly(gid, secondId)
+                assertThat(restored.map { it.displayOrder }).containsExactly(1, 2)
+            }
+        } finally {
+            reset(favorites)
+            transactions.executeWithoutResult {
+                favorites.deleteAllByUserId(uid)
+                em.createQuery("delete from UserGame ug where ug.user.id = :uid")
+                    .setParameter("uid", uid).executeUpdate()
+                games.deleteAllById(fixtureGameIds)
+                users.deleteById(uid)
+            }
+        }
     }
 }
