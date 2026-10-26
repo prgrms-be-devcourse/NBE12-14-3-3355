@@ -4,4 +4,4 @@ data class UserGameTasteDto(
     val longPlay: TasteMetricDto,
     val rating: TasteMetricDto,
     val completion: TasteMetricDto,
-) {}
+)

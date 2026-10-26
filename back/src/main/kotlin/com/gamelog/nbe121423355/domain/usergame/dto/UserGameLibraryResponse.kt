@@ -4,4 +4,4 @@ data class UserGameLibraryResponse(
     val totalElements: Long,
     val totalPages: Int,
     val userGames: List<UserGameListResponse>,
-) {}
+)

@@ -6,4 +6,4 @@ data class TasteMetricDto(
     val ratio: BigDecimal?,
     val message: String,
     val description: String,
-) {}
+)
