@@ -34,17 +34,15 @@ class UserPreferenceGameService(
         }
         userPreferenceGameRepository.deleteByUser_Id(userId)
         val newPreferences: List<UserPreferenceGame> =
-            games.stream().map { game -> UserPreferenceGame(user, game) }.toList()
+            games.map { game -> UserPreferenceGame(user, game) }
         userPreferenceGameRepository.saveAll(newPreferences)
-        return newPreferences.stream().map { value -> PreferredGameResponseDto(value) }.toList()
+        return newPreferences.map { value -> PreferredGameResponseDto(value) }
     }
 
     // 온보딩 게임정보 가져오기
     fun getPreferredGames(userId: Long?): List<PreferredGameResponseDto> {
         return userPreferenceGameRepository
             .findByUser_Id(userId)
-            .stream()
             .map { value -> PreferredGameResponseDto(value) }
-            .toList()
     }
 }
