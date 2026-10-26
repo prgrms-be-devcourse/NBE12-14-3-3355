@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
 @Schema(description = "회원가입 요청")
-@JvmRecord
 data class SignupRequestDto(
     @field:NotBlank @field:Schema(description = "닉네임", example = "게임마스터") val nickname: String?,
     @field:NotBlank
