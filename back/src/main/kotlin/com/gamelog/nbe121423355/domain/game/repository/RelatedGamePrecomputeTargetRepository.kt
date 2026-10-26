@@ -24,14 +24,14 @@ class RelatedGamePrecomputeTargetRepository(private val jdbcTemplate: JdbcTempla
             "SELECT COUNT(*) FROM games game WHERE game.id <= ? AND ${condition(type)}",
             Long::class.javaObjectType,
             upperId,
-        ) ?: 0L
+        ) ?: error("추천 계산 대상 수 집계 결과가 없습니다.")
 
     fun findIds(
         type: RelatedGamePrecomputeTargetType,
         afterId: Long,
         upperId: Long,
         limit: Int,
-    ): MutableList<Long> {
+    ): List<Long> {
         require(limit > 0)
         return jdbcTemplate.query(
             """

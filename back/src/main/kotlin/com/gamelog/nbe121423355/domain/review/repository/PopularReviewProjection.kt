@@ -4,23 +4,23 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 interface PopularReviewProjection {
-    val reviewId: Long?
+    val reviewId: Long
 
-    val userId: Long?
+    val userId: Long
 
     val nickname: String?
 
     val profileImageUrl: String?
 
-    val gameId: Long?
+    val gameId: Long
 
-    val gameTitle: String?
+    val gameTitle: String
 
     val gameCoverImageUrl: String?
 
     val rating: BigDecimal?
 
-    val content: String?
+    val content: String
 
     val spoiler: Boolean
 

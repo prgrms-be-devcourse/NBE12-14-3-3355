@@ -25,26 +25,23 @@ class UserPreferenceGenreService(
             throw ServiceException("400-12", "선호 장르는 최대 3개까지 선택 가능합니다.") // 온보딩 장르 최대 3개 선택
         }
         val user =
-            userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow {
-                ServiceException("404-1", "존재하지 않는 유저입니다.")
-            }
+            userRepository.findByIdAndDeletedAtIsNull(userId)
+                ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
         val genres = genreRepository.findAllById(genreIds)
         if (genres.size != genreIds.size) {
             throw ServiceException("400-11", "존재하지 않는 장르가 포함되어 있습니다.")
         }
         userPreferenceGenreRepository.deleteByUser_Id(userId)
-        val newPreferences: List<UserPreferenceGenre> =
-            genres.stream().map { genre -> UserPreferenceGenre(user, genre) }.toList()
+        val newPreferences =
+            genres.map { genre -> UserPreferenceGenre(user, genre) }
         userPreferenceGenreRepository.saveAll(newPreferences)
-        return newPreferences.stream().map { value -> PreferredGenreResponseDto(value) }.toList()
+        return newPreferences.map { value -> PreferredGenreResponseDto(value) }
     }
 
     // 온보딩 장르정보 가져오기
     fun getPreferredGenres(userId: Long?): List<PreferredGenreResponseDto> {
         return userPreferenceGenreRepository
             .findByUser_Id(userId)
-            .stream()
             .map { value -> PreferredGenreResponseDto(value) }
-            .toList()
     }
 }

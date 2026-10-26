@@ -88,6 +88,48 @@ class PopularGameServiceTest {
     }
 
     @Test
+    @DisplayName("장르와 커버 이미지가 없는 게임도 조회 순서대로 반환한다")
+    void getPopularGamesPreservesOrderWithoutGenresOrCoverImage() {
+        // given: 조회 순서가 ID 오름차순과 다른 두 게임과 빈 장르 목록을 준비
+        PopularGameProjection firstGame = org.mockito.Mockito.mock(PopularGameProjection.class);
+        PopularGameProjection secondGame = org.mockito.Mockito.mock(PopularGameProjection.class);
+        when(firstGame.getGameId()).thenReturn(2L);
+        when(firstGame.getTitle()).thenReturn("첫 번째 인기 게임");
+        when(secondGame.getGameId()).thenReturn(1L);
+        when(secondGame.getTitle()).thenReturn("두 번째 인기 게임");
+        when(gameStatisticsRepository.findPopularGames(PageRequest.of(0, 5)))
+                .thenReturn(List.of(firstGame, secondGame));
+        when(gameGenreRepository.findAllWithGenreByGameIdIn(List.of(2L, 1L)))
+                .thenReturn(List.of());
+
+        // when: 장르와 커버 이미지가 없는 인기 게임을 조회
+        List<PopularGameResponse> result = popularGameService.getPopularGames(5);
+
+        // then: 기존 조회 순서와 null 커버 이미지를 유지하고 장르는 빈 목록으로 반환
+        assertThat(result).extracting(PopularGameResponse::gameId).containsExactly(2L, 1L);
+        assertThat(result).allSatisfy(game -> {
+            assertThat(game.coverImageUrl()).isNull();
+            assertThat(game.genres()).isEmpty();
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 50})
+    @DisplayName("조회 개수의 최솟값과 최댓값을 허용한다")
+    void getPopularGamesAcceptsBoundarySizes(int size) {
+        // given: 허용 범위 경계의 조회 개수와 빈 조회 결과를 준비
+        when(gameStatisticsRepository.findPopularGames(PageRequest.of(0, size)))
+                .thenReturn(List.of());
+
+        // when: 최솟값 또는 최댓값으로 인기 게임을 조회
+        List<PopularGameResponse> result = popularGameService.getPopularGames(size);
+
+        // then: 예외 없이 빈 목록을 반환하고 장르 조회를 생략
+        assertThat(result).isEmpty();
+        verifyNoInteractions(gameGenreRepository);
+    }
+
+    @Test
     @DisplayName("인기 게임이 없으면 장르를 조회하지 않고 빈 목록을 반환한다")
     void getPopularGamesReturnsEmptyListWithoutGenreQuery() {
         // given: 인기 게임 조회 결과가 비어 있도록 준비

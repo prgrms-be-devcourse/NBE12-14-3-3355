@@ -74,6 +74,24 @@ class RelatedGameCalculationTest {
         assertThat(calculation.isReady()).isFalse();
     }
 
+    @Test
+    void nullFailureMessagePreservesPreviousSuccess() {
+        // given: 정상 계산을 마친 상태와 마지막 성공 시각을 준비한다.
+        RelatedGameCalculation calculation = pendingCalculation();
+        calculation.start(FIRST_ATTEMPT);
+        LocalDateTime succeededAt = FIRST_ATTEMPT.plusMinutes(1);
+        calculation.succeed(succeededAt);
+
+        // when: 오류 메시지가 없는 재갱신 실패를 기록한다.
+        calculation.fail(FIRST_ATTEMPT.plusDays(1), null);
+
+        // then: 오류 메시지의 null과 이전 정상 결과의 준비 완료 상태를 유지한다.
+        assertThat(calculation.getLastError()).isNull();
+        assertThat(calculation.getLastSuccessAt()).isEqualTo(succeededAt);
+        assertThat(calculation.isReady()).isTrue();
+        assertThat(calculation.getLastAttemptStatus()).isEqualTo(RelatedGameCalculationStatus.FAILED);
+    }
+
     private RelatedGameCalculation pendingCalculation() {
         Game game = mock(Game.class);
         when(game.getId()).thenReturn(1L);

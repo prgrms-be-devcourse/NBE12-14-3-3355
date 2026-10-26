@@ -4,13 +4,11 @@ import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse.NamedResource
 import com.gamelog.nbe121423355.domain.game.entity.*
 import com.gamelog.nbe121423355.domain.game.repository.*
-import java.util.ArrayList
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class GameImportService
-constructor(
+class GameImportService(
     private val gameRepository: GameRepository,
     private val genreRepository: GenreRepository,
     private val platformRepository: PlatformRepository,
@@ -23,17 +21,12 @@ constructor(
 ) {
     @Transactional
     fun saveGames(responses: MutableList<IgdbGameResponse>): Int {
-        val newGames: MutableList<Game> = ArrayList()
-        val changedGames = ArrayList<Game>()
+        val newGames = mutableListOf<Game>()
+        val changedGames = mutableListOf<Game>()
         for (response in responses) {
-            var game = gameRepository.findByIgdbId(response.id).orElse(null)
-            if (game == null) {
-                // 저장 후 ID가 부여된 객체를 사용합니다.
-                game = gameRepository.save(Game.createFromIgdb(response))
-                newGames.add(game)
-            } else {
-                game.updateFromIgdb(response)
-            }
+            val existingGame = gameRepository.findByIgdbId(response.id).orElse(null)
+            val game = existingGame?.apply { updateFromIgdb(response) }
+                ?: gameRepository.save(Game.createFromIgdb(response)).also { newGames.add(it) }
             changedGames.add(game)
             saveGenres(game, response.genres)
             savePlatforms(game, response.platforms)
@@ -41,24 +34,22 @@ constructor(
         }
         gameRepository.flush()
         changedGames.sortedBy { it.id }.forEach { game ->
-            changeRecorder.record(requireNotNull(game.id),
-                if (game in newGames) RelatedGameChangeReason.GAME_ADDED else RelatedGameChangeReason.GAME_INFORMATION)
+            val reason = if (game in newGames) RelatedGameChangeReason.GAME_ADDED
+                else RelatedGameChangeReason.GAME_INFORMATION
+            changeRecorder.record(requireNotNull(game.id), reason)
         }
         recommendationRegistration.register(newGames)
         return responses.size
     }
 
-    private fun saveGenres(game: Game, genres: MutableList<NamedResource>?) {
-        if (genres == null) {
-            return
-        }
-        for (response in genres) {
+    private fun saveGenres(game: Game, genres: List<NamedResource>?) {
+        for (response in genres.orEmpty()) {
             val genre =
                 genreRepository
                     .findByIgdbGenreId(response.id)
-                    .orElseGet({
+                    .orElseGet {
                         genreRepository.save(Genre.createFromIgdb(response.id, response.name))
-                    })
+                    }
             val link = GameGenre(game, genre)
             if (!gameGenreRepository.existsById(requireNotNull(link.id))) {
                 gameGenreRepository.save(link)
@@ -66,22 +57,19 @@ constructor(
         }
     }
 
-    private fun savePlatforms(game: Game, platforms: MutableList<NamedResource>?) {
-        if (platforms == null) {
-            return
-        }
-        for (response in platforms) {
-            val platform: com.gamelog.nbe121423355.domain.game.entity.Platform =
+    private fun savePlatforms(game: Game, platforms: List<NamedResource>?) {
+        for (response in platforms.orEmpty()) {
+            val platform =
                 platformRepository
                     .findByIgdbPlatformsId(response.id)
-                    .orElseGet({
+                    .orElseGet {
                         platformRepository.save(
-                            com.gamelog.nbe121423355.domain.game.entity.Platform.createFromIgdb(
+                            Platform.createFromIgdb(
                                 response.id,
                                 response.name,
                             )
                         )
-                    })
+                    }
             val link = GamePlatform(game, platform)
             if (!gamePlatformRepository.existsById(requireNotNull(link.id))) {
                 gamePlatformRepository.save(link)
@@ -89,22 +77,19 @@ constructor(
         }
     }
 
-    private fun saveSeries(game: Game, collections: MutableList<NamedResource>?) {
-        if (collections == null) {
-            return
-        }
-        for (response in collections) {
+    private fun saveSeries(game: Game, collections: List<NamedResource>?) {
+        for (response in collections.orEmpty()) {
             val series =
                 gameSeriesRepository
                     .findByIgdbId(response.id)
-                    .orElseGet({
+                    .orElseGet {
                         gameSeriesRepository.save(
                             GameSeries.createFromIgdb(
                                 response.id,
                                 response.name,
                             )
                         )
-                    })
+                    }
             // 기존 생성자의 인자 순서는 시리즈, 게임입니다.
             val link = GameSeriesGame(series, game)
             if (!gameSeriesGameRepository.existsById(requireNotNull(link.id))) {

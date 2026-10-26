@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/reviews")
 @Tag(name = "popular-review-controller", description = "인기 리뷰 조회 API")
-class PopularReviewController constructor(private val popularReviewService: PopularReviewService) {
+class PopularReviewController(private val popularReviewService: PopularReviewService) {
     @GetMapping("/popular")
     @Operation(summary = "인기 리뷰 조회", description = "좋아요 수가 많은 공개 리뷰를 조회합니다.")
     fun getPopularReviews(
@@ -26,6 +26,6 @@ class PopularReviewController constructor(private val popularReviewService: Popu
         size: Int
     ): RsData<List<PopularReviewResponse>> {
         val response = popularReviewService.getPopularReviews(size)
-        return RsData<List<PopularReviewResponse>>("200-1", "인기 리뷰를 조회했습니다.", response)
+        return RsData("200-1", "인기 리뷰를 조회했습니다.", response)
     }
 }

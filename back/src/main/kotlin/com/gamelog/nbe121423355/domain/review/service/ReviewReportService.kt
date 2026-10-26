@@ -2,14 +2,15 @@ package com.gamelog.nbe121423355.domain.review.service
 
 import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
 import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportGroupResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportPageResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportResponse
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
-import com.gamelog.nbe121423355.domain.review.entity.ReportStatus.APPROVED
-import com.gamelog.nbe121423355.domain.review.entity.ReportStatus.PENDING
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport
 import com.gamelog.nbe121423355.domain.review.repository.ReviewReportRepository
@@ -22,6 +23,7 @@ import java.util.Objects
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewReportService
 constructor(
+    private val events: ApplicationEventPublisher,
     private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewReportRepository: ReviewReportRepository,
     private val reviewRepository: ReviewRepository,
@@ -94,7 +97,22 @@ constructor(
             throw ServiceException("409-4", "이미 처리된 리뷰 신고입니다.")
         }
         if (request.status == ReportStatus.APPROVED) {
+            val wasActive = report.review.isActive
             report.review.hideByAdmin()
+            if (wasActive) {
+                events.publishEvent(
+                    NotificationRequested(
+                        recipients = setOf(requireNotNull(report.review.userGame.user.id)),
+                        actorId = null,
+                        kind = NotificationKind.REVIEW_HIDDEN,
+                        targetType = NotificationTarget.REVIEW,
+                        targetId = requireNotNull(report.review.id),
+                        sourceKey = "review-hidden:${report.review.id}:${report.review.version}",
+                        reviewId = report.review.id,
+                        gameTitle = report.review.userGame.game.title,
+                    )
+                )
+            }
             changeRecorder.record(requireNotNull(report.review.userGame.game.id), RelatedGameChangeReason.REVIEW)
             userGameService.synchronizeLibraryState(report.review.userGame)
         }

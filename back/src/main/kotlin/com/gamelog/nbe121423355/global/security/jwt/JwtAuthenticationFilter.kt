@@ -1,19 +1,14 @@
 package com.gamelog.nbe121423355.global.security.jwt
 
 import com.gamelog.nbe121423355.domain.user.service.TokenReissueService
-import com.gamelog.nbe121423355.domain.user.service.TokenReissueService.ReissueResult
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.jsonwebtoken.Claims
 import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.io.IOException
 import org.slf4j.LoggerFactory
-import org.springframework.http.ResponseCookie
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
@@ -28,19 +23,18 @@ class JwtAuthenticationFilter(
 
     // 필터는 spring mvc의 dispatcherservlet보다 앞단에서 실행
     // 그로 인해 globalexceptionhandler 관여 x
-    @Throws(ServletException::class, IOException::class)
     override fun doFilterInternal(
         servletRequest: HttpServletRequest,
         serveletResponse: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val token: String? = resolveToken(servletRequest)
+        val token = resolveToken(servletRequest)
         if (token != null && jwtProvider.validateToken(token)) {
             authenticate(token)
         } else if (token != null) {
             jwtProvider
                 .getExpiredAccessTokenClaims(token)
-                .ifPresent { expiredClaims ->
+                ?.let { expiredClaims ->
                     tryAutoReissue(servletRequest, serveletResponse, expiredClaims)
                 }
         }
@@ -69,17 +63,14 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         expiredClaims: Claims,
     ) {
-        val refreshToken: String? = resolveTokenFromCookie(servletRequest)
-        if (refreshToken == null) {
-            return
-        }
+        val refreshToken = resolveTokenFromCookie(servletRequest) ?: return
         try {
             val expectedUserId = expiredClaims.userId
-            val result: ReissueResult = tokenReissueService.reissue(refreshToken, expectedUserId)
+            val result = tokenReissueService.reissue(refreshToken, expectedUserId)
             setSecurityContext(result.userId, result.role)
             response.setHeader("New-Access-Token", result.accessToken)
             // Rotation으로 교체된 refreshToken (프록시는 relayAuthHeaders로 Set-Cookie를 브라우저까지 전달)
-            val cookie: ResponseCookie =
+            val cookie =
                 refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
             response.addResponseCookie(cookie)
         } catch (e: ServiceException) {
@@ -94,7 +85,7 @@ class JwtAuthenticationFilter(
     private fun setSecurityContext(userId: Long?, role: String?) {
         val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
         val securityUser = SecurityUser(requireNotNull(userId), authorities)
-        val authentication: Authentication =
+        val authentication =
             UsernamePasswordAuthenticationToken(securityUser, null, securityUser.authorities)
         SecurityContextHolder.getContext().authentication = authentication
     }
@@ -102,24 +93,12 @@ class JwtAuthenticationFilter(
     // Authorization 헤더에서 accessToken 추출
     private fun resolveToken(serveletRequest: HttpServletRequest): String? {
         val header = serveletRequest.getHeader("Authorization")
-        if (header != null && header.startsWith("Bearer ")) {
-            return header.substring(7)
-        }
-        return null
+        return header?.takeIf { it.startsWith("Bearer ") }?.substring(7)
     }
 
     // 쿠키에서 refreshToken 추출
     private fun resolveTokenFromCookie(serveletRequest: HttpServletRequest): String? {
-        val cookies = serveletRequest.cookies
-        if (cookies == null) {
-            return null
-        }
-        for (cookie in cookies) {
-            if (cookie.name == "refreshToken") {
-                return cookie.value
-            }
-        }
-        return null
+        return serveletRequest.cookies?.firstOrNull { it.name == "refreshToken" }?.value
     }
 
     companion object {

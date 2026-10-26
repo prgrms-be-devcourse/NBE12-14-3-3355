@@ -12,13 +12,13 @@ import org.springframework.data.repository.query.Param
 interface RelatedGameCandidateRepository :
     JpaRepository<RelatedGameCandidate, RelatedGameCandidateId> {
     fun findByIdSourceGameIdOrderByRelatedRankAsc(
-        sourceGameId: Long?
-    ): MutableList<RelatedGameCandidate>
+        sourceGameId: Long
+    ): List<RelatedGameCandidate>
 
     @Query(
         """
             SELECT new com.gamelog.nbe121423355.domain.game.dto.RelatedGameResponse(
-                game.id, game.title, game.coverImageUrl, game.igdbRating, candidate.relatedScore, null)
+                game.id, game.title, game.coverImageUrl, game.igdbRating, candidate.relatedScore)
             FROM RelatedGameCandidate candidate
             JOIN candidate.candidateGame game
             WHERE candidate.id.sourceGameId = :sourceGameId
@@ -30,13 +30,13 @@ interface RelatedGameCandidateRepository :
             """
     )
     fun findStoredRelatedGames(
-        @Param("sourceGameId") sourceGameId: Long?,
-        pageable: Pageable?,
-    ): MutableList<RelatedGameResponse>
+        @Param("sourceGameId") sourceGameId: Long,
+        pageable: Pageable,
+    ): List<RelatedGameResponse>
 
     @Modifying
     @Query(
         "DELETE FROM RelatedGameCandidate candidate WHERE candidate.id.sourceGameId = :sourceGameId"
     )
-    fun deleteAllBySourceGameId(@Param("sourceGameId") sourceGameId: Long?): Int
+    fun deleteAllBySourceGameId(@Param("sourceGameId") sourceGameId: Long): Int
 }

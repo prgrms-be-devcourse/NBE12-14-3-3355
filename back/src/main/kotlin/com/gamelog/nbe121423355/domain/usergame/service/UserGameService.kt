@@ -6,7 +6,6 @@ import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.game.entity.Platform
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.domain.game.repository.PlatformRepository
-import com.gamelog.nbe121423355.domain.review.entity.Review
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.entity.UserFavoriteGame
@@ -25,6 +24,7 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation.MANDATORY
 import org.springframework.transaction.annotation.Transactional
@@ -55,22 +55,27 @@ class UserGameService(
             request.status,
             request.sort,
         )
-        val keyword: String? = request.keyword
-        val pattern =
-            if (keyword == null || keyword.javaIsBlank()) null
-            else
-                "%" + keyword.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%"
-        val platforms = !request.platformIds.isNullOrEmpty()
-        val genres = !request.genreIds.isNullOrEmpty()
+        val keyword = request.keyword
+        val pattern = if (keyword == null || keyword.javaIsBlank()) {
+            null
+        } else {
+            val escapedKeyword = keyword.strip()
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_")
+            "%$escapedKeyword%"
+        }
+        val platformIds = request.platformIds.orEmpty()
+        val genreIds = request.genreIds.orEmpty()
         return userGameRepository
             .findByLibraryFilters(
                 userId,
                 requireNotNull(request.status).name,
                 pattern,
-                platforms,
-                if (platforms) requireNotNull(request.platformIds) else listOf(0L),
-                genres,
-                if (genres) requireNotNull(request.genreIds) else listOf(0L),
+                platformIds.isNotEmpty(),
+                platformIds.ifEmpty { listOf(0L) },
+                genreIds.isNotEmpty(),
+                genreIds.ifEmpty { listOf(0L) },
                 requireNotNull(request.sort).name,
                 PageRequest.of(request.page, request.size),
             )
@@ -158,7 +163,7 @@ class UserGameService(
         platform: Platform?,
     ): UserGame {
         val user = findUser(userId)
-        val game: Game = findGame(gameId)
+        val game = findGame(gameId)
         val userGame =
             UserGame(
                 user = user,
@@ -203,11 +208,11 @@ class UserGameService(
     @Transactional
     fun synchronizeLibraryState(userGame: UserGame) {
         val hasActiveReview =
-            userGame.id != null &&
-                reviewRepository
-                    .findByUserGame_Id(checkNotNull(userGame.id))
-                    .filter { obj: Review -> obj.hasVisibleContent() }
+            userGame.id?.let { userGameId ->
+                reviewRepository.findByUserGame_Id(userGameId)
+                    .filter { it.hasVisibleContent() }
                     .isPresent
+            } == true
         userGame.updateLibraryStatus(hasActiveReview)
         changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.USER_GAME_RECORD)
         if (!userGame.isInLibrary) {
@@ -218,9 +223,8 @@ class UserGameService(
     @Transactional(propagation = MANDATORY)
     fun synchronizeLibraryState(userGameId: Long) {
         val userGame =
-            userGameRepository
-                .findById(userGameId)
-                .orElseThrow { ServiceException("404-2", "게임 기록을 찾을 수 없습니다.") }
+            userGameRepository.findByIdOrNull(userGameId)
+                ?: throw ServiceException("404-2", "게임 기록을 찾을 수 없습니다.")
         synchronizeLibraryState(userGame)
     }
 
@@ -251,29 +255,22 @@ class UserGameService(
         }
     }
 
-    private fun findUser(userId: Long): User {
-        return userRepository
-            .findById(userId)
-            .orElseThrow { ServiceException("404-1", "사용자를 찾을 수 없습니다.") }
-    }
+    private fun findUser(userId: Long): User =
+        userRepository.findByIdOrNull(userId)
+            ?: throw ServiceException("404-1", "사용자를 찾을 수 없습니다.")
 
-    private fun findGame(gameId: Long): Game {
-        return gameRepository
-            .findById(gameId)
-            .orElseThrow { ServiceException("404-2", "게임을 찾을 수 없습니다.") }
-    }
+    private fun findGame(gameId: Long): Game =
+        gameRepository.findByIdOrNull(gameId)
+            ?: throw ServiceException("404-2", "게임을 찾을 수 없습니다.")
 
-    private fun findUserGame(userId: Long, gameId: Long): UserGame {
-        return userGameRepository
-            .findByUser_IdAndGame_Id(userId, gameId)
+    private fun findUserGame(userId: Long, gameId: Long): UserGame =
+        userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
             ?: throw ServiceException("404-3", "라이브러리에 등록되지 않은 게임입니다.")
-    }
 
     private fun findPlatform(platformId: Long?): Platform? =
         platformId?.let {
-            platformRepository
-                .findById(it)
-                .orElseThrow { ServiceException("404-4", "플랫폼을 찾을 수 없습니다.") }
+            platformRepository.findByIdOrNull(it)
+                ?: throw ServiceException("404-4", "플랫폼을 찾을 수 없습니다.")
         }
 
     private fun createUserGame(userId: Long, gameId: Long): UserGame {
@@ -285,11 +282,9 @@ class UserGameService(
         )
     }
 
-    private fun getOrCreateUserGame(userId: Long, gameId: Long): UserGame {
-        return userGameRepository
-            .findByUser_IdAndGame_Id(userId, gameId)
+    private fun getOrCreateUserGame(userId: Long, gameId: Long): UserGame =
+        userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
             ?: userGameRepository.save(createUserGame(userId, gameId))
-    }
 
     private fun findOrCreateUserGameForBoolean(
         userId: Long,
@@ -476,12 +471,10 @@ class UserGameService(
         require(gameIds.distinct().size == gameIds.size) {
             "같은 게임을 중복해서 등록할 수 없습니다."
         }
-        val user: User =
-            userRepository
-                .findById(userId)
-                .orElseThrow { IllegalArgumentException("사용자를 찾을 수 없습니다.") }
+        val user = userRepository.findByIdOrNull(userId)
+            ?: throw IllegalArgumentException("사용자를 찾을 수 없습니다.")
         // 3. 사용자의 UserGame 조회
-        val userGames: List<UserGame> =
+        val userGames =
             userGameRepository.findAllByUser_IdAndGame_IdInAndInLibraryTrue(userId, gameIds)
         // 4. 모든 게임이 사용자의 라이브러리에 있는지 검증
         if (userGames.size != gameIds.size) {
@@ -561,7 +554,7 @@ class UserGameService(
                 description = "게임 평가가 3개 이상 쌓이면 확인할 수 있어요.",
             )
         }
-        val highRatingCount: Long =
+        val highRatingCount =
             ratings
                 .count { rating -> rating >= HIGH_RATING }
                 .toLong()
@@ -569,7 +562,7 @@ class UserGameService(
             ratings
                 .count { rating -> rating in LOW_RATING..<HIGH_RATING }
                 .toLong()
-        val lowRatingCount: Long =
+        val lowRatingCount =
             ratings
                 .count { rating -> rating < LOW_RATING }
                 .toLong()
@@ -611,56 +604,44 @@ class UserGameService(
                 description = "플레이한 게임이 3개 이상 쌓이면 확인할 수 있어요.",
             )
         }
-        val completedCount: Long =
+        val completedCount =
             playedGames
                 .count { userGame -> userGame.playStatus == PlayStatus.COMPLETED }
                 .toLong()
         val completionRatio = calculateRatio(completedCount, playedGames.size)
-        // 70% 이상
-        if (completionRatio >= HIGH_RATIO) {
-            return TasteMetricDto(
-                ratio = completionRatio,
-                message = "게임을 끝까지 플레이하는 편이에요.",
-                description = createPercentageDescription(completionRatio, "완료한 게임이"),
-            )
-        }
-        // 40% 이상
-        if (completionRatio >= MEDIUM_RATIO) {
-            return TasteMetricDto(
-                ratio = completionRatio,
-                message = "플레이한 게임 중 절반 정도를 완료했어요.",
-                description = createPercentageDescription(completionRatio, "완료한 게임이"),
-            )
+        val message = when {
+            completionRatio >= HIGH_RATIO -> "게임을 끝까지 플레이하는 편이에요."
+            completionRatio >= MEDIUM_RATIO -> "플레이한 게임 중 절반 정도를 완료했어요."
+            else -> "끝까지 완료하기보다 여러 게임을 플레이하는 편이에요."
         }
         return TasteMetricDto(
             ratio = completionRatio,
-            message = "끝까지 완료하기보다 여러 게임을 플레이하는 편이에요.",
+            message = message,
             description = createPercentageDescription(completionRatio, "완료한 게임이"),
         )
     }
 
-    private fun calculateRatio(count: Long, total: Int): BigDecimal {
-        return BigDecimal.valueOf(count)
+    private fun calculateRatio(count: Long, total: Int): BigDecimal =
+        BigDecimal.valueOf(count)
             .divide(BigDecimal.valueOf(total.toLong()), 4, RoundingMode.HALF_UP)
-    }
 
     private fun createPercentageDescription(ratio: BigDecimal, subject: String): String {
         val percentage = ratio.multiply(BigDecimal.valueOf(100)).stripTrailingZeros()
-        return subject + " " + percentage.toPlainString() + "%예요."
+        return "$subject ${percentage.toPlainString()}%예요."
     }
 
     fun getGenreDistribution(userId: Long): List<UserGameGenreDistributionResponse> {
         val distributions = userGameRepository.findGenreDistribution(userId)
         val totalGenreGameCount = distributions.sumOf(UserGameGenreDTO::gameCount)
         return distributions.map { dto ->
-                val ratio =
-                    BigDecimal.valueOf(dto.gameCount)
-                        .divide(BigDecimal.valueOf(totalGenreGameCount), 4, RoundingMode.HALF_UP)
-                UserGameGenreDistributionResponse(
-                    genreName = dto.genreName,
-                    ratio = ratio,
-                )
-            }
+            val ratio =
+                BigDecimal.valueOf(dto.gameCount)
+                    .divide(BigDecimal.valueOf(totalGenreGameCount), 4, RoundingMode.HALF_UP)
+            UserGameGenreDistributionResponse(
+                genreName = dto.genreName,
+                ratio = ratio,
+            )
+        }
     }
 
     fun getRecentPlayedGames(userId: Long): List<UserGameListResponse> {

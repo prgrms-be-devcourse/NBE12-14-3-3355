@@ -4,14 +4,12 @@ import com.gamelog.nbe121423355.domain.game.dto.*
 import com.gamelog.nbe121423355.domain.game.dto.GameDetailResponse.*
 import com.gamelog.nbe121423355.domain.game.repository.*
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import com.gamelog.nbe121423355.global.interop.javaNonNull
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
-import java.util.*
-import java.util.stream.Collectors
 
 @Service
 @Transactional(readOnly = true)
@@ -33,60 +31,44 @@ class GameDetailService(
     fun getGameDetail(gameId: Long): GameDetailResponse {
         requirePublished(gameId)
         // GameLog DB ID로 게임 기본 정보 조회
-        val game =
-            gameRepository.findById(gameId)
-                .orElseThrow { ServiceException("404-1", "존재하지 않는 게임입니다.") }
+        val game = gameRepository.findByIdOrNull(gameId)
+            ?: throw ServiceException("404-1", "존재하지 않는 게임입니다.")
         // 게임에 연결된 장르 정보를 응답 DTO로 변환
-        val genres =
-            gameGenreRepository
-                .findAllWithGenreByGameId(gameId)
-                .stream()
-                .map { gameGenre ->
-                    GenreResponse(
-                        id = gameGenre.genre.id,
-                        name = gameGenre.genre.name,
-                    )
-                }
-                .toList()
+        val genres = gameGenreRepository.findAllWithGenreByGameId(gameId).map { gameGenre ->
+            GenreResponse(
+                id = requireNotNull(gameGenre.genre.id) { "조회한 장르의 ID가 없습니다." },
+                name = requireNotNull(gameGenre.genre.name) { "조회한 장르의 이름이 없습니다." },
+            )
+        }
         // 게임에 연결된 플랫폼 정보를 응답 DTO로 변환
-        val platforms =
-            gamePlatformRepository
-                .findAllWithPlatformByGameId(gameId)
-                .stream()
-                .map { gamePlatform ->
-                    PlatformResponse(
-                        id = gamePlatform.platform.id,
-                        name = gamePlatform.platform.name,
-                    )
-                }
-                .toList()
+        val platforms = gamePlatformRepository.findAllWithPlatformByGameId(gameId).map { gamePlatform ->
+            PlatformResponse(
+                id = requireNotNull(gamePlatform.platform.id) { "조회한 플랫폼의 ID가 없습니다." },
+                name = requireNotNull(gamePlatform.platform.name) { "조회한 플랫폼의 이름이 없습니다." },
+            )
+        }
         // 게임에 연결된 시리즈 정보를 응답 DTO로 변환
-        val series =
-            gameSeriesGameRepository
-                .findAllWithSeriesByGameId(gameId)
-                .stream()
-                .map { seriesGame ->
-                    SeriesResponse(
-                        id = seriesGame.series.id,
-                        name = seriesGame.series.name
-                    )
-                }
-                .toList()
+        val series = gameSeriesGameRepository.findAllWithSeriesByGameId(gameId).map { seriesGame ->
+            SeriesResponse(
+                id = requireNotNull(seriesGame.series.id) { "조회한 시리즈의 ID가 없습니다." },
+                name = requireNotNull(seriesGame.series.name) { "조회한 시리즈의 이름이 없습니다." },
+            )
+        }
         // 게임 ID를 기준으로 상태·평점·리뷰·좋아요 통계 조회
         val statistics = getStatistics(gameId)
 
         return GameDetailResponse(
-            id = game.id,
+            id = requireNotNull(game.id) { "조회한 게임의 ID가 없습니다." },
             igdbId = game.igdbId,
-            title = game.title,
+            title = requireNotNull(game.title) { "조회한 게임의 제목이 없습니다." },
             coverImageUrl = game.coverImageUrl,
             developer = game.developer,
             releaseDate = game.releaseDate,
             description = game.description,
             igdbRating = game.igdbRating,
-            genres = genres,
-            platforms = platforms,
-            series = series,
+            genres = java.util.List.copyOf(genres),
+            platforms = java.util.List.copyOf(platforms),
+            series = java.util.List.copyOf(series),
             statistics = statistics,
         )
     }
@@ -133,32 +115,26 @@ class GameDetailService(
     private fun attachGenres(
         games: List<RelatedGameResponse>
     ): List<RelatedGameResponse> {
-        val gameIds = games.map { requireNotNull(it.id) }.toMutableList()
+        val gameIds = games.map { it.id }
 
         val genresByGameId =
             gameGenreRepository.findAllWithGenreByGameIdIn(gameIds)
                 .groupBy(
                     keySelector = { item ->
-                        javaNonNull(
-                            item.game.id,
-                            "element cannot be mapped to a null key",
-                        )
+                        requireNotNull(item.game.id) { "조회한 게임의 ID가 없습니다." }
                     },
                     valueTransform = { item ->
                         GenreResponse(
-                            id = item.genre.id,
-                            name = item.genre.name,
+                            id = requireNotNull(item.genre.id) { "조회한 장르의 ID가 없습니다." },
+                            name = requireNotNull(item.genre.name) { "조회한 장르의 이름이 없습니다." },
                         )
                     },
                 )
 
-        return games.stream()
-            .map { game ->
-                game.copy(
-                    genres = genresByGameId[game.id] ?: java.util.List.of()
-                )
-            }
-            .toList()
+        val responses = games.map { game ->
+            game.copy(genres = genresByGameId[game.id].orEmpty())
+        }
+        return java.util.List.copyOf(responses)
     }
 
     private fun getStatistics(gameId: Long): GameStatisticsResponse {
@@ -190,40 +166,28 @@ class GameDetailService(
         val ratingStatistics =
             gameStatisticsRepository.findRatingStatisticsByGameId(gameId)
 
-        val countsByRating: Map<Int, Long> =
-            gameStatisticsRepository.findRatingDistributionByGameId(gameId)
-                .stream()
-                .collect(
-                    Collectors.toMap(
-                        { item ->
-                            item.rating.multiply(BigDecimal.valueOf(2)).intValueExact()
-                        },
-                        { item -> item.count },
-                    )
-                )
-
-        val distribution =
-            Collections.unmodifiableList(
-                (1..10).map { ratingStep ->
-                    GameRatingDistributionResponse(
-                        rating = BigDecimal.valueOf(ratingStep * 5L, 1),
-                        count = countsByRating.getOrDefault(ratingStep, 0L),
-                    )
-                }
+        // SQL이 별점별로 집계하므로 0.5점 단위 구간은 중복되지 않는다.
+        val countsByRating = gameStatisticsRepository.findRatingDistributionByGameId(gameId)
+            .associate { item ->
+                item.rating.multiply(BigDecimal.valueOf(2)).intValueExact() to item.count
+            }
+        val distribution = (1..10).map { ratingStep ->
+            GameRatingDistributionResponse(
+                rating = BigDecimal.valueOf(ratingStep * 5L, 1),
+                count = countsByRating.getOrDefault(ratingStep, 0L),
             )
+        }
 
         return GameRatingStatisticsResponse(
             averageRating = BigDecimal.valueOf(ratingStatistics.averageRating),
             ratingCount = ratingStatistics.ratingCount,
             reviewCount = ratingStatistics.reviewCount,
-            ratingDistribution = distribution,
+            ratingDistribution = java.util.List.copyOf(distribution),
         )
     }
 
     // 게임에 좋아요를 누른 사용자 수 조회
-    private fun getLikeCount(gameId: Long): Long {
-        return gameStatisticsRepository.countLikesByGameId(gameId)
-    }
+    private fun getLikeCount(gameId: Long): Long = gameStatisticsRepository.countLikesByGameId(gameId)
 
     // 평균 플레이타임과 플레이타임 기록 사용자 수를 응답 DTO로 반환
     private fun getPlayTimeStatistics(gameId: Long): GamePlayTimeStatisticsResponse {

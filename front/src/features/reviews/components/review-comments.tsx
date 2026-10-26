@@ -11,7 +11,7 @@ import styles from "./review-comments.module.css";
 type Draft = { content: string; spoiler: boolean; parentId: number | null; editId: number | null; target: string };
 const blank: Draft = { content: "", spoiler: false, parentId: null, editId: null, target: "" };
 
-export default function ReviewComments({ reviewId, locked = false, autoOpen = false }: { reviewId: number; locked?: boolean; autoOpen?: boolean }) {
+export default function ReviewComments({ reviewId, locked = false, autoOpen = false, targetCommentId }: { reviewId: number; locked?: boolean; autoOpen?: boolean; targetCommentId?: number }) {
   const auth = useAuth();
   const inputId = useId();
   const [open, setOpen] = useState(autoOpen);
@@ -47,6 +47,18 @@ export default function ReviewComments({ reviewId, locked = false, autoOpen = fa
       } catch { /* 저장소가 차단되면 빈 입력창으로 계속 진행한다. */ }
     });
   }, [autoOpen, auth.user, auth.accessToken, reviewId, storageKey]);
+
+  useEffect(() => {
+    if (!targetCommentId || locked) return;
+    const controller = new AbortController();
+    commentRequest<Comment>(reviewId, `/${targetCommentId}`, auth.accessToken, "GET", undefined, controller.signal)
+      .then(async target => {
+        if (target.deleted) throw new Error("삭제된 댓글입니다.");
+        const parent = target.parentId ? await commentRequest<Comment>(reviewId, `/${target.parentId}`, auth.accessToken, "GET", undefined, controller.signal) : null;
+        if (!controller.signal.aborted) { setFresh(target); setFocusedParent(parent); setExpandedParent(target.parentId); }
+      }).catch(e => { if (!controller.signal.aborted) setError(e.message); });
+    return () => controller.abort();
+  }, [targetCommentId, reviewId, auth.accessToken, locked]);
 
   const recount = useCallback(() => {
     commentRequest<number>(reviewId, "/count").then(value => { if (alive.current) setCount(value); }).catch(() => {});
@@ -114,7 +126,7 @@ export default function ReviewComments({ reviewId, locked = false, autoOpen = fa
       <div className={styles.toolbar}><strong>댓글 {count ?? ""}</strong><button disabled={busy} onClick={() => { setVersion(v => v + 1); setFresh(null); }}>새로고침</button></div>
       {error && <p role="alert" className={styles.error}>{error}</p>}
       <CommentList key={`${version}:${auth.user?.id}`} reviewId={reviewId} token={auth.accessToken} parentId={null}
-        fresh={fresh} focusedParent={focusedParent} expandedParent={expandedParent} busy={busy} onCount={setCount}
+        fresh={fresh} focusedParent={focusedParent} fromNotification={Boolean(targetCommentId)} expandedParent={expandedParent} busy={busy} onCount={setCount}
         onReply={c => edit({ ...blank, parentId: c.id, target: c.nickname ?? "" })}
         onEdit={c => edit({ content: c.content, spoiler: c.spoiler, editId: c.id, parentId: c.parentId, target: "" })}
         onDelete={c => { if (window.confirm("댓글을 삭제할까요?")) void action(async () => {
@@ -140,7 +152,7 @@ export default function ReviewComments({ reviewId, locked = false, autoOpen = fa
 
 type ListProps = {
   reviewId: number; parentId: number | null; token: string | null; fresh: Comment | null;
-  focusedParent: Comment | null;
+  focusedParent: Comment | null; fromNotification?: boolean;
   expandedParent: number | null; busy: boolean; onCount: (n: number) => void;
   onReply: (c: Comment) => void; onEdit: (c: Comment) => void; onDelete: (c: Comment) => void;
   onLike: (c: Comment) => Promise<Comment>;
@@ -183,8 +195,8 @@ function CommentList(props: ListProps) {
   const newHere = fresh?.parentId === parentId && !rows.some(c => c.id === fresh.id) ? fresh : null;
   return <div className={parentId ? styles.replies : undefined}>
     {parentId === null && props.focusedParent && !rows.some(c => c.id === props.focusedParent?.id) &&
-      <div className={styles.fresh}><small>작성하던 답글의 원댓글</small><CommentRow {...props} comment={props.focusedParent} /></div>}
-    {newHere && <div className={styles.fresh}><small>방금 작성한 {parentId ? "답글" : "댓글"}</small><CommentRow {...props} comment={newHere} /></div>}
+      <div className={styles.fresh}><small>{props.fromNotification ? "알림 받은 답글의 원댓글" : "작성하던 답글의 원댓글"}</small><CommentRow {...props} comment={props.focusedParent} /></div>}
+    {newHere && <div className={styles.fresh}><small>{props.fromNotification ? "알림 받은" : "방금 작성한"} {parentId ? "답글" : "댓글"}</small><CommentRow {...props} comment={newHere} /></div>}
     {rows.map(c => <CommentRow {...props} key={c.id} comment={c} />)}
     {!loading && !error && rows.length === 0 && !newHere && <p className={styles.muted}>아직 {parentId ? "답글" : "댓글"}이 없습니다.</p>}
     {loading && <p role="status">댓글을 불러오는 중…</p>}

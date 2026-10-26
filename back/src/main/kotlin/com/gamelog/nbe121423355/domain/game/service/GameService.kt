@@ -15,8 +15,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class GameService
-constructor(
+class GameService(
     private val gameRepository: GameRepository,
     private val gameFilteredQueryRepository: GameFilteredQueryRepository,
 ) {
@@ -34,11 +33,11 @@ constructor(
         val useDefaultSearch = !filterGenres && !filterPlatforms && request.sort == null
         if (useDefaultSearch) {
             // 전체 목록의 기존 응답에 포함되던 pageable.sort 메타데이터도 유지합니다.
-            val pageable: org.springframework.data.domain.Pageable =
+            val pageable =
                 if (keywordPattern == null) request.toPageable()
                 else PageRequest.of(request.page, request.size)
-            val minDate = GameService.MIN_RELEASE_DATE
-            val maxDate = LocalDate.now(GameService.CATALOG_ZONE).plusDays(1)
+            val minDate = MIN_RELEASE_DATE
+            val maxDate = LocalDate.now(CATALOG_ZONE).plusDays(1)
             val content =
                 gameRepository.findDefaultSearchContent(
                     keywordPattern,
@@ -60,8 +59,8 @@ constructor(
                 genreIds,
                 platformIds,
                 request.sort,
-                GameService.MIN_RELEASE_DATE,
-                LocalDate.now(GameService.CATALOG_ZONE).plusDays(1),
+                MIN_RELEASE_DATE,
+                LocalDate.now(CATALOG_ZONE).plusDays(1),
                 request.toPageable(),
             )
             .map(::GameListResponse)
@@ -77,19 +76,16 @@ constructor(
                 normalized,
                 "${escaped}%",
                 "%${escaped}%",
-                GameService.MIN_RELEASE_DATE,
-                LocalDate.now(GameService.CATALOG_ZONE).plusDays(1),
+                MIN_RELEASE_DATE,
+                LocalDate.now(CATALOG_ZONE).plusDays(1),
             )
             .map(::GameListResponse)
     }
 
-    private fun escapeLike(keyword: String): String {
-        return keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_")
-    }
+    private fun escapeLike(keyword: String): String =
+        keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_")
 
-    private fun toContainsPattern(keyword: String): String {
-        return "%${escapeLike(keyword)}%"
-    }
+    private fun toContainsPattern(keyword: String): String = "%${escapeLike(keyword)}%"
 
     companion object {
         private val MIN_RELEASE_DATE: LocalDate = LocalDate.of(1970, 1, 1)

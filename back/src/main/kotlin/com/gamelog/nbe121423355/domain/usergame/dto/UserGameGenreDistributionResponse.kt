@@ -5,4 +5,4 @@ import java.math.BigDecimal
 data class UserGameGenreDistributionResponse(
     val genreName: String,
     val ratio: BigDecimal,
-) {}
+)

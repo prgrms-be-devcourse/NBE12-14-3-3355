@@ -1,7 +1,6 @@
 package com.gamelog.nbe121423355.domain.user.repository
 
 import com.gamelog.nbe121423355.domain.user.entity.User
-import java.util.Optional
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
@@ -18,11 +17,11 @@ interface UserRepository : JpaRepository<User, Long> {
         pageable: Pageable?,
     ): Page<User>
 
-    fun findByIdAndDeletedAtIsNull(id: Long?): Optional<User>
+    fun findByIdAndDeletedAtIsNull(id: Long?): User?
 
     fun existsByIdAndDeletedAtIsNull(id: Long?): Boolean
 
-    fun findByEmail(email: String?): Optional<User>
+    fun findByEmail(email: String?): User?
 
     fun existsByEmail(email: String?): Boolean
 

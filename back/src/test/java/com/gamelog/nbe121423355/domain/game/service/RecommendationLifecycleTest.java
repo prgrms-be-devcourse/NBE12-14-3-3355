@@ -132,7 +132,10 @@ class RecommendationLifecycleTest {
 
     @Test
     void realLockContentionPreservesNewPendingGameUntilRetry() {
+        // given: 공개 가능한 기존 후보를 저장하고 공통 잠금을 먼저 획득한다.
         tx.executeWithoutResult(status -> readyGame(100L, "기존 후보"));
+
+        // when: 잠금 경합 중 신규 게임을 등록하여 즉시 계산을 시도한다.
         Long sourceId = lock.tryRun(checkOwnership -> {
             imports.saveGames(List.of(response(200L, "대기 게임")));
             Long id = games.findByIgdbId(200L).orElseThrow().getId();
@@ -140,10 +143,11 @@ class RecommendationLifecycleTest {
             assertThat(state.getLastAttemptStatus()).isEqualTo(RelatedGameCalculationStatus.PENDING);
             assertThat(state.getLastSuccessAt()).isNull();
             assertHidden(id, "대기 게임");
-            checkOwnership.run();
+            checkOwnership.invoke();
             return id;
-        }).orElseThrow();
+        });
 
+        // then: 대기 상태를 보존하며 잠금 해제 후 재시도하면 추천 준비를 완료한다.
         assertThat(batch.run(false, List.of(sourceId), RelatedGamePrecomputeMode.REFRESH).exitCode()).isZero();
         assertThat(details.getRelatedGames(sourceId)).hasSize(1);
         assertThat(calculations.findById(sourceId).orElseThrow().isReady()).isTrue();

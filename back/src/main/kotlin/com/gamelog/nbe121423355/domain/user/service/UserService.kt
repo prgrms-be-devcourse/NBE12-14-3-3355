@@ -59,9 +59,9 @@ class UserService(
         if (userRepository.existsByNickname(signUpDto.nickname)) {
             throw ServiceException("409-2", "이미 존재하는 닉네임입니다.")
         }
-        val encodePassword = passwordEncoder.encode(signUpDto.password)
-        val user = User(signUpDto.nickname, signUpDto.email, encodePassword)
-        val saveUser: User = userRepository.save(user)
+        val encodePassword = passwordEncoder.encodeNotNull(signUpDto.password)
+        val user = User(requireNotNull(signUpDto.nickname), requireNotNull(signUpDto.email), encodePassword)
+        val saveUser = userRepository.save(user)
         return UserDto(saveUser)
     }
 
@@ -70,7 +70,7 @@ class UserService(
         val user =
             userRepository
                 .findByEmail(loginRequestDto.email)
-                .orElseThrow { ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.") }
+                ?: throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
         if (!passwordEncoder.matches(loginRequestDto.password, user.password)) {
             throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
         }
@@ -156,7 +156,7 @@ class UserService(
         }
         val oldProfileImageUrl = user.profileImageUrl
         user.updateProfile(
-            updateProfileRequestDto.nickname,
+            requireNotNull(updateProfileRequestDto.nickname),
             updateProfileRequestDto.profileImageUrl,
             updateProfileRequestDto.bio,
         )
@@ -181,7 +181,7 @@ class UserService(
         if (passwordEncoder.matches(requestDto.newPassword, user.password)) {
             throw ServiceException("400-4", "새 비밀번호는 현재 비밀번호와 달라야 합니다.")
         }
-        user.changePassword(passwordEncoder.encode(requestDto.newPassword))
+        user.changePassword(passwordEncoder.encodeNotNull(requestDto.newPassword))
         // 비밀번호 변경 시 모든 기기의 refreshToken 폐기
         refreshTokenRepository.deleteAllByUserId(userId)
         // deleteAllByUserId의 clearAutomatically로 user는 준영속 상태지만, 새 세션은 user의 id만 참조하므로 문제없음
@@ -208,7 +208,7 @@ class UserService(
         }
         val oldProfileImageUrl = user.profileImageUrl
         // 익명화를 먼저: 마지막 refreshToken 삭제의 clearAutomatically 이후에는 user 변경이 반영되지 않음
-        user.withdraw(passwordEncoder.encode(UUID.randomUUID().toString()))
+        user.withdraw(passwordEncoder.encodeNotNull(UUID.randomUUID().toString()))
         reviewService.hideAllByWithdrawnUser(checkNotNull(user.id))
         userFollowRepository.deleteAllByUserId(userId)
         userPreferenceGenreRepository.deleteByUser_Id(userId)
@@ -228,9 +228,11 @@ class UserService(
         }
     }
 
+    // Spring Security 7의 encode는 String?을 반환하지만 null이 아닌 입력에는 항상 값을 돌려줌
+    private fun PasswordEncoder.encodeNotNull(rawPassword: String?): String = checkNotNull(encode(rawPassword))
+
     // 탈퇴한 유저는 존재하지 않는 유저로 취급
     private fun UserRepository.getActiveUserById(id: Long?): User =
-        findByIdAndDeletedAtIsNull(id).orElseThrow {
-            ServiceException("404-1", "존재하지 않는 유저입니다.")
-        }
+        findByIdAndDeletedAtIsNull(id)
+            ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
 }

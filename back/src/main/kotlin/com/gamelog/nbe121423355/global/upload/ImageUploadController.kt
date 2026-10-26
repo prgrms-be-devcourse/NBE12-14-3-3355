@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile
 @RestController
 @RequestMapping("/api/v1/uploads")
 @Tag(name = "image-upload-controller", description = "이미지 업로드 API")
-class ImageUploadController constructor(private val imageUploadService: ImageUploadService) {
+class ImageUploadController(private val imageUploadService: ImageUploadService) {
     @PostMapping("/images")
     @Operation(
         summary = "이미지 업로드",

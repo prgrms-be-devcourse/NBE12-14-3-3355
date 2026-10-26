@@ -1,5 +1,10 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.notification.entity.CommentNotificationsCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.entity.*
 import com.gamelog.nbe121423355.domain.review.repository.*
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
@@ -7,13 +12,14 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class ReviewCommentService
-constructor(
+class ReviewCommentService(
+    private val events: ApplicationEventPublisher,
     private val reviews: ReviewRepository,
     private val comments: ReviewCommentRepository,
     private val likes: ReviewCommentLikeRepository,
@@ -37,16 +43,16 @@ constructor(
         val liked: Boolean,
         val replyCount: Long,
         val createdDate: LocalDateTime?,
-    ) {}
+    )
 
     @JvmRecord
     data class Page(
         val comments: List<Item>,
         val nextCursor: Long?,
         val totalCount: Long,
-    ) {}
+    )
 
-    @JvmRecord data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?) {}
+    @JvmRecord data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?)
 
     private fun review(id: Long, lock: Boolean): Review {
         return (if (lock) reviews.findActiveForUpdate(id) else reviews.findActiveById(id))
@@ -69,9 +75,7 @@ constructor(
         if (c.user.id != userId) throw ServiceException("403-20", "본인의 댓글만 변경할 수 있습니다.")
     }
 
-    private fun validate(
-        body: Body
-    ) {
+    private fun validate(body: Body) {
         if (body.content == null || body.content.javaIsBlank() || body.content.length > 1000)
             throw ServiceException(
                 "400-20",
@@ -105,7 +109,7 @@ constructor(
         val rows: List<ReviewComment> =
             comments.list(reviewId, parentId, after, PageRequest.of(0, size + 1))
         val more = rows.size > size
-        val visible = rows.subList(0, Math.min(size, rows.size))
+        val visible = rows.take(size)
         return Page(
             items(review, visible, viewer),
             if (more) visible.last().id else null,
@@ -135,8 +139,7 @@ constructor(
     ): Item {
         val review: Review = review(reviewId, true)
         validate(body)
-        val parent: ReviewComment? =
-            if (body.parentId == null) null else comment(reviewId, body.parentId, true)
+        val parent = body.parentId?.let { comment(reviewId, it, active = true) }
         if (parent != null && parent.parent != null)
             throw ServiceException(
                 "400-20",
@@ -146,6 +149,19 @@ constructor(
             users.findById(userId).orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
         val c: ReviewComment =
             comments.saveAndFlush(ReviewComment(review, user, body.content, body.spoiler, parent))
+        val recipients = setOfNotNull(review.userGame.user.id, parent?.user?.id)
+        events.publishEvent(
+            NotificationRequested(
+                recipients = recipients,
+                actorId = userId,
+                kind = if (parent == null) NotificationKind.REVIEW_COMMENT else NotificationKind.REVIEW_REPLY,
+                targetType = NotificationTarget.REVIEW_COMMENT,
+                targetId = requireNotNull(c.id),
+                sourceKey = "comment:${c.id}",
+                reviewId = reviewId,
+                gameTitle = review.userGame.game.title,
+            )
+        )
         return items(review, listOf(c), userId).first()
     }
 
@@ -171,6 +187,7 @@ constructor(
         owner(c, userId)
         likes.deleteForComment(id)
         c.delete()
+        events.publishEvent(CommentNotificationsCancelled(id))
     }
 
     @Transactional
@@ -194,7 +211,22 @@ constructor(
                         )
                     })
             likes.save(ReviewCommentLike(c, user))
-        } else if (!value) likes.deleteById(key)
+            events.publishEvent(
+                NotificationRequested(
+                    recipients = setOf(requireNotNull(c.user.id)),
+                    actorId = userId,
+                    kind = NotificationKind.REVIEW_COMMENT_LIKE,
+                    targetType = NotificationTarget.REVIEW_COMMENT,
+                    targetId = id,
+                    sourceKey = "comment-like:$id:$userId",
+                    reviewId = reviewId,
+                    gameTitle = review.userGame.game.title,
+                )
+            )
+        } else if (!value) {
+            likes.deleteById(key)
+            events.publishEvent(NotificationCancelled("comment-like:$id:$userId"))
+        }
         likes.flush()
         return items(review, listOf(c), userId).first()
     }
@@ -221,27 +253,27 @@ constructor(
             comments
                 .replyCounts(ids)
                 .associate { it.parentId to it.count }
-        val author: Long? = review.userGame.user.id
+        val authorId = review.userGame.user.id
         return rows
-            .map { c ->
-                val l = counts.get(c.id)
-                val deleted: Boolean = c.isDeleted
+            .map { comment ->
+                val likeSummary = counts[comment.id]
+                val deleted = comment.isDeleted
                 Item(
-                    c.id,
-                    c.parent?.id,
-                    if (deleted) null else c.user.id,
-                    if (deleted) null else c.user.nickname,
-                    if (deleted) null else c.user.profileImageUrl,
-                    if (deleted) "" else c.content,
-                    !deleted && c.isSpoiler,
-                    deleted,
-                    !deleted && c.isEdited,
-                    !deleted && (c.user.id == author),
-                    !deleted && (c.user.id == viewer),
-                    if (deleted || l == null) 0 else l.count,
-                    !deleted && l != null && l.liked,
-                    replies.getOrDefault(c.id, 0L),
-                    c.createdDate,
+                    id = comment.id,
+                    parentId = comment.parent?.id,
+                    userId = if (deleted) null else comment.user.id,
+                    nickname = if (deleted) null else comment.user.nickname,
+                    profileImageUrl = if (deleted) null else comment.user.profileImageUrl,
+                    content = if (deleted) "" else comment.content,
+                    spoiler = !deleted && comment.isSpoiler,
+                    deleted = deleted,
+                    edited = !deleted && comment.isEdited,
+                    author = !deleted && comment.user.id == authorId,
+                    mine = !deleted && comment.user.id == viewer,
+                    likeCount = if (deleted) 0 else likeSummary?.count ?: 0,
+                    liked = !deleted && likeSummary?.liked == true,
+                    replyCount = replies.getOrDefault(comment.id, 0L),
+                    createdDate = comment.createdDate,
                 )
             }
     }

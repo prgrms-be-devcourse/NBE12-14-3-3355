@@ -22,7 +22,7 @@ Mockito를 프로젝트에서 제거한 작업은 아니다. 기존 Mockito 기�
 
 ### IgdbSyncServiceIntegrationTest — 2개
 
-파일: `back/src/test/java/com/gamelog/nbe121423355/domain/game/sync/IgdbSyncServiceIntegrationTest.java`
+파일: `back/src/test/kotlin/com/gamelog/nbe121423355/domain/game/sync/IgdbSyncServiceIntegrationTest.kt`
 
 1. 두 페이지와 빈 마지막 페이지를 순서대로 수집한다. 호출 cursor와 cutoff, 저장된 게임, 처리 건수, SUCCEEDED 상태와 watermark 갱신을 확인한다.
 2. 첫 페이지 커밋 후 다음 IGDB 요청을 실패시킨다. FAILED 상태, 첫 페이지 보존, watermark 미갱신을 확인하고 재시작하면 저장된 cursor부터 재개하여 중복 없이 완료하는지 검증한다.
@@ -31,7 +31,7 @@ worker의 실제 트랜잭션 커밋을 검증하기 위해 테스트 전체에 
 
 ### GameImportServiceIntegrationTest — 2개
 
-파일: `back/src/test/java/com/gamelog/nbe121423355/domain/game/service/GameImportServiceIntegrationTest.java`
+파일: `back/src/test/kotlin/com/gamelog/nbe121423355/domain/game/service/GameImportServiceIntegrationTest.kt`
 
 1. 두 게임이 같은 장르·플랫폼·시리즈를 공유하도록 저장한 뒤 재수집한다. 게임 ID 유지, 제목 갱신, 리소스 및 연결 중복 방지를 확인한다.
 2. 재수집 응답의 관계 정보가 null이어도 기존 연결을 보존하는지 확인한다.
@@ -40,7 +40,7 @@ worker의 실제 트랜잭션 커밋을 검증하기 위해 테스트 전체에 
 
 ### GameFilterControllerTest — 2개 추가
 
-파일: `back/src/test/java/com/gamelog/nbe121423355/domain/game/controller/GameFilterControllerTest.java`
+파일: `back/src/test/kotlin/com/gamelog/nbe121423355/domain/game/controller/GameFilterControllerTest.kt`
 
 1. 필터 데이터가 없으면 genres와 platforms를 null이 아닌 빈 배열로 응답한다.
 2. 저장 순서와 관계없이 두 목록을 이름순으로 응답한다.
@@ -75,3 +75,49 @@ allprojects {
 ```
 
 검증 결과 경로: `back/build/test-results/test/TEST-*.xml`, `back/build/reports/tests/test/index.html`. 이 경로는 후속 테스트 실행으로 갱신되는 로컬 빌드 산출물이다.
+
+
+## 2026-10-26 담당 테스트 Kotlin 전환
+
+게임 수집·동기화와 검색·필터·정렬·자동완성의 테스트 12개 클래스와 공통 준비 코드 1개를 `src/test/java`에서 `src/test/kotlin`으로 옮겼다. 패키지와 테스트 클래스·메서드 이름, DisplayName, 파라미터화 입력, assertion 및 시나리오는 유지했다.
+
+전환 파일(공통 경로: `back/src/test/kotlin/com/gamelog/nbe121423355/domain/game/`):
+
+- `controller/`: `GameControllerTest.kt`, `GameFilterControllerTest.kt`
+- `service/`: `GameQueryTestSupport.kt`, `GameServiceTest.kt`, `GameFilterTest.kt`, `GameSortTest.kt`, `GameOffsetSearchTest.kt`, `GameCatalogPolicyTest.kt`, `GameSuggestionTest.kt`, `GameImportServiceIntegrationTest.kt`
+- `sync/`: `IgdbSyncTest.kt`, `IgdbSyncSecurityTest.kt`, `IgdbSyncServiceIntegrationTest.kt`
+
+필드 주입은 `lateinit var`, getter 호출은 프로퍼티 접근, Java 반복문·Stream은 Kotlin 반복문·컬렉션 연산으로 전환했다. 저장 후 필수 ID는 `requireNotNull`로 확인한다. 읽기 전용 fixture 목록은 `List`를 사용하고, 운영 DTO·서비스가 `MutableList`를 요구하는 입력에는 해당 타입을 유지했다. 페이지 전체 건수(`Long`)와 목록 크기(`Int`)를 비교할 때는 `toLong()`으로 타입을 명시했다.
+
+공통 Java MySQL 지원 설정은 다른 담당자의 테스트도 사용하므로 유지했다. 운영 코드·빌드 의존성·DB 설정은 수정하지 않았다. Mockito 사용 경계도 기존과 동일하다. 동기화의 외부 `IgdbClient`만 대체하며 내부 서비스·Repository·MySQL은 실제 구현이다. 기존 번역 테스트 삭제 상태도 유지한다.
+
+전환 대상만 실행하는 명령(`back` 디렉터리):
+
+```powershell
+$gameTestNames = @(
+    'controller.GameControllerTest', 'controller.GameFilterControllerTest',
+    'service.GameServiceTest', 'service.GameFilterTest', 'service.GameSortTest',
+    'service.GameOffsetSearchTest', 'service.GameCatalogPolicyTest',
+    'service.GameSuggestionTest', 'service.GameImportServiceIntegrationTest',
+    'sync.IgdbSyncTest', 'sync.IgdbSyncSecurityTest', 'sync.IgdbSyncServiceIntegrationTest'
+)
+$gameTestArgs = @('test', '--no-daemon')
+foreach ($gameTestName in $gameTestNames) {
+    $gameTestArgs += @('--tests', "com.gamelog.nbe121423355.domain.game.$gameTestName")
+}
+.\gradlew.bat @gameTestArgs
+```
+
+이번 로컬 실행에는 앞서 기록한 에이전트 초기화 스크립트 옵션(`--init-script build/test-agent.init.gradle`)을 함께 사용했다.
+
+검증 결과: **12개 클래스, 56개 테스트 통과, 실패·오류·건너뜀 0개**. 파라미터화 테스트를 포함한 실행 건수이며, 대상의 테스트 메서드 51개와 assertion 진입점 231개가 전환 전후 유지됨을 대조했다. 이전 Java 클래스 산출물이 남아 있지 않은 것도 확인했다. 이번에는 담당 범위만 정확한 클래스명으로 선택했으므로, 앞선 67개 실행에 포함됐던 다른 영역의 11개 테스트는 실행하지 않았다. 전체 프로젝트 회귀 테스트 실행 결과는 아니다.
+
+### Kotlin 표현과 포맷 후속 정리
+
+- `GameSearchRequest`, `IgdbGameResponse` 등 생성자에 이름 있는 인자를 사용해 null과 숫자 인자의 의미를 드러냈다.
+- 제목 목록 검증은 AssertJ `extracting` 대신 Kotlin `map`으로 변환한 목록을 검증한다. DTO 필드 5개를 tuple로 비교하던 검증은 같은 5개 필드의 `GameListResponse`를 만들어 값과 순서를 직접 비교한다.
+- 단순 반환 helper는 식 본문으로 정리하고, 주입 필드는 필요한 범위에서 private으로 제한했다.
+- 외부 IGDB 응답 설정은 Mockito의 `given(...).willReturn(...)` / `willThrow(...)` 형태로 정리했다. 모킹 대상은 추가하지 않았다.
+- ktfmt 0.64의 Kotlin 스타일로 13개 파일의 들여쓰기·줄바꿈·import를 정리했다. 포매터는 Git 제외 경로인 `back/build`에서만 실행했으며 빌드 의존성은 추가하지 않았다.
+
+운영 코드와 MySQL 격리 설정, 테스트 입력과 기대 결과는 유지했다.

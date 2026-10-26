@@ -22,8 +22,8 @@ interface GameRepository : JpaRepository<Game, Long> {
     fun findGameIdsForPrecompute(
         @Param("afterId") afterId: Long,
         @Param("upperId") upperId: Long,
-        pageable: Pageable?,
-    ): MutableList<Long>
+        pageable: Pageable,
+    ): List<Long>
 
     // 제목 인덱스에서 후보를 먼저 제한하여 큰 본문 컬럼은 최종 6행만 읽습니다.
     @Query(

@@ -8,75 +8,67 @@ import org.hibernate.query.NativeQuery
 import org.springframework.stereotype.Repository
 
 @Repository
-class PersonalizedRelatedGameQueryRepository
-constructor(
+class PersonalizedRelatedGameQueryRepository(
     private val entityManager: EntityManager,
     private val publicationPolicy: GamePublicationPolicy,
 ) {
     // 여러 기준 게임의 연관 추천 상위 5개를 한 번에 조회해 Projection으로 반환
     fun findTopFiveBySourceGameIds(
-        sourceGameIds: MutableList<Long>,
-        excludedGameIds: MutableList<Long>,
-    ): MutableList<PersonalizedRelatedGameProjection> {
+        sourceGameIds: List<Long>,
+        excludedGameIds: List<Long>,
+    ): List<PersonalizedRelatedGameProjection> {
         return query(
-            PersonalizedRelatedGameQueryRepository.RELATED_GAMES_BY_SOURCE_SQL,
+            RELATED_GAMES_BY_SOURCE_SQL,
             sourceGameIds,
             excludedGameIds,
         )
     }
 
     fun findStoredTopFiveBySourceGameIds(
-        sourceGameIds: MutableList<Long>,
-        excludedGameIds: MutableList<Long>,
-    ): MutableList<PersonalizedRelatedGameProjection> {
+        sourceGameIds: List<Long>,
+        excludedGameIds: List<Long>,
+    ): List<PersonalizedRelatedGameProjection> {
         return query(
-            PersonalizedRelatedGameQueryRepository.STORED_RELATED_GAMES_SQL,
+            STORED_RELATED_GAMES_SQL,
             sourceGameIds,
             excludedGameIds,
         )
     }
 
     private fun query(
-        sql: String?,
-        sourceGameIds: MutableList<Long>,
-        excludedGameIds: MutableList<Long>,
-    ): MutableList<PersonalizedRelatedGameProjection> {
+        sql: String,
+        sourceGameIds: List<Long>,
+        excludedGameIds: List<Long>,
+    ): List<PersonalizedRelatedGameProjection> {
         if (sourceGameIds.isEmpty()) {
-            return java.util.List.of()
+            return emptyList()
         }
-        @SuppressWarnings("unchecked")
-        val rows = // 빈 IN 목록을 피하기 위한 존재하지 않는 게임 ID
-            entityManager
-                .createNativeQuery(sql)
-                .unwrap(NativeQuery::class.java)
-                .setParameterList("sourceGameIds", sourceGameIds)
-                .setParameter("readyOnly", publicationPolicy.isReadyOnly)
-                .setParameterList(
-                    "excludedGameIds",
-                    if (excludedGameIds.isEmpty()) java.util.List.of(-1L) else excludedGameIds,
-                )
-                .getResultList()
-        return rows
-            .stream()
-            .map({ row ->
-                val columns = row as Array<*>
-                PersonalizedRelatedGameProjection(
-                    (columns[0] as Number).toLong(),
-                    (columns[1] as Number).toLong(),
-                    columns[2] as String?,
-                    columns[3] as String?,
-                    toBigDecimal(columns[4]),
-                    toBigDecimal(columns[5]),
-                    (columns[6] as Number).toInt(),
-                )
-            })
-            .toList()
+        // 빈 IN 목록을 피하기 위한 존재하지 않는 게임 ID를 전달한다.
+        val rows = entityManager
+            .createNativeQuery(sql)
+            .unwrap(NativeQuery::class.java)
+            .setParameterList("sourceGameIds", sourceGameIds)
+            .setParameter("readyOnly", publicationPolicy.isReadyOnly)
+            .setParameterList("excludedGameIds", excludedGameIds.ifEmpty { listOf(-1L) })
+            .resultList
+        val candidates = rows.map { row ->
+            val columns = row as Array<*>
+            PersonalizedRelatedGameProjection(
+                sourceGameId = (columns[0] as Number).toLong(),
+                gameId = (columns[1] as Number).toLong(),
+                title = requireNotNull(columns[2] as String?) { "조회한 게임의 제목이 없습니다." },
+                coverImageUrl = columns[3] as String?,
+                igdbRating = toBigDecimal(columns[4]),
+                relatedScore = requireNotNull(toBigDecimal(columns[5])) { "연관 추천 점수가 없습니다." },
+                relatedRank = (columns[6] as Number).toInt(),
+            )
+        }
+        return java.util.List.copyOf(candidates)
     }
 
     // SQL 조회 결과의 수치 데이터 객체를 BigDecimal로 변환
-    private fun toBigDecimal(value: Any?): BigDecimal? {
-        return if (value == null) null else BigDecimal((value as Number).toString())
-    }
+    private fun toBigDecimal(value: Any?): BigDecimal? =
+        value?.let { BigDecimal((it as Number).toString()) }
 
     companion object {
         // 사용자별 제외를 먼저 적용하고 저장 순위 순서로 1~5위를 다시 매긴다.

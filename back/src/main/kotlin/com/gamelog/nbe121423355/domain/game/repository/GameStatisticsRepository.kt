@@ -34,7 +34,7 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
 
             """
     )
-    fun findStatusStatisticsByGameId(@Param("gameId") gameId: Long?): GameStatusStatisticsProjection
+    fun findStatusStatisticsByGameId(@Param("gameId") gameId: Long): GameStatusStatisticsProjection
 
     // 게임 ID를 기준으로 평균 평점, 평가 수와 내용이 있는 리뷰 수를 각각 집계
     @Query(
@@ -52,7 +52,7 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
 
             """
     )
-    fun findRatingStatisticsByGameId(@Param("gameId") gameId: Long?): GameRatingStatisticsProjection
+    fun findRatingStatisticsByGameId(@Param("gameId") gameId: Long): GameRatingStatisticsProjection
 
     // 게임 ID를 기준으로 평점별 리뷰 수를 집계
     @Query(
@@ -70,8 +70,8 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
             """
     )
     fun findRatingDistributionByGameId(
-        @Param("gameId") gameId: Long?
-    ): MutableList<GameRatingDistributionProjection>
+        @Param("gameId") gameId: Long
+    ): List<GameRatingDistributionProjection>
 
     // 게임 ID를 기준으로 좋아요를 누른 사용자 수를 집계
     @Query(
@@ -83,7 +83,7 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
 
             """
     )
-    fun countLikesByGameId(@Param("gameId") gameId: Long?): Long
+    fun countLikesByGameId(@Param("gameId") gameId: Long): Long
 
     // 게임 ID를 기준으로 평균 플레이타임과 기록 사용자 수를 집계
     @Query(
@@ -97,7 +97,7 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
             """
     )
     fun findPlayTimeStatisticsByGameId(
-        @Param("gameId") gameId: Long?
+        @Param("gameId") gameId: Long
     ): GamePlayTimeStatisticsProjection
 
     // 전체 사용자 좋아요 수를 기준으로 인기 게임 조회
@@ -119,5 +119,5 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
 
             """
     )
-    fun findPopularGames(pageable: Pageable?): MutableList<PopularGameProjection>
+    fun findPopularGames(pageable: Pageable): List<PopularGameProjection>
 }

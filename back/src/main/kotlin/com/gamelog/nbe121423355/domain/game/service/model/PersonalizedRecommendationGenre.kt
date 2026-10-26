@@ -4,5 +4,5 @@ package com.gamelog.nbe121423355.domain.game.service.model
 @JvmRecord
 data class PersonalizedRecommendationGenre(
     val id: Long,
-    val name: String?,
-) {}
+    val name: String,
+)

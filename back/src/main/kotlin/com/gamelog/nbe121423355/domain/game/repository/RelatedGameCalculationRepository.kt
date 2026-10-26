@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface RelatedGameCalculationRepository : JpaRepository<RelatedGameCalculation, Long> {
-    fun existsByGameIdAndLastSuccessAtIsNotNull(gameId: Long?): Boolean
+    fun existsByGameIdAndLastSuccessAtIsNotNull(gameId: Long): Boolean
 
     // 최초 계산 미완료 대상을 ID 순서로 나누어 조회한다.
     @Query(
@@ -19,7 +19,7 @@ interface RelatedGameCalculationRepository : JpaRepository<RelatedGameCalculatio
             """
     )
     fun findUnreadyGameIdsAfter(
-        @Param("afterGameId") afterGameId: Long?,
-        pageable: Pageable?,
-    ): MutableList<Long>
+        @Param("afterGameId") afterGameId: Long,
+        pageable: Pageable,
+    ): List<Long>
 }

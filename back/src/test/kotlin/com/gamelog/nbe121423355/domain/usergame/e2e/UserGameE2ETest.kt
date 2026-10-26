@@ -53,8 +53,8 @@ class UserGameE2ETest {
     fun setUp() {
         // 실제 HTTP 요청은 별도 스레드에서 실행되므로 fixture를 먼저 커밋한다.
         transaction.executeWithoutResult {
-            owner = User("e2e-owner", "e2e-owner@test.com", passwordEncoder.encode(password))
-            other = User("e2e-other", "e2e-other@test.com", passwordEncoder.encode(password))
+            owner = User("e2e-owner", "e2e-owner@test.com", checkNotNull(passwordEncoder.encode(password)))
+            other = User("e2e-other", "e2e-other@test.com", checkNotNull(passwordEncoder.encode(password)))
             for (user in listOf(owner, other)) {
                 em.persist(user)
                 userIds += checkNotNull(user.id)

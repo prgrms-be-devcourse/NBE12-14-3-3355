@@ -9,31 +9,31 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class PopularReviewService constructor(private val reviewLikeRepository: ReviewLikeRepository) {
+class PopularReviewService(private val reviewLikeRepository: ReviewLikeRepository) {
     fun getPopularReviews(size: Int): List<PopularReviewResponse> {
         validateSize(size)
         return reviewLikeRepository
             .findPopularReviews(PageRequest.of(0, size))
             .map { review ->
                 PopularReviewResponse(
-                    review.reviewId,
-                    review.userId,
-                    review.nickname,
-                    review.profileImageUrl,
-                    review.gameId,
-                    review.gameTitle,
-                    review.gameCoverImageUrl,
-                    review.rating,
-                    review.content,
-                    review.spoiler,
-                    review.likeCount,
-                    review.createdDate,
+                    reviewId = review.reviewId,
+                    userId = review.userId,
+                    nickname = review.nickname,
+                    profileImageUrl = review.profileImageUrl,
+                    gameId = review.gameId,
+                    gameTitle = review.gameTitle,
+                    gameCoverImageUrl = review.gameCoverImageUrl,
+                    rating = review.rating,
+                    content = review.content,
+                    spoiler = review.spoiler,
+                    likeCount = review.likeCount,
+                    createdDate = review.createdDate,
                 )
             }
     }
 
     private fun validateSize(size: Int) {
-        if (size < 1 || size > MAX_SIZE) {
+        if (size !in 1..MAX_SIZE) {
             throw ServiceException("400-10", "조회 개수는 1 이상 50 이하여야 합니다.")
         }
     }

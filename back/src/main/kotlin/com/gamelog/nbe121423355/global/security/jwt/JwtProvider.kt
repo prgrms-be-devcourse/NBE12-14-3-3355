@@ -10,19 +10,12 @@ import io.jsonwebtoken.security.Keys
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
-import java.util.Optional
 import javax.crypto.SecretKey
 import org.springframework.stereotype.Component
 
 @Component
 class JwtProvider(private val jwtProperties: JwtProperties) {
-    private val secretKey: SecretKey?
-
-    // 토큰 제공 클래스
-    init {
-        val keyBytes = Decoders.BASE64.decode(jwtProperties.secret)
-        this.secretKey = Keys.hmacShaKeyFor(keyBytes)
-    }
+    private val secretKey: SecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.secret))
 
     // accesstoken 생성 메소드
     fun generateAccessToken(userId: Long?, role: String?): String {
@@ -80,31 +73,31 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
 
     // 서명/만료 검증
     fun validateToken(token: String?): Boolean {
-        try {
+        return try {
             Jwts.parser()
                 .verifyWith(secretKey)
                 .build() // 시크릿키로 서명 검증
                 .parseSignedClaims(token) // 토큰을 파싱하면서 서명검증까지 수행, 서명이 안맞거나 만료되었으면 여기서 예외를 던지기
-            return true
+            true
         } catch (e: JwtException) {
-            return false
+            false
         } catch (e: IllegalArgumentException) {
-            return false
+            false
         }
     }
 
     // 서명은 유효하지만 시간이 지나 만료된 accessToken이면 그 클레임을 반환 (자동 재발급 대상 여부 + 사용자 ID 비교용)
-    // 만료되지 않았거나, accessToken이 아니거나, 서명이 위조된 토큰이면 empty
-    fun getExpiredAccessTokenClaims(token: String?): Optional<Claims> {
-        try {
+    // 만료되지 않았거나, accessToken이 아니거나, 서명이 위조된 토큰이면 null
+    fun getExpiredAccessTokenClaims(token: String?): Claims? {
+        return try {
             parseClaims(token)
-            return Optional.empty()
+            null
         } catch (e: ExpiredJwtException) {
-            return if (isAccessToken(e.claims)) Optional.of(e.claims) else Optional.empty()
+            if (isAccessToken(e.claims)) e.claims else null
         } catch (e: JwtException) {
-            return Optional.empty()
+            null
         } catch (e: IllegalArgumentException) {
-            return Optional.empty()
+            null
         }
     }
 

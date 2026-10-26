@@ -18,5 +18,5 @@ interface GameSeriesGameRepository : JpaRepository<GameSeriesGame, GameSeriesGam
 
             """
     )
-    fun findAllWithSeriesByGameId(@Param("gameId") gameId: Long?): MutableList<GameSeriesGame>
+    fun findAllWithSeriesByGameId(@Param("gameId") gameId: Long): List<GameSeriesGame>
 }

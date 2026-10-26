@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/admin")
 @Tag(name = "api-v1-admin-controller", description = "관리자 권한 관리 API")
-class ApiV1AdminController constructor(private val userService: UserService) {
+class ApiV1AdminController(private val userService: UserService) {
     @PatchMapping("/users/{userId}/role")
     @Operation(
         summary = "사용자 관리자 승격",

@@ -4,4 +4,4 @@ data class UserGameGenreDTO(
     val genreId: Long,
     val genreName: String,
     val gameCount: Long,
-) {}
+)

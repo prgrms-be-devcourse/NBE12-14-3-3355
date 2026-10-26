@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.jwt.CorsProperties
 import com.gamelog.nbe121423355.global.security.jwt.JwtAuthenticationFilter
 import jakarta.servlet.http.HttpServletResponse
-import java.io.IOException
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod.GET
@@ -27,7 +26,6 @@ class SecurityConfig {
     }
 
     @Bean
-    @Throws(Exception::class)
     fun filterChain(
         http: HttpSecurity,
         jwtFilter: JwtAuthenticationFilter?,
@@ -114,7 +112,6 @@ class SecurityConfig {
         return http.build()
     }
 
-    @Throws(IOException::class)
     private fun writeRsData(
         response: HttpServletResponse,
         objectMapper: ObjectMapper,

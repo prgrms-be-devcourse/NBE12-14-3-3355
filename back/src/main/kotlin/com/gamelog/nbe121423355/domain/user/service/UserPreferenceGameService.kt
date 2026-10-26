@@ -25,26 +25,23 @@ class UserPreferenceGameService(
             throw ServiceException("400-12", "선호 게임은 최대 3개까지 선택 가능합니다.") // 온보딩 장르 최대 3개 선택
         }
         val user =
-            userRepository.findByIdAndDeletedAtIsNull(userId).orElseThrow {
-                ServiceException("404-1", "존재하지 않는 유저입니다.")
-            }
+            userRepository.findByIdAndDeletedAtIsNull(userId)
+                ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
         val games = gameRepository.findAllById(genreIds)
         if (games.size != genreIds.size) {
             throw ServiceException("400-11", "존재하지 않는 게임이 포함되어 있습니다.")
         }
         userPreferenceGameRepository.deleteByUser_Id(userId)
-        val newPreferences: List<UserPreferenceGame> =
-            games.stream().map { game -> UserPreferenceGame(user, game) }.toList()
+        val newPreferences =
+            games.map { game -> UserPreferenceGame(user, game) }
         userPreferenceGameRepository.saveAll(newPreferences)
-        return newPreferences.stream().map { value -> PreferredGameResponseDto(value) }.toList()
+        return newPreferences.map { value -> PreferredGameResponseDto(value) }
     }
 
     // 온보딩 게임정보 가져오기
     fun getPreferredGames(userId: Long?): List<PreferredGameResponseDto> {
         return userPreferenceGameRepository
             .findByUser_Id(userId)
-            .stream()
             .map { value -> PreferredGameResponseDto(value) }
-            .toList()
     }
 }

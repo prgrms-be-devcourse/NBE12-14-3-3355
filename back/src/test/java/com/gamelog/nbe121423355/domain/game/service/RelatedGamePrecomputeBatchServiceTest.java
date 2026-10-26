@@ -14,10 +14,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.Set;
 import java.util.List;
-import java.util.Optional;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -38,26 +42,30 @@ class RelatedGamePrecomputeBatchServiceTest {
     @Mock
     private RelatedGamePrecomputeSnapshot snapshot;
 
+    @Mock
+    private RelatedGameChangePreparation changePreparation;
+    @Mock
+    private com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository refreshTargets;
+
     private RelatedGamePrecomputeBatchService batch;
 
     @BeforeEach
     void setUp() {
-        batch = new RelatedGamePrecomputeBatchService(gameRepository, precomputeService, lock, org.mockito.Mockito.mock(RelatedGameChangePreparation.class),
-                org.mockito.Mockito.mock(RelatedGameChangeExpansion.class),
-                org.mockito.Mockito.mock(com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository.class), targetRepository);
+        batch = new RelatedGamePrecomputeBatchService(gameRepository, precomputeService, lock, changePreparation,
+                org.mockito.Mockito.mock(RelatedGameChangeExpansion.class), refreshTargets, targetRepository);
     }
 
     private void allowLock() {
         when(lock.tryRun(any())).thenAnswer(invocation -> {
-            Function<Runnable, Object> action = invocation.getArgument(0);
-            return Optional.of(action.apply(() -> {}));
+            Function1<Function0<Unit>, Object> action = invocation.getArgument(0);
+            return action.invoke(() -> Unit.INSTANCE);
         });
     }
 
     @Test
     void skipsAllWorkWhenAnotherExecutionOwnsLock() {
         // given: 다른 작업이 추천 실행 잠금을 보유한 상태를 준비한다.
-        when(lock.tryRun(any())).thenReturn(Optional.empty());
+        when(lock.tryRun(any())).thenReturn(null);
 
         // when: 전체 계산을 요청한다.
         var result = batch.run(true, List.of(), RelatedGamePrecomputeMode.INITIAL_LOAD);
@@ -89,6 +97,7 @@ class RelatedGamePrecomputeBatchServiceTest {
         assertThat(result.succeeded()).isEqualTo(2);
         assertThat(result.failedIds()).containsExactly(20L);
         assertThat(result.exitCode()).isEqualTo(1);
+        verify(precomputeService, never()).prepare(any(), anyLong());
         var order = inOrder(precomputeService);
         order.verify(precomputeService).precompute(10L, RelatedGamePrecomputeMode.REFRESH);
         order.verify(precomputeService).precompute(20L, RelatedGamePrecomputeMode.REFRESH);
@@ -120,17 +129,75 @@ class RelatedGamePrecomputeBatchServiceTest {
     }
 
     @Test
+    void changedReusesGenreRankingAcrossPagesAndOnlyProcessesPendingTargets() {
+        // given: 같은 장르 조합의 대기 게임 두 개와 대기가 아닌 후보 게임을 준비한다.
+        allowLock();
+        when(gameRepository.findMaxGameIdForPrecompute()).thenReturn(30L);
+        when(refreshTargets.countPending(30L)).thenReturn(2L);
+        when(refreshTargets.findPendingIds(0L, 30L, 100)).thenReturn(List.of(10L));
+        when(refreshTargets.findPendingIds(10L, 30L, 100)).thenReturn(List.of(20L));
+        when(refreshTargets.findPendingIds(20L, 30L, 100)).thenReturn(List.of());
+        var shared = new RelatedGamePrecomputeSnapshot(RelatedGamePrecomputeMode.REFRESH, 20,
+                Map.of(10L, List.of(1L), 20L, List.of(1L), 30L, List.of(1L)),
+                Map.of(10L, BigDecimal.valueOf(80), 20L, BigDecimal.valueOf(80), 30L, BigDecimal.valueOf(80)), Set.of());
+        when(precomputeService.prepare(RelatedGamePrecomputeMode.REFRESH, 30L)).thenReturn(shared);
+        when(precomputeService.precompute(anyLong(), eq(RelatedGamePrecomputeMode.REFRESH), same(shared)))
+                .thenAnswer(invocation -> shared.baselineFor(invocation.getArgument(0)).size());
+        var observer = mock(RelatedGamePrecomputeObserver.class);
+
+        // when: 변경 영향 갱신을 여러 페이지로 계산한다.
+        var result = batch.run(new RelatedGamePrecomputeTarget(RelatedGamePrecomputeTargetType.CHANGED),
+                RelatedGamePrecomputeMode.REFRESH, observer);
+
+        // then: 확장 후 한 번 준비한 스냅샷으로 장르 계산을 재사용하고 대기 게임만 처리한다.
+        assertThat(result.processed()).isEqualTo(2);
+        assertThat(result.succeeded()).isEqualTo(2);
+        assertThat(shared.calculatedGroupCount()).isEqualTo(1);
+        var order = inOrder(changePreparation, refreshTargets, precomputeService, observer);
+        order.verify(changePreparation).expandPending(any());
+        order.verify(refreshTargets).countPending(30L);
+        order.verify(precomputeService).prepare(RelatedGamePrecomputeMode.REFRESH, 30L);
+        order.verify(observer).onPrepared(30L, 2L);
+        verify(precomputeService).precompute(10L, RelatedGamePrecomputeMode.REFRESH, shared);
+        verify(precomputeService).precompute(20L, RelatedGamePrecomputeMode.REFRESH, shared);
+        verify(precomputeService, never()).precompute(eq(30L), any(), any());
+        verify(precomputeService, never()).precompute(anyLong(), any());
+        verify(gameRepository, never()).findGameIdsForPrecompute(anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void changedWithoutPendingTargetsSkipsSnapshotPreparation() {
+        // given: 영향 대상을 확장한 뒤에도 대기가 없는 실행을 준비한다.
+        allowLock();
+        when(gameRepository.findMaxGameIdForPrecompute()).thenReturn(30L);
+        when(refreshTargets.countPending(30L)).thenReturn(0L);
+        var observer = mock(RelatedGamePrecomputeObserver.class);
+
+        // when: 대상 없는 변경 영향 갱신을 실행한다.
+        var result = batch.run(new RelatedGamePrecomputeTarget(RelatedGamePrecomputeTargetType.CHANGED),
+                RelatedGamePrecomputeMode.REFRESH, observer);
+
+        // then: 예상 대상 0개로 정상 종료하고 공통 데이터와 개별 계산을 준비하지 않는다.
+        assertThat(result.processed()).isZero();
+        assertThat(result.exitCode()).isZero();
+        verify(changePreparation).expandPending(any());
+        verify(observer).onPrepared(30L, 0L);
+        verifyNoInteractions(precomputeService);
+    }
+
+    @Test
     void lostLockStopsExecutionInsteadOfTreatingItAsIndividualGameFailure() {
         // given: 첫 게임 처리 직후 잠금 연결 소유권을 잃도록 준비한다.
         when(lock.tryRun(any())).thenAnswer(invocation -> {
-            Function<Runnable, Object> action = invocation.getArgument(0);
+            Function1<Function0<Unit>, Object> action = invocation.getArgument(0);
             AtomicInteger checks = new AtomicInteger();
-            Runnable check = () -> {
+            Function0<Unit> check = () -> {
                 if (checks.incrementAndGet() > 1) {
                     throw new IllegalStateException("잠금 연결 단절");
                 }
+                return Unit.INSTANCE;
             };
-            return Optional.of(action.apply(check));
+            return action.invoke(check);
         });
 
         // when: 잠금 연결이 끊긴 상태에서 다음 게임으로 진행하려 한다.
@@ -193,7 +260,7 @@ class RelatedGamePrecomputeBatchServiceTest {
     @Test
     void rejectedExecutionNotifiesObserverWithoutPreparingTargets() {
         // given: 다른 실행이 잠금을 보유한 상태와 관리자 진행 통지 대상을 준비한다.
-        when(lock.tryRun(any())).thenReturn(Optional.empty());
+        when(lock.tryRun(any())).thenReturn(null);
         var observer = mock(RelatedGamePrecomputeObserver.class);
 
         // when: 관리자 전체 갱신을 요청한다.

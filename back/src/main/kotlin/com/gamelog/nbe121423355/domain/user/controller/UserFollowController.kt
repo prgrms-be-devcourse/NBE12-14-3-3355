@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/v1/users")
 @Tag(name = "user-follow-controller", description = "사용자 검색 및 팔로우 관계 API")
-class UserFollowController constructor(private val userFollowService: UserFollowService) {
+class UserFollowController(private val userFollowService: UserFollowService) {
     @GetMapping("/search")
     @Operation(
         summary = "사용자 검색",
@@ -39,7 +39,7 @@ class UserFollowController constructor(private val userFollowService: UserFollow
             "200-18",
             "사용자 검색 결과를 조회했습니다.",
             userFollowService.searchUsers(
-                if (securityUser == null) null else securityUser.id,
+                securityUser?.id,
                 keyword,
                 page,
                 size,
@@ -90,7 +90,7 @@ class UserFollowController constructor(private val userFollowService: UserFollow
         @RequestParam(defaultValue = "10")
         size: Int,
     ): RsData<FollowPageResponseDto> {
-        val loginUserId = if (securityUser == null) null else securityUser.id
+        val loginUserId = securityUser?.id
         val response = userFollowService.getFollowing(loginUserId, userId, page, size)
         return RsData<FollowPageResponseDto>("200-16", "팔로잉 목록을 조회했습니다.", response)
     }
@@ -110,7 +110,7 @@ class UserFollowController constructor(private val userFollowService: UserFollow
         @RequestParam(defaultValue = "10")
         size: Int,
     ): RsData<FollowPageResponseDto> {
-        val loginUserId = if (securityUser == null) null else securityUser.id
+        val loginUserId = securityUser?.id
         val response = userFollowService.getFollowers(loginUserId, userId, page, size)
         return RsData<FollowPageResponseDto>("200-17", "팔로워 목록을 조회했습니다.", response)
     }

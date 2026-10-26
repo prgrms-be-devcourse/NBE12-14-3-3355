@@ -77,7 +77,7 @@ class RelatedGameInputChangeRepository(
     fun countPending(): Long = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM related_game_input_changes WHERE change_version > expanded_version",
         Long::class.javaObjectType,
-    ) ?: 0L
+    ) ?: error("미확장 변경 게임 수 집계 결과가 없습니다.")
 
     fun findPendingAfter(afterId: Long, limit: Int): List<RelatedGameInputChange> {
         require(afterId >= 0 && limit in 1..1000)
@@ -102,10 +102,15 @@ class RelatedGameInputChangeRepository(
         ).singleOrNull()
 
     private fun rowMapper(): RowMapper<RelatedGameInputChange> = RowMapper { row, _ ->
-                RelatedGameInputChange(
-                    row.getLong("game_id"), row.getLong("change_version"), row.getLong("expanded_version"),
-                    objectMapper.readValue(row.getString("affected_genre_ids"), LongArray::class.java).toList(),
-                    row.getLong("reason_mask"), row.getObject("changed_at", LocalDateTime::class.java),
-                )
-            }
+        RelatedGameInputChange(
+            gameId = row.getLong("game_id"),
+            changeVersion = row.getLong("change_version"),
+            expandedVersion = row.getLong("expanded_version"),
+            affectedGenreIds = objectMapper.readValue(row.getString("affected_genre_ids"), LongArray::class.java).toList(),
+            reasonMask = row.getLong("reason_mask"),
+            changedAt = requireNotNull(row.getObject("changed_at", LocalDateTime::class.java)) {
+                "변경 시각이 없습니다."
+            },
+        )
+    }
 }

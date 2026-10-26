@@ -59,10 +59,9 @@ class TokenReissueService(
         if (expectedUserId != null && expectedUserId != claims.userId) {
             throw ServiceException("401-2", "토큰의 사용자 정보가 일치하지 않습니다.")
         }
-        val familyId = jwtProvider.getFamilyId(claims)
-        if (familyId == null) {
-            throw ServiceException("401-2", "유효하지 않은 토큰 입니다.")
-        }
+        val familyId =
+            jwtProvider.getFamilyId(claims)
+                ?: throw ServiceException("401-2", "유효하지 않은 토큰 입니다.")
         val jti = claims.id
         val now = LocalDateTime.now()
         // 교체 시도를 조회보다 먼저 실행
@@ -73,7 +72,7 @@ class TokenReissueService(
         val session =
             refreshTokenRepository
                 .findByFamilyIdWithUser(familyId)
-                .orElseThrow { ServiceException("401-2", "로그아웃된 토큰입니다.") }
+                ?: throw ServiceException("401-2", "로그아웃된 토큰입니다.")
         val user = session.user
         // 탈퇴 시 세션은 전부 삭제되지만 방어적으로 한 번 더 확인
         if (user.isDeleted) {

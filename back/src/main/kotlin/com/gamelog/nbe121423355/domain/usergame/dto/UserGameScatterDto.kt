@@ -8,4 +8,4 @@ data class UserGameScatterDto(
     val coverImage: String?,
     val playTime: BigDecimal,
     val rating: BigDecimal,
-) {}
+)

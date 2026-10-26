@@ -1,5 +1,9 @@
 package com.gamelog.nbe121423355.domain.user.service
 
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.user.dto.FollowPageResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowStatusResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowUserResponseDto
@@ -12,15 +16,16 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaTrim
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Order
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
 class UserFollowService(
+    private val events: ApplicationEventPublisher,
     private val userFollowRepository: UserFollowRepository,
     private val userRepository: UserRepository,
 ) {
@@ -31,12 +36,12 @@ class UserFollowService(
         size: Int,
     ): FollowPageResponseDto {
         validatePageRequest(page, size)
-        val term = if (keyword == null) "" else keyword.javaTrim()
+        val term = keyword?.javaTrim().orEmpty()
         if (term.isEmpty() || term.length > 50) {
             throw ServiceException("400-9", "검색어는 1자 이상 50자 이하로 입력해 주세요.")
         }
-        val pageable: Pageable = PageRequest.of(page, size, Sort.by("nickname", "id"))
-        val result: Page<User> =
+        val pageable = PageRequest.of(page, size, Sort.by("nickname", "id"))
+        val result =
             if (loginUserId == null)
                 userRepository.findByNicknameContainingIgnoreCaseAndDeletedAtIsNull(
                     term,
@@ -54,19 +59,16 @@ class UserFollowService(
                 result.content.map { requireNotNull(it.id) },
             )
         val users =
-            result.content
-                .stream()
-                .map { user ->
-                    FollowUserResponseDto(
-                        user.id,
-                        user.nickname,
-                        user.profileImageUrl,
-                        null,
-                        followedIds.contains(user.id),
-                        (user.id == loginUserId),
-                    )
-                }
-                .toList()
+            result.content.map { user ->
+                FollowUserResponseDto(
+                    user.id,
+                    user.nickname,
+                    user.profileImageUrl,
+                    null,
+                    followedIds.contains(user.id),
+                    (user.id == loginUserId),
+                )
+            }
         return FollowPageResponseDto(
             users,
             result.number,
@@ -85,6 +87,16 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (!userFollowRepository.existsById(followId)) {
             userFollowRepository.save(UserFollow(follower, followee))
+            events.publishEvent(
+                NotificationRequested(
+                    recipients = setOf(requireNotNull(targetUserId)),
+                    actorId = followerId,
+                    kind = NotificationKind.FOLLOW,
+                    targetType = NotificationTarget.USER,
+                    targetId = followerId,
+                    sourceKey = "follow:$followerId:$targetUserId",
+                )
+            )
         }
         return FollowStatusResponseDto(targetUserId, true)
     }
@@ -96,6 +108,7 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (userFollowRepository.existsById(followId)) {
             userFollowRepository.deleteById(followId)
+            events.publishEvent(NotificationCancelled("follow:$followerId:$targetUserId"))
         }
         return FollowStatusResponseDto(targetUserId, false)
     }
@@ -108,7 +121,7 @@ class UserFollowService(
     ): FollowPageResponseDto {
         getUser(targetUserId)
         validatePageRequest(page, size)
-        val pageable: Pageable =
+        val pageable =
             PageRequest.of(
                 page,
                 size,
@@ -117,7 +130,7 @@ class UserFollowService(
                     Order.desc("id.followingId"),
                 ),
             )
-        val followPage: Page<UserFollow> =
+        val followPage =
             userFollowRepository.findAllByFollower_Id(targetUserId, pageable)
         return createPageResponse(
             loginUserId,
@@ -134,7 +147,7 @@ class UserFollowService(
     ): FollowPageResponseDto {
         getUser(targetUserId)
         validatePageRequest(page, size)
-        val pageable: Pageable =
+        val pageable =
             PageRequest.of(
                 page,
                 size,
@@ -143,7 +156,7 @@ class UserFollowService(
                     Order.desc("id.followerId"),
                 ),
             )
-        val followPage: Page<UserFollow> =
+        val followPage =
             userFollowRepository.findAllByFollowee_Id(targetUserId, pageable)
         return createPageResponse(
             loginUserId,
@@ -159,21 +172,18 @@ class UserFollowService(
     ): FollowPageResponseDto {
         val displayedUserIds = followPage.content.map { requireNotNull(userExtractor(it).id) }
         val followedUserIds = findFollowedUserIds(loginUserId, displayedUserIds)
-        val users: List<FollowUserResponseDto> =
-            followPage.content
-                .stream()
-                .map { userFollow ->
-                    val user = userExtractor(userFollow)
-                    FollowUserResponseDto(
-                        user.id,
-                        user.nickname,
-                        user.profileImageUrl,
-                        userFollow.createdDate,
-                        followedUserIds.contains(user.id),
-                        loginUserId != null && loginUserId == user.id,
-                    )
-                }
-                .toList()
+        val users =
+            followPage.content.map { userFollow ->
+                val user = userExtractor(userFollow)
+                FollowUserResponseDto(
+                    user.id,
+                    user.nickname,
+                    user.profileImageUrl,
+                    userFollow.createdDate,
+                    followedUserIds.contains(user.id),
+                    loginUserId != null && loginUserId == user.id,
+                )
+            }
         return FollowPageResponseDto.from(followPage, users)
     }
 
@@ -208,7 +218,7 @@ class UserFollowService(
     private fun getUser(userId: Long?): User {
         return userRepository
             .findByIdAndDeletedAtIsNull(userId)
-            .orElseThrow { ServiceException("404-1", "존재하지 않는 유저입니다.") }
+            ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
     }
 
     companion object {
