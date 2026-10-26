@@ -39,7 +39,6 @@ class UserService(
 ) {
     // 로그인 결과를 Controller에 전달하기 위한 내부 운반용 record
     // refreshTokenExpiryDate: 쿠키 maxAge 계산용 (세션의 절대 만료 시각)
-    @JvmRecord
     data class LoginResult(
         val user: UserDto,
         val accessToken: String,
@@ -48,7 +47,6 @@ class UserService(
     )
 
     // 새로 만든 세션의 refreshToken과 만료 시각 (비밀번호 변경 시 Controller가 쿠키로 내려줌)
-    @JvmRecord
     data class IssuedSession(val refreshToken: String, val expiryDate: LocalDateTime)
 
     // 회원가입 메소드
