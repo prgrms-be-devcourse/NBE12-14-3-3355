@@ -6,6 +6,7 @@ import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequ
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
 import com.gamelog.nbe121423355.domain.review.entity.Review
+import com.gamelog.nbe121423355.domain.review.entity.ReviewComment
 import com.gamelog.nbe121423355.domain.review.service.ReviewCommentService
 import com.gamelog.nbe121423355.domain.review.service.ReviewLikeService
 import com.gamelog.nbe121423355.domain.review.service.ReviewReportService
@@ -315,6 +316,72 @@ class NotificationIntegrationTest {
         assertThat(retention.deleteExpiredBatch(readAt.plusDays(7))).isEqualTo(6)
         em.clear()
         assertThat(repository.findById(recentlyRead)).isEmpty()
+    }
+
+    @Test
+    fun missingActorAndProfileTargetRemainUnavailable() {
+        repository.save(
+            Notification(
+                recipientId = authorId,
+                actorId = -1L,
+                kind = NotificationKind.FOLLOW,
+                targetType = NotificationTarget.USER,
+                targetId = -1L,
+                reviewId = null,
+                gameTitle = null,
+                sourceKey = "missing-user",
+            )
+        )
+        em.flush()
+        em.clear()
+
+        val item = notifications.list(authorId, null).items.single()
+
+        assertThat(item.actorName).isEqualTo("탈퇴한 사용자")
+        assertThat(item.url).isNull()
+        assertThat(item.unavailable).isTrue()
+    }
+
+    @Test
+    fun commentLinkBecomesUnavailableWhenCommentIsDeletedButNoticeRemains() {
+        val comment = comments.create(reviewId, readerId, body("알림 링크 댓글"))
+        val commentId = checkNotNull(comment.id)
+        val item = notifications.list(authorId, null).items.single()
+
+        assertThat(item.actorName).isEqualTo(reader.nickname)
+        assertThat(item.url).isEqualTo(
+            "/games/${review.userGame.game.id}?commentReview=$reviewId&notificationComment=$commentId"
+        )
+        assertThat(item.unavailable).isFalse()
+
+        // 알림 취소 이벤트 없이 대상만 삭제되어도 남아 있는 알림은 안전하게 표시한다.
+        em.find(ReviewComment::class.java, commentId).delete()
+        em.flush()
+        em.clear()
+
+        val unavailableItem = notifications.list(authorId, null).items.single()
+
+        assertThat(unavailableItem.id).isEqualTo(item.id)
+        assertThat(unavailableItem.url).isNull()
+        assertThat(unavailableItem.unavailable).isTrue()
+    }
+
+    @Test
+    fun readingAgainPreservesOriginalReadTime() {
+        val originalReadAt = LocalDateTime.of(2026, 10, 20, 12, 0)
+        val id = agedNotification(
+            NotificationKind.FOLLOW,
+            originalReadAt.minusDays(1),
+            originalReadAt,
+            "already-read",
+        )
+        em.clear()
+
+        assertThat(notifications.read(authorId, id).read).isTrue()
+        em.flush()
+        em.clear()
+
+        assertThat(repository.findById(id).orElseThrow().readAt).isEqualTo(originalReadAt)
     }
 
     private fun token(user: User) = "Bearer ${jwt.generateAccessToken(checkNotNull(user.id), "USER")}"
