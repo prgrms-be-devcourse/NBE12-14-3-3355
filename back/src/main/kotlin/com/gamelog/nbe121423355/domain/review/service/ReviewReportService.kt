@@ -19,9 +19,11 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
 import com.gamelog.nbe121423355.global.exception.ServiceException
+import kotlin.jvm.optionals.getOrNull
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -84,9 +86,8 @@ constructor(
         request: ReviewReportStatusUpdateRequest,
     ): ReviewReportResponse {
         val report =
-            reviewReportRepository
-                .findById(reportId)
-                .orElseThrow({ ServiceException("404-5", "리뷰 신고를 찾을 수 없습니다.") })
+            reviewReportRepository.findByIdOrNull(reportId)
+                ?: throw ServiceException("404-5", "리뷰 신고를 찾을 수 없습니다.")
         if (request.status == ReportStatus.PENDING) {
             throw ServiceException("400-5", "신고 처리 결과는 승인 또는 반려여야 합니다.")
         }
@@ -115,19 +116,15 @@ constructor(
             changeRecorder.record(requireNotNull(report.review.userGame.game.id), RelatedGameChangeReason.REVIEW)
             userGameService.synchronizeLibraryState(report.review.userGame)
         }
-        pendingReports.forEach({ pendingReport -> pendingReport.changeStatus(request.status) })
+        pendingReports.forEach { pendingReport -> pendingReport.changeStatus(request.status) }
         return ReviewReportResponse.from(pendingReports.first())
     }
 
-    private fun getReview(reviewId: Long): Review {
-        return reviewRepository
-            .findActiveById(reviewId)
-            .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
-    }
+    private fun getReview(reviewId: Long): Review =
+        reviewRepository.findActiveById(reviewId).getOrNull()
+            ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
-    private fun getUser(userId: Long): User {
-        return userRepository
-            .findById(userId)
-            .orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
-    }
+    private fun getUser(userId: Long): User =
+        userRepository.findByIdOrNull(userId)
+            ?: throw ServiceException("404-4", "사용자를 찾을 수 없습니다.")
 }
