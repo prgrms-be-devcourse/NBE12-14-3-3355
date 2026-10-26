@@ -61,7 +61,7 @@ constructor(
 
         assertThat(userDto.email).isEqualTo("test@test.com")
         assertThat(userDto.nickname).isEqualTo("nickname")
-        val saved = userRepository.findByEmail("test@test.com").orElseThrow()
+        val saved = checkNotNull(userRepository.findByEmail("test@test.com"))
         assertThat(saved.id).isEqualTo(userDto.id)
         assertThat(passwordEncoder.matches("password123", saved.password)).isTrue()
     }
@@ -186,11 +186,11 @@ constructor(
         val loginRequestDto = LoginRequestDto("test@test.com", "password123")
         val loginResult = userService.login(loginRequestDto)
         val familyId = familyIdOf(loginResult.refreshToken)
-        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isPresent()
+        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isNotNull()
 
         userService.logout(loginResult.refreshToken)
 
-        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isEmpty()
+        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isNull()
         assertThatThrownBy { userService.refresh(loginResult.refreshToken) }
             .isInstanceOf(ServiceException::class.java)
             .satisfies({ e -> assertThat((e as ServiceException).resultCode).isEqualTo("401-2") })
@@ -219,8 +219,8 @@ constructor(
 
         userService.changePassword(user.requiredId, ChangePasswordRequestDto("password123", "newPassword123"))
 
-        assertThat(refreshTokenRepository.findByFamilyId(familyId1)).isEmpty()
-        assertThat(refreshTokenRepository.findByFamilyId(familyId2)).isEmpty()
+        assertThat(refreshTokenRepository.findByFamilyId(familyId1)).isNull()
+        assertThat(refreshTokenRepository.findByFamilyId(familyId2)).isNull()
         assertThatThrownBy { userService.refresh(device1.refreshToken) }
             .isInstanceOf(ServiceException::class.java)
             .satisfies({ e -> assertThat((e as ServiceException).resultCode).isEqualTo("401-2") })
@@ -236,7 +236,7 @@ constructor(
 
         val newFamilyId = familyIdOf(session.refreshToken)
         assertThat(newFamilyId).isNotEqualTo(familyIdOf(current.refreshToken))
-        assertThat(refreshTokenRepository.findByFamilyId(newFamilyId)).isPresent()
+        assertThat(refreshTokenRepository.findByFamilyId(newFamilyId)).isNotNull()
         assertThat(userService.refresh(session.refreshToken).userId).isEqualTo(user.id)
     }
 
@@ -264,7 +264,7 @@ constructor(
 
         userService.changePassword(user.requiredId, ChangePasswordRequestDto("password123", "newPassword123"))
 
-        assertThat(refreshTokenRepository.findByFamilyId(otherFamilyId)).isPresent()
+        assertThat(refreshTokenRepository.findByFamilyId(otherFamilyId)).isNotNull()
     }
 
     @Test

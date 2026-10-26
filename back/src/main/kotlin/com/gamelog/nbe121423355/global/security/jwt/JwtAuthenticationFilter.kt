@@ -37,7 +37,7 @@ class JwtAuthenticationFilter(
         } else if (token != null) {
             jwtProvider
                 .getExpiredAccessTokenClaims(token)
-                .ifPresent { expiredClaims ->
+                ?.let { expiredClaims ->
                     tryAutoReissue(servletRequest, serveletResponse, expiredClaims)
                 }
         }

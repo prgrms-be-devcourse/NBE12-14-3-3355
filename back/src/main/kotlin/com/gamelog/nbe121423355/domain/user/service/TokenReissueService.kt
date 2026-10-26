@@ -73,7 +73,7 @@ class TokenReissueService(
         val session =
             refreshTokenRepository
                 .findByFamilyIdWithUser(familyId)
-                .orElseThrow { ServiceException("401-2", "로그아웃된 토큰입니다.") }
+                ?: throw ServiceException("401-2", "로그아웃된 토큰입니다.")
         val user = session.user
         // 탈퇴 시 세션은 전부 삭제되지만 방어적으로 한 번 더 확인
         if (user.isDeleted) {

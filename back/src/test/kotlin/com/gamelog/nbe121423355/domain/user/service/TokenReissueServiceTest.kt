@@ -121,7 +121,7 @@ constructor(
 
         assertThat(familyIdOf(result.refreshToken)).isEqualTo(familyIdOf(oldRefreshToken))
         assertThat(jtiOf(result.refreshToken)).isNotEqualTo(jtiOf(oldRefreshToken))
-        val session = refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken)).orElseThrow()
+        val session = checkNotNull(refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken)))
         assertThat(session.currentJti).isEqualTo(jtiOf(result.refreshToken))
         assertThat(session.prevJti).isEqualTo(jtiOf(oldRefreshToken))
         assertThat(session.rotatedAt).isNotNull()
@@ -138,7 +138,7 @@ constructor(
 
         assertThat(jwtProvider.parseClaims(result.refreshToken).expiration).isEqualTo(oldExpiration)
         assertThat(result.refreshTokenExpiryDate)
-            .isEqualTo(refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken)).orElseThrow().expiryDate)
+            .isEqualTo(checkNotNull(refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken))).expiryDate)
     }
 
     @Test
@@ -166,7 +166,7 @@ constructor(
         assertThat(jtiOf(second.refreshToken)).isEqualTo(jtiOf(first.refreshToken))
         assertThat(second.accessToken).isNotBlank()
         // 유예 요청은 교체를 다시 하지 않음
-        val session = refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken)).orElseThrow()
+        val session = checkNotNull(refreshTokenRepository.findByFamilyId(familyIdOf(oldRefreshToken)))
         assertThat(session.currentJti).isEqualTo(jtiOf(first.refreshToken))
         assertThat(session.prevJti).isEqualTo(jtiOf(oldRefreshToken))
     }
@@ -184,7 +184,7 @@ constructor(
             .satisfies({ e -> assertResultCode(e, "401-3") })
 
         // 예외를 던져도 세션 삭제는 롤백되지 않아야 함 (noRollbackFor)
-        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isEmpty()
+        assertThat(refreshTokenRepository.findByFamilyId(familyId)).isNull()
         assertThatThrownBy { tokenReissueService.reissue(newRefreshToken) }
             .satisfies({ e -> assertResultCode(e, "401-2") })
     }
@@ -199,7 +199,7 @@ constructor(
 
         assertThatThrownBy { tokenReissueService.reissue(refreshToken1) }
             .satisfies({ e -> assertResultCode(e, "401-3") })
-        assertThat(refreshTokenRepository.findByFamilyId(familyIdOf(refreshToken1))).isEmpty()
+        assertThat(refreshTokenRepository.findByFamilyId(familyIdOf(refreshToken1))).isNull()
     }
 
     @Test
@@ -233,11 +233,11 @@ constructor(
             val result = tokenReissueService.reissue(oldRefreshToken)
 
             assertThat(jtiOf(result.refreshToken)).isNotEqualTo(jtiOf(oldRefreshToken))
-            assertThat(refreshTokenRepository.findByFamilyId(familyId).orElseThrow().currentJti)
+            assertThat(checkNotNull(refreshTokenRepository.findByFamilyId(familyId)).currentJti)
                 .isEqualTo(jtiOf(result.refreshToken))
         } finally {
             if (familyId != null) {
-                refreshTokenRepository.findByFamilyId(familyId).ifPresent { refreshTokenRepository.delete(it) }
+                refreshTokenRepository.findByFamilyId(familyId)?.let { refreshTokenRepository.delete(it) }
             }
             userRepository.delete(user)
         }

@@ -2,18 +2,17 @@ package com.gamelog.nbe121423355.domain.user.repository
 
 import com.gamelog.nbe121423355.domain.user.entity.RefreshToken
 import java.time.LocalDateTime
-import java.util.Optional
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
-    fun findByFamilyId(familyId: String?): Optional<RefreshToken>
+    fun findByFamilyId(familyId: String?): RefreshToken?
 
     // 재발급용: 세션(RefreshToken)과 User를 한 번에 조회 (쿼리 1번)
     @Query("select r from RefreshToken r join fetch r.user where r.familyId = :familyId")
-    fun findByFamilyIdWithUser(@Param("familyId") familyId: String?): Optional<RefreshToken>
+    fun findByFamilyIdWithUser(@Param("familyId") familyId: String?): RefreshToken?
 
     // Rotation: 현재 jti가 일치할 때만 새 jti로 교체 (원자적 선점)
     // 반환값 1 = 교체 성공, 0 = 이미 다른 요청이 교체했거나 세션이 없음
