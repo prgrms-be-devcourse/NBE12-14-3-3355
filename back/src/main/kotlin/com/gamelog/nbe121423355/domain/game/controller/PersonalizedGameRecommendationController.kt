@@ -17,8 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/games/recommendations")
 @Tag(name = "personalized-game-recommendation-controller", description = "로그인 사용자 맞춤 게임 추천 API")
-class PersonalizedGameRecommendationController
-constructor(private val recommendationService: PersonalizedGameRecommendationService) {
+class PersonalizedGameRecommendationController(private val recommendationService: PersonalizedGameRecommendationService) {
     // 인증 토큰의 사용자 ID를 기준으로 맞춤 추천 게임을 최대 5개 반환
     @GetMapping("/personalized")
     @Operation(
@@ -28,10 +27,9 @@ constructor(private val recommendationService: PersonalizedGameRecommendationSer
     )
     fun getPersonalizedRecommendations(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
-    ): RsData<MutableList<PersonalizedGameRecommendationResponse>> {
-        val response: MutableList<PersonalizedGameRecommendationResponse>? =
-            recommendationService.recommend(securityUser.id)
-        return RsData<MutableList<PersonalizedGameRecommendationResponse>>(
+    ): RsData<List<PersonalizedGameRecommendationResponse>> {
+        val response = recommendationService.recommend(securityUser.id)
+        return RsData(
             "200-1",
             "사용자 맞춤 추천 게임을 조회했습니다.",
             response,

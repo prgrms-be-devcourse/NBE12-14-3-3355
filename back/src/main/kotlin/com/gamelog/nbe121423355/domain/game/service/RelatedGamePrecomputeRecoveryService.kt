@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.game.service
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGamePrecomputeRunRepository
 import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeAdminProperties
 import java.time.LocalDateTime
-import java.util.function.Function
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 
@@ -21,14 +20,14 @@ class RelatedGamePrecomputeRecoveryService(
         )
         if (ids.isEmpty()) return 0
         // 조회만으로 판단하지 않는다. CLI·다른 서버의 계산이 있으면 정리를 보류한다.
-        return executionLock.tryRun(Function<Runnable, Int> { checkOwnership ->
+        return executionLock.tryRun { checkOwnership ->
             var interrupted = 0
             for (id in ids) {
-                checkOwnership.run()
+                checkOwnership()
                 if (store.interruptStale(id, cutoff)) interrupted++
             }
-            checkOwnership.run()
+            checkOwnership()
             interrupted
-        }).orElse(0)
+        } ?: 0
     }
 }

@@ -39,7 +39,7 @@ class NotificationService(
     fun receive(event: NotificationRequested) {
         event.recipients.filter { it != event.actorId }.forEach { recipient ->
             if (
-                users.findByIdAndDeletedAtIsNull(recipient).isPresent &&
+                users.findByIdAndDeletedAtIsNull(recipient) != null &&
                 !notifications.existsBySourceKeyAndRecipientId(event.sourceKey, recipient)
             ) {
                 notifications.save(
@@ -107,7 +107,6 @@ class NotificationService(
         val url = when (notification.targetType) {
             NotificationTarget.USER ->
                 users.findByIdAndDeletedAtIsNull(notification.targetId)
-                    .orElse(null)
                     ?.let { "/profile/${it.id}" }
             NotificationTarget.REVIEW, NotificationTarget.REVIEW_COMMENT -> {
                 val review = notification.reviewId?.let { reviews.findActiveById(it).orElse(null) }

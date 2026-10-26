@@ -19,8 +19,8 @@ interface GameGenreRepository : JpaRepository<GameGenre, GameGenreId> {
             """
     )
     fun findAllWithGenreByGameIdIn(
-        @Param("gameIds") gameIds: MutableList<Long>?
-    ): MutableList<GameGenre>
+        @Param("gameIds") gameIds: List<Long>
+    ): List<GameGenre>
 
     // 게임 ID로 장르 정보를 함께 조회하고 장르 이름순으로 정렬
     @Query(
@@ -33,5 +33,5 @@ interface GameGenreRepository : JpaRepository<GameGenre, GameGenreId> {
 
             """
     )
-    fun findAllWithGenreByGameId(@Param("gameId") gameId: Long?): MutableList<GameGenre>
+    fun findAllWithGenreByGameId(@Param("gameId") gameId: Long): List<GameGenre>
 }

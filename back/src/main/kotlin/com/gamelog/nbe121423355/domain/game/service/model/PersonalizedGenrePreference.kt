@@ -7,4 +7,4 @@ data class PersonalizedGenrePreference(
     val playRatio: Double,
     val averageRating: Double?,
     val score: Double,
-) {}
+)

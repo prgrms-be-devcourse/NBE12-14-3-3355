@@ -25,7 +25,13 @@ class RelatedGamePrecomputeRunStore(
         ownerId: String,
         sourceRunId: String? = null,
     ): String = runRepository.saveAndFlush(
-        RelatedGamePrecomputeRun(requestedBy, target, ownerId, sourceRunId, LocalDateTime.now())
+        RelatedGamePrecomputeRun(
+            requestedBy = requestedBy,
+            target = target,
+            ownerId = ownerId,
+            sourceRunId = sourceRunId,
+            now = LocalDateTime.now(),
+        )
     ).id
 
     fun start(runId: String) {
@@ -50,7 +56,10 @@ class RelatedGamePrecomputeRunStore(
         // 집계와 실패 상세는 함께 커밋하거나 함께 롤백한다.
         run.record(progress, now)
         failureRepository.save(RelatedGamePrecomputeRunFailure(
-            run, gameId, summary(failure), now,
+            run = run,
+            gameId = gameId,
+            error = summary(failure),
+            occurredAt = now,
         ))
     }
 

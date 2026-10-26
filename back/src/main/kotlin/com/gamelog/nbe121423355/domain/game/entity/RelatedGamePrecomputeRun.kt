@@ -138,9 +138,9 @@ class RelatedGamePrecomputeRun protected constructor() {
     }
 
     fun target(): RelatedGamePrecomputeTarget = RelatedGamePrecomputeTarget(
-        targetType,
-        requestedGameIds?.split(',')?.map(String::toLong) ?: emptyList(),
-        initializeBaseline,
+        type = targetType,
+        gameIds = requestedGameIds?.split(',')?.map(String::toLong).orEmpty(),
+        initializeBaseline = initializeBaseline,
     )
 
     fun start(now: LocalDateTime) {

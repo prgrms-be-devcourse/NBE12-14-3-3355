@@ -42,6 +42,7 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
 
     @Test
     void baselineMatchesOriginalQueryForEverySourceIncludingSelfExclusionAndTies() {
+        // given: 장르 중복과 동점 및 후보 자격 경계를 포함한 게임을 준비한다.
         Genre rpg = genre("RPG");
         Genre action = genre("Action");
         List<Game> games = new ArrayList<>();
@@ -53,8 +54,10 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
         games.add(game("99.00"));
         em.flush();
 
+        // when: 전체 게임의 공통 계산 스냅샷을 준비한다.
         var snapshot = snapshots.load(RelatedGamePrecomputeMode.INITIAL_LOAD, Long.MAX_VALUE, 20);
 
+        // then: 모든 기준 게임의 후보와 점수가 기존 SQL과 같고 장르 조합 계산을 재사용한다.
         for (Game source : games) {
             assertMatchesExisting(snapshot, source.getId(), false);
         }
@@ -63,6 +66,7 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
 
     @Test
     void ratingCountAverageAndInactiveReviewsMatchExistingCandidateEligibility() {
+        // given: 리뷰 수와 평균 별점 및 숨김 상태가 다른 후보 게임을 준비한다.
         Genre rpg = genre("RPG");
         Game source = game("90", rpg);
         Game fewLowRatings = game("80.25", rpg);
@@ -79,10 +83,12 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
         }
         em.flush();
 
+        // when: 최초 적재 모드의 스냅샷을 준비한다.
         var snapshot = snapshots.load(RelatedGamePrecomputeMode.INITIAL_LOAD, Long.MAX_VALUE, 20);
 
+        // then: 기존 SQL과 같은 리뷰 집계 및 후보 자격을 적용한다.
         assertMatchesExisting(snapshot, source.getId(), false);
-        assertThat(snapshot.baselineFor(source.getId()).orElseThrow())
+        assertThat(snapshot.baselineFor(source.getId()))
                 .extracting(RelatedGameCandidateProjection::gameId)
                 .contains(hiddenRatings.getId(), boundaryAverage.getId(), fewLowRatings.getId())
                 .doesNotContain(fiveLowRatings.getId());
@@ -90,6 +96,7 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
 
     @Test
     void refreshFiltersUnreadyCandidatesAndHonorsUpperBoundary() {
+        // given: 준비 완료 후보와 미준비 후보를 서로 다른 ID로 저장한다.
         Genre rpg = genre("RPG");
         Game source = game("90", rpg);
         Game ready = game("80", rpg);
@@ -100,18 +107,22 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
         em.persist(calculation);
         em.flush();
 
+        // when: 갱신 모드와 ID 상한이 있는 최초 적재 모드의 스냅샷을 준비한다.
         var snapshot = snapshots.load(RelatedGamePrecomputeMode.REFRESH, Long.MAX_VALUE, 20);
 
-        assertMatchesExisting(snapshot, source.getId(), true);
-        assertThat(snapshot.baselineFor(source.getId()).orElseThrow())
-                .extracting(RelatedGameCandidateProjection::gameId).containsExactly(ready.getId());
         var bounded = snapshots.load(RelatedGamePrecomputeMode.INITIAL_LOAD, ready.getId(), 20);
-        assertThat(bounded.baselineFor(source.getId()).orElseThrow())
+
+        // then: 갱신 모드의 준비 조건과 최초 적재의 ID 상한을 각각 유지한다.
+        assertMatchesExisting(snapshot, source.getId(), true);
+        assertThat(snapshot.baselineFor(source.getId()))
+                .extracting(RelatedGameCandidateProjection::gameId).containsExactly(ready.getId());
+        assertThat(bounded.baselineFor(source.getId()))
                 .extracting(RelatedGameCandidateProjection::gameId).doesNotContain(unready.getId());
     }
 
     @Test
     void allPositiveUserConditionsUseExistingQueryWhileInactiveAndWishlistOnlyDoNot() {
+        // given: 플레이 상태와 좋아요 및 리뷰 상태가 다른 기준 게임을 준비한다.
         Genre rpg = genre("RPG");
         Game played = game("90", rpg);
         Game liked = game("90", rpg);
@@ -125,11 +136,13 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
         record(wishlistOnly).changeWishlist(true);
         em.flush();
 
+        // when: 사용자 행동을 포함한 공통 스냅샷을 준비한다.
         var snapshot = snapshots.load(RelatedGamePrecomputeMode.INITIAL_LOAD, Long.MAX_VALUE, 20);
 
-        assertThat(snapshot.baselineFor(played.getId())).isEmpty();
-        assertThat(snapshot.baselineFor(liked.getId())).isEmpty();
-        assertThat(snapshot.baselineFor(highlyRated.getId())).isEmpty();
+        // then: 유효한 행동 게임만 SQL 경로를 요구하고 나머지는 기본 계산을 사용한다.
+        assertThat(snapshot.baselineFor(played.getId())).isNull();
+        assertThat(snapshot.baselineFor(liked.getId())).isNull();
+        assertThat(snapshot.baselineFor(highlyRated.getId())).isNull();
         assertMatchesExisting(snapshot, hidden.getId(), false);
         assertMatchesExisting(snapshot, wishlistOnly.getId(), false);
         assertThat(snapshot.interactionSourceCount()).isEqualTo(3);
@@ -137,7 +150,7 @@ class RelatedGamePrecomputeSnapshotRepositoryTest {
 
     private void assertMatchesExisting(RelatedGamePrecomputeSnapshot snapshot, Long sourceId, boolean readyOnly) {
         var expected = existingQuery.findCandidatesForPrecompute(sourceId, 20, readyOnly);
-        var actual = snapshot.baselineFor(sourceId).orElseThrow();
+        var actual = snapshot.baselineFor(sourceId);
         assertThat(actual).extracting(RelatedGameCandidateProjection::gameId)
                 .containsExactlyElementsOf(expected.stream().map(RelatedGameCandidateProjection::gameId).toList());
         for (int index = 0; index < expected.size(); index++) {

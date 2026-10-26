@@ -10,7 +10,6 @@ import io.jsonwebtoken.security.Keys
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Date
-import java.util.Optional
 import javax.crypto.SecretKey
 import org.springframework.stereotype.Component
 
@@ -88,17 +87,17 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
     }
 
     // 서명은 유효하지만 시간이 지나 만료된 accessToken이면 그 클레임을 반환 (자동 재발급 대상 여부 + 사용자 ID 비교용)
-    // 만료되지 않았거나, accessToken이 아니거나, 서명이 위조된 토큰이면 empty
-    fun getExpiredAccessTokenClaims(token: String?): Optional<Claims> {
+    // 만료되지 않았거나, accessToken이 아니거나, 서명이 위조된 토큰이면 null
+    fun getExpiredAccessTokenClaims(token: String?): Claims? {
         return try {
             parseClaims(token)
-            Optional.empty()
+            null
         } catch (e: ExpiredJwtException) {
-            if (isAccessToken(e.claims)) Optional.of(e.claims) else Optional.empty()
+            if (isAccessToken(e.claims)) e.claims else null
         } catch (e: JwtException) {
-            Optional.empty()
+            null
         } catch (e: IllegalArgumentException) {
-            Optional.empty()
+            null
         }
     }
 

@@ -70,7 +70,7 @@ class UserService(
         val user =
             userRepository
                 .findByEmail(loginRequestDto.email)
-                .orElseThrow { ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.") }
+                ?: throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
         if (!passwordEncoder.matches(loginRequestDto.password, user.password)) {
             throw ServiceException("401-1", "이메일 또는 비밀번호가 일치하지 않습니다.")
         }
@@ -230,7 +230,6 @@ class UserService(
 
     // 탈퇴한 유저는 존재하지 않는 유저로 취급
     private fun UserRepository.getActiveUserById(id: Long?): User =
-        findByIdAndDeletedAtIsNull(id).orElseThrow {
-            ServiceException("404-1", "존재하지 않는 유저입니다.")
-        }
+        findByIdAndDeletedAtIsNull(id)
+            ?: throw ServiceException("404-1", "존재하지 않는 유저입니다.")
 }

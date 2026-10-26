@@ -146,6 +146,26 @@ class RelatedGamePrecomputeServiceTest {
     }
 
     @Test
+    void sharedEmptyBaselineIsSuccessfulWithoutFallingBackToSql() {
+        // given: 이전 정상 후보가 있는 게임에 장르가 없는 공통 스냅샷을 준비한다.
+        Fixture fixture = createFixture(1, 1);
+        seedPreviousResult(fixture);
+        var snapshot = new RelatedGamePrecomputeSnapshot(RelatedGamePrecomputeMode.REFRESH, 20,
+                Map.of(fixture.sourceId(), List.of()), Map.of(), Set.of());
+
+        // when: 정상 빈 결과를 제공하는 공통 스냅샷으로 갱신한다.
+        int count = service.precompute(fixture.sourceId(), RelatedGamePrecomputeMode.REFRESH, snapshot);
+
+        // then: SQL로 전환하지 않고 이전 후보를 비우며 준비 완료와 성공 상태를 유지한다.
+        assertThat(count).isZero();
+        verify(queryRepository, never()).findCandidatesForPrecompute(fixture.sourceId(), 20, true);
+        assertThat(storedCandidates(fixture.sourceId())).isEmpty();
+        var calculation = calculationRepository.findById(fixture.sourceId()).orElseThrow();
+        assertThat(calculation.isReady()).isTrue();
+        assertThat(calculation.getLastAttemptStatus()).isEqualTo(RelatedGameCalculationStatus.SUCCESS);
+    }
+
+    @Test
     void interactionSourceStillUsesExistingQueryAndAtomicStore() {
         Fixture fixture = createFixture(3, 0);
         var snapshot = new RelatedGamePrecomputeSnapshot(RelatedGamePrecomputeMode.INITIAL_LOAD, 20,
@@ -262,6 +282,27 @@ class RelatedGamePrecomputeServiceTest {
                 .isInstanceOf(ServiceException.class)
                 .satisfies(error -> assertThat(((ServiceException) error).getResultCode()).isEqualTo("404-1"));
         assertThat(calculationRepository.existsById(Long.MAX_VALUE)).isFalse();
+    }
+
+    @Test
+    void reloadsStoredCandidateUsingAnEquivalentCompositeKey() {
+        // given: 기준 게임과 후보 한 개를 저장한다.
+        Fixture fixture = createFixture(1, 0);
+
+        // when: 추천 후보를 계산하여 JDBC로 저장한다.
+        service.precompute(fixture.sourceId(), RelatedGamePrecomputeMode.INITIAL_LOAD);
+
+        // then: 새 영속성 컨텍스트에서 동일한 복합키로 후보와 필수 점수를 복원한다.
+        inTransaction(() -> {
+            entityManager.clear();
+            var key = new RelatedGameCandidateId(fixture.sourceId(), fixture.candidateIds().getFirst());
+            var loaded = entityManager.find(RelatedGameCandidate.class, key);
+            assertThat(loaded).isNotNull();
+            assertThat(loaded.getId()).isEqualTo(key);
+            assertThat(loaded.getRelatedScore()).isPositive();
+            assertThat(loaded.getRelatedRank()).isEqualTo(1);
+            return null;
+        });
     }
 
     private void assertPreviousResultAndFailedState(Fixture fixture) {

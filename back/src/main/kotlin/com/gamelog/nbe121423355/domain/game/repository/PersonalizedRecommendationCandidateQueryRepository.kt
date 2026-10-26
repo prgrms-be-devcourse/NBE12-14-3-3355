@@ -2,24 +2,22 @@ package com.gamelog.nbe121423355.domain.game.repository
 
 import com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedRecommendationCandidateProjection
 import com.gamelog.nbe121423355.domain.game.service.GamePublicationPolicy
-import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus
 import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
 import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Repository
 
 // 맞춤 추천 후보의 게임 정보와 장르, GameLog 사용자 평균 평점을 일괄 조회
 @Repository
-class PersonalizedRecommendationCandidateQueryRepository
-constructor(
+class PersonalizedRecommendationCandidateQueryRepository(
     private val entityManager: EntityManager,
     private val publicationPolicy: GamePublicationPolicy,
 ) {
     // 추천 후보 ID 목록에 해당하는 게임 정보, 장르, 사용자 평균 평점을 한 번에 반환
     fun findAllByGameIds(
-        gameIds: MutableList<Long>
-    ): MutableList<PersonalizedRecommendationCandidateProjection> {
+        gameIds: List<Long>
+    ): List<PersonalizedRecommendationCandidateProjection> {
         if (gameIds.isEmpty()) {
-            return java.util.List.of()
+            return emptyList()
         }
         return entityManager
             .createQuery(
@@ -27,18 +25,18 @@ constructor(
                 PersonalizedRecommendationCandidateProjection::class.java,
             )
             .setParameter("gameIds", gameIds)
-            .setParameter("activeReviewStatus", ReviewStatus.ACTIVE)
+            .setParameter("activeReviewStatus", ACTIVE)
             .setParameter("readyOnly", publicationPolicy.isReadyOnly)
-            .getResultList()
+            .resultList
     }
 
     // 선호 게임 없이 장르만 선택한 사용자의 추천 후보 ID를 최대 5개 반환
     fun findTopFiveIdsByPreferredGenres(
-        preferredGenreIds: MutableList<Long>,
-        excludedGameIds: MutableList<Long>,
-    ): MutableList<Long> {
+        preferredGenreIds: List<Long>,
+        excludedGameIds: List<Long>,
+    ): List<Long> {
         if (preferredGenreIds.isEmpty()) {
-            return java.util.List.of()
+            return emptyList()
         }
         // 빈 IN 목록을 피하기 위한 존재하지 않는 게임 ID
         return entityManager
@@ -46,12 +44,12 @@ constructor(
             .setParameter("preferredGenreIds", preferredGenreIds)
             .setParameter(
                 "excludedGameIds",
-                if (excludedGameIds.isEmpty()) java.util.List.of(-1L) else excludedGameIds,
+                if (excludedGameIds.isEmpty()) listOf(-1L) else excludedGameIds,
             )
-            .setParameter("activeReviewStatus", ReviewStatus.ACTIVE)
+            .setParameter("activeReviewStatus", ACTIVE)
             .setParameter("readyOnly", publicationPolicy.isReadyOnly)
             .setMaxResults(5)
-            .getResultList()
+            .resultList
     }
 
     companion object {

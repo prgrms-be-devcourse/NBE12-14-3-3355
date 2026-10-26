@@ -7,9 +7,9 @@ import java.math.BigDecimal
 data class PersonalizedRelatedGameProjection(
     val sourceGameId: Long,
     val gameId: Long,
-    val title: String?,
+    val title: String,
     val coverImageUrl: String?,
     val igdbRating: BigDecimal?,
-    val relatedScore: BigDecimal?,
+    val relatedScore: BigDecimal,
     val relatedRank: Int,
-) {}
+)
