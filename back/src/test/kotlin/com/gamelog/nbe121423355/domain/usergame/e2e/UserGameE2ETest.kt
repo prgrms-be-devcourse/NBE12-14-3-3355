@@ -111,15 +111,15 @@ class UserGameE2ETest {
 
         val recent = request("GET", "$base/recentGames", token).path("data")
         assertThat(recent.single().path("gameId").asLong()).isEqualTo(gameId)
-        val profile = request("GET", "$base/profile", token).path("data")
+        val profile = request("GET", "/api/v1/users/me/game-profile", token).path("data")
         assertThat(profile.path("isMe").asBoolean()).isTrue()
         assertThat(profile.path("stats").path("totalPlayTime").decimalValue()).isEqualByComparingTo("25")
 
         assertThat(request("GET", base, otherToken).path("data").path("totalElements").asLong()).isZero()
         request("PATCH", "$base/$gameId", otherToken, recordRequest(), expectedStatus = 404)
-        val publicLibrary = request("GET", "$base/profile/$ownerId/games").path("data")
+        val publicLibrary = request("GET", "/api/v1/users/$ownerId/games").path("data")
         assertThat(publicLibrary.path("userGames").single().path("gameId").asLong()).isEqualTo(gameId)
-        assertThat(request("GET", "$base/profile/$ownerId").path("data").path("isMe").asBoolean()).isFalse()
+        assertThat(request("GET", "/api/v1/users/$ownerId/game-profile").path("data").path("isMe").asBoolean()).isFalse()
     }
 
     @Test
@@ -130,20 +130,20 @@ class UserGameE2ETest {
             recordRequest(liked = true), expectedStatus = 201)
         val recordId = created.path("data").path("id").asLong()
 
-        val favorites = request("PUT", "$base/favorite-games", token,
+        val favorites = request("PUT", "/api/v1/users/me/favorite-games", token,
             mapOf("gameIds" to listOf(gameId))).path("data")
         assertThat(favorites.single().path("gameId").asLong()).isEqualTo(gameId)
-        assertThat(request("GET", "$base/profile", token).path("data").path("favorite").size()).isEqualTo(1)
+        assertThat(request("GET", "/api/v1/users/me/game-profile", token).path("data").path("favorite").size()).isEqualTo(1)
 
         val cleared = request("PUT", "$base/$gameId/play-status", token).path("data")
         assertThat(cleared.path("playStatus").isNull).isTrue()
         assertThat(request("GET", base, token).path("data").path("totalElements").asLong()).isZero()
-        assertThat(request("GET", "$base/profile", token).path("data").path("favorite").isEmpty).isTrue()
+        assertThat(request("GET", "/api/v1/users/me/game-profile", token).path("data").path("favorite").isEmpty).isTrue()
 
         val likes = request("GET", "$base?status=LIKED", token).path("data").path("userGames")
         assertThat(likes.single().path("gameId").asLong()).isEqualTo(gameId)
         assertThat(likes.single().path("liked").asBoolean()).isTrue()
-        request("PUT", "$base/favorite-games", token,
+        request("PUT", "/api/v1/users/me/favorite-games", token,
             mapOf("gameIds" to listOf(gameId)), expectedStatus = 400)
 
         val restored = request("POST", "$base/$gameId", token, recordRequest(liked = true)).path("data")

@@ -20,7 +20,7 @@ export default function GameSearch({ value, demo, onChange, onSearch, onSelect, 
   async function fetchResults(keyword: string, signal: AbortSignal): Promise<Game[]> {
     if (libraryAccessToken || libraryUserId !== undefined) {
       const query = new URLSearchParams({ keyword, status: "ALL", sort: "TITLE", page: "0", size: "6" });
-      const endpoint = libraryUserId === undefined ? "/api/library/games" : `/api/library/games/profile/${libraryUserId}/games`;
+      const endpoint = libraryUserId === undefined ? "/api/library/games" : `/api/users/${libraryUserId}/games`;
       const response = await fetch(`${endpoint}?${query}`, {
         headers: libraryAccessToken ? { Authorization: `Bearer ${libraryAccessToken}` } : undefined, signal, cache: "no-store",
       });
