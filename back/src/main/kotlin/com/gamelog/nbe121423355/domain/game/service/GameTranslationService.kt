@@ -1,12 +1,14 @@
 package com.gamelog.nbe121423355.domain.game.service
 
 import com.gamelog.nbe121423355.domain.game.client.DeepLClient
+import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.HexFormat
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -25,10 +27,10 @@ class GameTranslationService(
 ) {
     private val transaction = TransactionTemplate(manager)
 
-    @kotlin.jvm.Synchronized
+    @Synchronized
     fun translatePending(): Int {
         if (!enabled) return 0
-        kotlin.require(maxGames >= 1) { "max-games는 1 이상이어야 합니다." }
+        require(maxGames >= 1) { "max-games는 1 이상이어야 합니다." }
         var translated = 0
         var page = 0
         while (translated < maxGames) {
@@ -50,20 +52,21 @@ class GameTranslationService(
                             .orElseThrow()
                             .let { current ->
                                 val source = current.prepareDescriptionTranslation()
-                                changeRecorder.record(requireNotNull(current.id),
-                                    com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.GAME_INFORMATION)
+                                changeRecorder.record(
+                                    requireNotNull(current.id),
+                                    RelatedGameChangeReason.GAME_INFORMATION,
+                                )
                                 source
                             }
                     }
                 if (source == null || source.javaIsBlank()) continue
-                val hash = GameTranslationService.hash(source)
+                val hash = hash(source)
                 if (hash == game.descriptionTranslatedHash) continue
-                val korean: String?
-                try {
-                    korean = client.translate(source)
+                val korean = try {
+                    client.translate(source)
                 } catch (exception: RuntimeException) {
                     // 응답 본문/키를 로그에 남기지 않습니다. 실패 시 기존 설명과 완료 건은 유지합니다.
-                    GameTranslationService.log.warn(
+                    log.warn(
                         "번역 중단: gameId={}, 원인={}. 키·한도·네트워크를 확인 후 재실행하세요.",
                         game.id,
                         exception.javaClass.simpleName,
@@ -76,12 +79,14 @@ class GameTranslationService(
                         .orElseThrow()
                         .also { current ->
                             current.applyDescriptionTranslation(source, korean, hash)
-                            changeRecorder.record(requireNotNull(current.id),
-                                com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.GAME_INFORMATION)
+                            changeRecorder.record(
+                                requireNotNull(current.id),
+                                RelatedGameChangeReason.GAME_INFORMATION,
+                            )
                         }
                 }
                 translated++
-                GameTranslationService.log.info(
+                log.info(
                     "한국어 설명 저장 완료: gameId={}, 이번 실행 {}개",
                     game.id,
                     translated,
@@ -94,8 +99,7 @@ class GameTranslationService(
     }
 
     companion object {
-        private val log: org.slf4j.Logger =
-            org.slf4j.LoggerFactory.getLogger(GameTranslationService::class.java)
+        private val log = LoggerFactory.getLogger(GameTranslationService::class.java)
 
         @JvmStatic
         fun hash(source: String): String {

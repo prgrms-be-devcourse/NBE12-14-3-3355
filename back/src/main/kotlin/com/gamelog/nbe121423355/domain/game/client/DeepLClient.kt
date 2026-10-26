@@ -1,11 +1,9 @@
 package com.gamelog.nbe121423355.domain.game.client
 
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
-import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import com.gamelog.nbe121423355.global.interop.strip
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
-import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -17,9 +15,10 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
 
     init {
         this.key = key.strip()
-        val factory = SimpleClientHttpRequestFactory()
-        factory.setConnectTimeout(10000)
-        factory.setReadTimeout(60000)
+        val factory = SimpleClientHttpRequestFactory().apply {
+            setConnectTimeout(10000)
+            setReadTimeout(60000)
+        }
         client =
             RestClient.builder()
                 .requestFactory(factory)
@@ -27,7 +26,7 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
                     if (this.key.endsWith(":fx")) "https://api-free.deepl.com"
                     else "https://api.deepl.com"
                 )
-                .defaultHeader("Authorization", "DeepL-Auth-Key " + this.key)
+                .defaultHeader("Authorization", "DeepL-Auth-Key ${this.key}")
                 .build()
     }
 
@@ -36,10 +35,10 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
         val usage = client.get().uri("/v2/usage").retrieve().body<Usage>(Usage::class.java)
         val length = source.codePointCount(0, source.length)
         check(
-            !(usage == null ||
-                usage.character_count == null ||
-                usage.character_limit == null ||
-                length > usage.character_limit - usage.character_count)
+            usage != null &&
+                usage.character_count != null &&
+                usage.character_limit != null &&
+                length <= usage.character_limit - usage.character_count
         ) {
             "DeepL 잔여 한도가 부족하거나 확인되지 않습니다."
         }
