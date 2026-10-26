@@ -5,22 +5,21 @@ import org.springframework.stereotype.Repository
 
 // 맞춤 추천에 필요한 사용자의 온보딩 선호 게임·장르 ID를 조회
 @Repository
-class PersonalizedOnboardingPreferenceQueryRepository
-constructor(private val entityManager: EntityManager) {
+class PersonalizedOnboardingPreferenceQueryRepository(private val entityManager: EntityManager) {
     // 로그인 사용자가 선택한 선호 게임 ID 목록 반환
-    fun findPreferredGameIds(userId: Long?): MutableList<Long> {
+    fun findPreferredGameIds(userId: Long): List<Long> {
         return entityManager
             .createQuery(PREFERRED_GAME_IDS_JPQL, Long::class.java)
             .setParameter("userId", userId)
-            .getResultList()
+            .resultList
     }
 
     // 로그인 사용자가 선택한 선호 장르 ID 목록 반환
-    fun findPreferredGenreIds(userId: Long?): MutableList<Long> {
+    fun findPreferredGenreIds(userId: Long): List<Long> {
         return entityManager
             .createQuery(PREFERRED_GENRE_IDS_JPQL, Long::class.java)
             .setParameter("userId", userId)
-            .getResultList()
+            .resultList
     }
 
     companion object {

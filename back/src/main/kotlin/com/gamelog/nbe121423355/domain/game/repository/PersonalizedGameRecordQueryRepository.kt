@@ -1,9 +1,7 @@
 package com.gamelog.nbe121423355.domain.game.repository
 
 import com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedGameRecordProjection
-import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus
 import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
-import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus.COMPLETED
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus.DROPPED
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus.PLAYED
@@ -13,34 +11,34 @@ import jakarta.persistence.EntityManager
 import org.springframework.stereotype.Repository
 
 @Repository
-class PersonalizedGameRecordQueryRepository constructor(private val entityManager: EntityManager) {
+class PersonalizedGameRecordQueryRepository(private val entityManager: EntityManager) {
     // 플레이 기록과 게임별 장르·활성 리뷰 별점을 사용자 기준으로 한 번에 조회
-    fun findEligibleRecordsByUserId(userId: Long?): MutableList<PersonalizedGameRecordProjection> {
+    fun findEligibleRecordsByUserId(userId: Long): List<PersonalizedGameRecordProjection> {
         // TODO: liked, wishlist, backlog 만 설정된 게임의 추천 반영 여부는 추후 검토
         return entityManager
             .createQuery(GAME_RECORDS_JPQL, PersonalizedGameRecordProjection::class.java)
             .setParameter("userId", userId)
             .setParameter(
                 "eligibleStatuses",
-                java.util.List.of(
-                    PlayStatus.PLAYED,
-                    PlayStatus.COMPLETED,
-                    PlayStatus.RETIRED,
-                    PlayStatus.SHELVED,
+                listOf(
+                    PLAYED,
+                    COMPLETED,
+                    RETIRED,
+                    SHELVED,
                 ),
             )
-            .setParameter("droppedStatus", PlayStatus.DROPPED)
-            .setParameter("activeReviewStatus", ReviewStatus.ACTIVE)
-            .getResultList()
+            .setParameter("droppedStatus", DROPPED)
+            .setParameter("activeReviewStatus", ACTIVE)
+            .resultList
     }
 
     // 세부 플레이 상태와 관계없이 이미 플레이하거나 평가·리뷰한 게임 ID를 반환
-    fun findRecordedGameIdsByUserId(userId: Long?): MutableList<Long> {
+    fun findRecordedGameIdsByUserId(userId: Long): List<Long> {
         return entityManager
             .createQuery(RECORDED_GAME_IDS_JPQL, Long::class.java)
             .setParameter("userId", userId)
-            .setParameter("activeReviewStatus", ReviewStatus.ACTIVE)
-            .getResultList()
+            .setParameter("activeReviewStatus", ACTIVE)
+            .resultList
     }
 
     companion object {
