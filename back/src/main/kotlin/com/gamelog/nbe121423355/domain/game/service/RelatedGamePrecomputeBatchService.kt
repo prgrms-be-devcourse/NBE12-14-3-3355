@@ -64,14 +64,7 @@ class RelatedGamePrecomputeBatchService(
                             changeExpansion.initializeBaseline(upperId)
                             observer.onBaselineRegistered()
                         }
-                        val preparationStartedAt = System.nanoTime()
-                        val snapshot = precomputeService.prepare(mode, upperId)
-                        log.info(
-                            "추천 공통 데이터 준비: 기준 게임={}, 적격 후보={}, 행동 기준 게임={}, 소요시간={}ms",
-                            snapshot.sourceCount(), snapshot.candidateCount(),
-                            snapshot.interactionSourceCount(),
-                            Duration.ofNanos(System.nanoTime() - preparationStartedAt).toMillis(),
-                        )
+                        val snapshot = prepareSnapshot(mode, upperId)
                         observer.onPrepared(upperId, snapshot.sourceCount().toLong())
                         processPages(upperId, mode, snapshot, checkOwnership, progress, observer) { afterId ->
                             gameRepository.findGameIdsForPrecompute(
@@ -82,9 +75,15 @@ class RelatedGamePrecomputeBatchService(
                     }
                     RelatedGamePrecomputeTargetType.CHANGED -> {
                         val upperId = gameRepository.findMaxGameIdForPrecompute()
-                        observer.onPrepared(upperId, refreshTargets.countPending(upperId))
-                        processPages(upperId, mode, null, checkOwnership, progress, observer) { afterId ->
-                            refreshTargets.findPendingIds(afterId, upperId, PAGE_SIZE)
+                        val pendingCount = refreshTargets.countPending(upperId)
+                        // 후보 범위는 전체로 유지하고, 계산·저장은 선정된 대기에만 적용한다.
+                        val snapshot = if (pendingCount > 0) prepareSnapshot(mode, upperId) else null
+                        observer.onPrepared(upperId, pendingCount)
+                        if (snapshot != null) {
+                            processPages(upperId, mode, snapshot, checkOwnership, progress, observer) { afterId ->
+                                refreshTargets.findPendingIds(afterId, upperId, PAGE_SIZE)
+                            }
+                            log.info("장르 조합별 기본 추천 계산: {}회", snapshot.calculatedGroupCount())
                         }
                     }
                     RelatedGamePrecomputeTargetType.IDS -> {
@@ -131,6 +130,17 @@ class RelatedGamePrecomputeBatchService(
             }
             throw failure
         }
+    }
+
+    private fun prepareSnapshot(mode: RelatedGamePrecomputeMode, upperId: Long): RelatedGamePrecomputeSnapshot {
+        val startedAt = System.nanoTime()
+        val snapshot = precomputeService.prepare(mode, upperId)
+        log.info(
+            "추천 공통 데이터 준비: 기준 게임={}, 적격 후보={}, 행동 기준 게임={}, 소요시간={}ms",
+            snapshot.sourceCount(), snapshot.candidateCount(), snapshot.interactionSourceCount(),
+            Duration.ofNanos(System.nanoTime() - startedAt).toMillis(),
+        )
+        return snapshot
     }
 
     private fun processPages(
