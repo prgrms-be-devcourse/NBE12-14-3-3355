@@ -42,4 +42,4 @@ data class UserGameReqBody(
         nullable = true,
     )
     val lastPlayedAt: LocalDateTime?,
-) {}
+)

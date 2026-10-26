@@ -11,4 +11,4 @@ data class UserProfileResponse(
     val genreDistribution: List<UserGameGenreDistributionResponse>,
     val recentGames: List<UserGameListResponse>,
     val recentReviews: List<RecentReviewResponse>,
-) {}
+)
