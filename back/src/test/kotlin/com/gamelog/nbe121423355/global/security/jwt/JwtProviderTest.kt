@@ -1,7 +1,6 @@
 package com.gamelog.nbe121423355.global.security.jwt
 
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import java.util.Date
@@ -57,7 +56,7 @@ class JwtProviderTest {
     @Test
     @DisplayName("getExpiredAccessTokenClaims - 서명이 위조된 토큰이면 null (만료가 아니라 무효라서 재발급 대상 아님)")
     fun getExpiredAccessTokenClaims_null_whenTampered() {
-        val wrongKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
+        val wrongKey = Jwts.SIG.HS256.key().build()
         val tamperedToken = createToken(wrongKey, "Access", Date(), Date(System.currentTimeMillis() + 1000 * 60 * 60))
 
         assertThat(jwtProvider.getExpiredAccessTokenClaims(tamperedToken)).isNull()
