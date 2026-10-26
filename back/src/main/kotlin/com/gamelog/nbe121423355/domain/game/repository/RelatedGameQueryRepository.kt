@@ -10,62 +10,55 @@ import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
-class RelatedGameQueryRepository
-constructor(
+class RelatedGameQueryRepository(
     private val entityManager: EntityManager,
     private val publicationPolicy: GamePublicationPolicy,
 ) {
     // 기준 게임과 연관된 추천 후보 게임 목록을 Native SQL로 조회하여 DTO로 반환
-    fun findRelatedGames(gameId: Long?): MutableList<RelatedGameResponse> {
-        val rows = findRows(gameId, 5, publicationPolicy.isReadyOnly)
-        return rows
-            .stream()
-            .map({ row ->
-                val columns = row as Array<Any?>
-                RelatedGameResponse(
-                    (columns[0] as Number).toLong(),
-                    columns[1] as String?,
-                    columns[2] as String?,
-                    toBigDecimal(columns[3]),
-                    toBigDecimal(columns[4]),
-                    java.util.List.of(),
-                )
-            })
-            .toList()
+    fun findRelatedGames(gameId: Long): List<RelatedGameResponse> {
+        val games = findRows(gameId, 5, publicationPolicy.isReadyOnly).map { row ->
+            val columns = row as Array<*>
+            RelatedGameResponse(
+                id = (columns[0] as Number).toLong(),
+                title = requireNotNull(columns[1] as String?) { "조회한 게임의 제목이 없습니다." },
+                coverImageUrl = columns[2] as String?,
+                igdbRating = toBigDecimal(columns[3]),
+                recommendationScore = toBigDecimal(columns[4]),
+            )
+        }
+        return java.util.List.copyOf(games)
     }
 
     // 최초 전체 계산은 모든 게임을, 일반 갱신은 준비 완료된 게임만 후보로 사용한다.
     @Transactional(readOnly = true)
     fun findCandidatesForPrecompute(
-        gameId: Long?,
+        gameId: Long,
         limit: Int,
         readyCandidatesOnly: Boolean,
-    ): MutableList<RelatedGameCandidateProjection> {
-        kotlin.require(limit >= 1) { "후보 조회 개수는 1 이상이어야 합니다." }
-        return findRows(gameId, limit, readyCandidatesOnly)
-            .stream()
-            .map({ row ->
-                val columns: Array<Any?> = row as Array<Any?>
-                RelatedGameCandidateProjection(
-                    (columns[0] as Number).toLong(),
-                    toBigDecimal(columns[4]),
-                )
-            })
-            .toList()
+    ): List<RelatedGameCandidateProjection> {
+        require(limit >= 1) { "후보 조회 개수는 1 이상이어야 합니다." }
+        val candidates = findRows(gameId, limit, readyCandidatesOnly).map { row ->
+            val columns = row as Array<*>
+            RelatedGameCandidateProjection(
+                gameId = (columns[0] as Number).toLong(),
+                relatedScore = toBigDecimal(columns[4]),
+            )
+        }
+        return java.util.List.copyOf(candidates)
     }
 
-    private fun findRows(gameId: Long?, limit: Int, readyCandidatesOnly: Boolean): MutableList<*> {
+    private fun findRows(gameId: Long, limit: Int, readyCandidatesOnly: Boolean): List<*> {
         // SQL에 삽입되는 조건은 고정된 내부 문자열이며 요청 값을 조합하지 않는다.
-        val sql: String? =
-            RelatedGameQueryRepository.RELATED_GAMES_SQL.formatted(
-                if (readyCandidatesOnly) RelatedGameQueryRepository.READY_CANDIDATE_CONDITION
+        val sql =
+            RELATED_GAMES_SQL.formatted(
+                if (readyCandidatesOnly) READY_CANDIDATE_CONDITION
                 else ""
             )
         return entityManager
             .createNativeQuery(sql)
             .setParameter("gameId", gameId)
             .setParameter("limit", limit)
-            .getResultList()
+            .resultList
     }
 
     // SQL 조회 결과의 수치 데이터 객체를 안전하게 BigDecimal 타입으로 변환

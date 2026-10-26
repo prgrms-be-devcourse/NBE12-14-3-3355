@@ -14,46 +14,26 @@ class RelatedGameCandidateId : Serializable {
     final var candidateGameId: Long? = null
         private set
 
-    public override fun equals(o: Any?): Boolean {
-        if (o === this) return true
-        if (o !is RelatedGameCandidateId) return false
-        val other = o
-        if (!other.canEqual(this as Any)) return false
-        val `this$sourceGameId`: Any? = this.sourceGameId
-        val `other$sourceGameId`: Any? = other.sourceGameId
-        if (
-            if (`this$sourceGameId` == null) `other$sourceGameId` != null
-            else !`this$sourceGameId`.equals(`other$sourceGameId`)
-        )
-            return false
-        val `this$candidateGameId`: Any? = this.candidateGameId
-        val `other$candidateGameId`: Any? = other.candidateGameId
-        if (
-            if (`this$candidateGameId` == null) `other$candidateGameId` != null
-            else !`this$candidateGameId`.equals(`other$candidateGameId`)
-        )
-            return false
-        return true
+    // 두 게임 ID의 순서까지 같아야 같은 추천 후보 키다.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RelatedGameCandidateId || !other.canEqual(this)) return false
+        return sourceGameId == other.sourceGameId && candidateGameId == other.candidateGameId
     }
 
-    protected fun canEqual(other: Any?): Boolean {
-        return other is RelatedGameCandidateId
-    }
+    protected fun canEqual(other: Any?): Boolean = other is RelatedGameCandidateId
 
-    public override fun hashCode(): Int {
-        val PRIME = 59
+    override fun hashCode(): Int {
+        // JPA가 무인자 생성 후 ID를 채우는 동안의 null과 기존 해시 계산 규칙을 보존한다.
         var result = 1
-        val `$sourceGameId`: Any? = this.sourceGameId
-        result = result * PRIME + (if (`$sourceGameId` == null) 43 else `$sourceGameId`.hashCode())
-        val `$candidateGameId`: Any? = this.candidateGameId
-        result =
-            result * PRIME + (if (`$candidateGameId` == null) 43 else `$candidateGameId`.hashCode())
+        result = result * 59 + (sourceGameId?.hashCode() ?: 43)
+        result = result * 59 + (candidateGameId?.hashCode() ?: 43)
         return result
     }
 
     protected constructor()
 
-    constructor(sourceGameId: Long?, candidateGameId: Long?) {
+    constructor(sourceGameId: Long, candidateGameId: Long) {
         this.sourceGameId = sourceGameId
         this.candidateGameId = candidateGameId
     }

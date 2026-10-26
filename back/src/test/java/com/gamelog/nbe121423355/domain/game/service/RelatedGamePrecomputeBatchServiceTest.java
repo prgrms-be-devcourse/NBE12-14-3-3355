@@ -18,9 +18,10 @@ import java.math.BigDecimal;
 import java.util.Map;
 import java.util.Set;
 import java.util.List;
-import java.util.Optional;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -56,15 +57,15 @@ class RelatedGamePrecomputeBatchServiceTest {
 
     private void allowLock() {
         when(lock.tryRun(any())).thenAnswer(invocation -> {
-            Function<Runnable, Object> action = invocation.getArgument(0);
-            return Optional.of(action.apply(() -> {}));
+            Function1<Function0<Unit>, Object> action = invocation.getArgument(0);
+            return action.invoke(() -> Unit.INSTANCE);
         });
     }
 
     @Test
     void skipsAllWorkWhenAnotherExecutionOwnsLock() {
         // given: 다른 작업이 추천 실행 잠금을 보유한 상태를 준비한다.
-        when(lock.tryRun(any())).thenReturn(Optional.empty());
+        when(lock.tryRun(any())).thenReturn(null);
 
         // when: 전체 계산을 요청한다.
         var result = batch.run(true, List.of(), RelatedGamePrecomputeMode.INITIAL_LOAD);
@@ -141,7 +142,7 @@ class RelatedGamePrecomputeBatchServiceTest {
                 Map.of(10L, BigDecimal.valueOf(80), 20L, BigDecimal.valueOf(80), 30L, BigDecimal.valueOf(80)), Set.of());
         when(precomputeService.prepare(RelatedGamePrecomputeMode.REFRESH, 30L)).thenReturn(shared);
         when(precomputeService.precompute(anyLong(), eq(RelatedGamePrecomputeMode.REFRESH), same(shared)))
-                .thenAnswer(invocation -> shared.baselineFor(invocation.getArgument(0)).orElseThrow().size());
+                .thenAnswer(invocation -> shared.baselineFor(invocation.getArgument(0)).size());
         var observer = mock(RelatedGamePrecomputeObserver.class);
 
         // when: 변경 영향 갱신을 여러 페이지로 계산한다.
@@ -188,14 +189,15 @@ class RelatedGamePrecomputeBatchServiceTest {
     void lostLockStopsExecutionInsteadOfTreatingItAsIndividualGameFailure() {
         // given: 첫 게임 처리 직후 잠금 연결 소유권을 잃도록 준비한다.
         when(lock.tryRun(any())).thenAnswer(invocation -> {
-            Function<Runnable, Object> action = invocation.getArgument(0);
+            Function1<Function0<Unit>, Object> action = invocation.getArgument(0);
             AtomicInteger checks = new AtomicInteger();
-            Runnable check = () -> {
+            Function0<Unit> check = () -> {
                 if (checks.incrementAndGet() > 1) {
                     throw new IllegalStateException("잠금 연결 단절");
                 }
+                return Unit.INSTANCE;
             };
-            return Optional.of(action.apply(check));
+            return action.invoke(check);
         });
 
         // when: 잠금 연결이 끊긴 상태에서 다음 게임으로 진행하려 한다.
@@ -258,7 +260,7 @@ class RelatedGamePrecomputeBatchServiceTest {
     @Test
     void rejectedExecutionNotifiesObserverWithoutPreparingTargets() {
         // given: 다른 실행이 잠금을 보유한 상태와 관리자 진행 통지 대상을 준비한다.
-        when(lock.tryRun(any())).thenReturn(Optional.empty());
+        when(lock.tryRun(any())).thenReturn(null);
         var observer = mock(RelatedGamePrecomputeObserver.class);
 
         // when: 관리자 전체 갱신을 요청한다.

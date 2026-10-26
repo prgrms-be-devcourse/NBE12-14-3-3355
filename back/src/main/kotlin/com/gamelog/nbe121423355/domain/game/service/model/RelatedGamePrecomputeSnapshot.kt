@@ -1,130 +1,92 @@
 package com.gamelog.nbe121423355.domain.game.service.model
 
 import com.gamelog.nbe121423355.domain.game.repository.projection.RelatedGameCandidateProjection
-import com.gamelog.nbe121423355.global.interop.javaNonNull
 import java.math.BigDecimal
-import java.util.ArrayList
-import java.util.Collections
-import java.util.Comparator
-import java.util.HashMap
-import java.util.Optional
 import java.util.PriorityQueue
 
 /** 한 실행에서 공유하는 계산 데이터와 장르 조합별 기본 순위 캐시. */
 class RelatedGamePrecomputeSnapshot(
-    mode: RelatedGamePrecomputeMode?,
+    val mode: RelatedGamePrecomputeMode,
     private val limit: Int,
-    sourceGenres: MutableMap<Long, MutableList<Long>>,
-    eligibleRatings: MutableMap<Long, BigDecimal>,
-    interactionSources: MutableSet<Long>?,
+    sourceGenres: Map<Long, List<Long>>,
+    eligibleRatings: Map<Long, BigDecimal>,
+    interactionSources: Set<Long>,
 ) {
-    private val mode: RelatedGamePrecomputeMode?
-    private val sourceGenres: MutableMap<Long, MutableList<Long>>
-    private val interactionSources: MutableSet<Long>
-    private val candidates: MutableList<Candidate>
-    private val genreMasks: MutableMap<MutableList<Long>, LongArray> = HashMap()
-    private val rankings:
-        MutableMap<MutableList<Long>, MutableList<RelatedGameCandidateProjection>> =
-        HashMap()
+    private val sourceGenres: Map<Long, List<Long>>
+    private val interactionSources = java.util.Set.copyOf(interactionSources)
+    private val candidates: List<Candidate>
+    private val genreMasks = mutableMapOf<List<Long>, LongArray>()
+    private val rankings = mutableMapOf<List<Long>, List<RelatedGameCandidateProjection>>()
 
     init {
-        this.mode = javaNonNull(mode, "mode")
         require(limit >= 1) { "저장 후보 수는 1 이상이어야 합니다." }
 
-        this.interactionSources = java.util.Set.copyOf(interactionSources)
-
         // 같은 장르 집합은 순서와 중복에 관계없이 하나의 불변 키로 정규화한다.
-        val canonicalGenres: MutableMap<MutableList<Long>, MutableList<Long>> = HashMap()
-        val normalized: MutableMap<Long, MutableList<Long>> = HashMap()
-        sourceGenres.forEach({ id, genres ->
-            val key = genres.stream().distinct().sorted().toList()
-            normalized.put(id, canonicalGenres.computeIfAbsent(key, { ignored -> key }))
-        })
-        this.sourceGenres = Collections.unmodifiableMap(normalized)
+        val canonicalGenres = mutableMapOf<List<Long>, List<Long>>()
+        val normalized = sourceGenres.mapValues { (_, genres) ->
+            val key = java.util.List.copyOf(genres.distinct().sorted())
+            canonicalGenres.getOrPut(key) { key }
+        }
+        this.sourceGenres = java.util.Map.copyOf(normalized)
 
-        val genreIndexes: MutableMap<Long, Int> = HashMap()
-        canonicalGenres.keys.forEach({ genres ->
-            genres.forEach({ genre ->
-                genreIndexes.computeIfAbsent(genre, { ignored -> genreIndexes.size })
-            })
-        })
+        val genreIndexes = mutableMapOf<Long, Int>()
+        for (genres in canonicalGenres.keys) {
+            for (genre in genres) {
+                genreIndexes.getOrPut(genre) { genreIndexes.size }
+            }
+        }
         val wordCount = (genreIndexes.size + Long.SIZE_BITS - 1) / Long.SIZE_BITS
-        canonicalGenres.keys.forEach({ genres ->
+        for (genres in canonicalGenres.keys) {
             val words = LongArray(wordCount)
             for (genre in genres) {
                 val index = genreIndexes.getValue(genre)
                 words[index / Long.SIZE_BITS] =
                     words[index / Long.SIZE_BITS] or (1L shl (index % Long.SIZE_BITS))
             }
-            genreMasks.put(genres, words)
-        })
+            genreMasks[genres] = words
+        }
 
-        val prepared: MutableList<Candidate> = ArrayList()
-        eligibleRatings.forEach({ id, rating ->
-            val genres = this.sourceGenres.get(id)
-            if (genres != null && !genres.isEmpty()) {
+        val prepared = eligibleRatings.mapNotNull { (id, rating) ->
+            val genres = this.sourceGenres[id]
+            if (genres.isNullOrEmpty()) {
+                null
+            } else {
                 // DB의 IGDB 소수 둘째 자리 × 0.5를 천분의 일 단위 정수로 정확히 표현한다.
-                val igdbScore =
-                    rating.multiply(BigDecimal("0.5")).movePointRight(3).longValueExact()
-                prepared.add(Candidate(id, genreMasks.getValue(genres), igdbScore))
+                val igdbScore = rating.multiply(IGDB_RATING_WEIGHT).movePointRight(3).longValueExact()
+                Candidate(id = id, genres = genreMasks.getValue(genres), igdbScore = igdbScore)
             }
-        })
+        }
         this.candidates = java.util.List.copyOf(prepared)
     }
 
-    fun mode(): RelatedGamePrecomputeMode? {
-        return mode
+    /** null은 기존 SQL 계산이 필요함을, 빈 목록은 후보가 없는 정상 계산 결과를 뜻한다. */
+    fun baselineFor(sourceId: Long): List<RelatedGameCandidateProjection>? {
+        val genres = sourceGenres[sourceId] ?: return null
+        if (genres.isEmpty()) return emptyList()
+        if (sourceId in interactionSources) return null
+
+        val groupRanking = rankings.getOrPut(genres) { rankGroup(genres) }
+        val baseline = groupRanking.asSequence()
+            .filter { it.gameId != sourceId }
+            .take(limit)
+            .toList()
+        // 실행 내 캐시를 공유하되 호출자가 반환 결과를 변경하지 못하게 한다.
+        return java.util.List.copyOf(baseline)
     }
 
-    /** 비어 있는 Optional은 기존 SQL 계산이 필요한 기준 게임을 뜻한다. */
-    fun baselineFor(sourceId: Long?): Optional<MutableList<RelatedGameCandidateProjection>> {
-        val genres = sourceGenres.get(sourceId)
-        if (genres == null) {
-            return Optional.empty()
-        }
-        if (genres.isEmpty()) {
-            return Optional.of(java.util.List.of())
-        }
-        if (interactionSources.contains(sourceId)) {
-            return Optional.empty()
-        }
-        val groupRanking: MutableList<RelatedGameCandidateProjection> =
-            rankings.computeIfAbsent(
-                genres,
-                { genres: MutableList<Long> -> this.rankGroup(genres) },
-            )
-        return Optional.of(
-            groupRanking
-                .stream()
-                .filter({ candidate -> candidate.gameId != sourceId })
-                .limit(limit.toLong())
-                .toList()
-        )
-    }
+    fun sourceCount(): Int = sourceGenres.size
 
-    fun sourceCount(): Int {
-        return sourceGenres.size
-    }
+    fun candidateCount(): Int = candidates.size
 
-    fun candidateCount(): Int {
-        return candidates.size
-    }
+    fun interactionSourceCount(): Int = interactionSources.size
 
-    fun interactionSourceCount(): Int {
-        return interactionSources.size
-    }
+    fun calculatedGroupCount(): Int = rankings.size
 
-    fun calculatedGroupCount(): Int {
-        return rankings.size
-    }
-
-    private fun rankGroup(genres: MutableList<Long>): MutableList<RelatedGameCandidateProjection> {
+    private fun rankGroup(genres: List<Long>): List<RelatedGameCandidateProjection> {
         val sourceMask = genreMasks.getValue(genres)
         // 자신의 후보 제외로 한 자리가 빠질 수 있으므로 그룹에서는 N+1개를 보관한다.
         val groupLimit = limit + 1
-        val worstFirst =
-            Comparator.comparingLong(ScoredCandidate::score)
-                .thenComparing(ScoredCandidate::id, Comparator.reverseOrder())
+        val worstFirst = compareBy<ScoredCandidate> { it.score }.thenByDescending { it.id }
         val top = PriorityQueue(groupLimit, worstFirst)
         for (candidate in candidates) {
             var shared = 0
@@ -147,23 +109,22 @@ class RelatedGamePrecomputeSnapshot(
                 top.add(ScoredCandidate(candidate.id, score))
             }
         }
-        return top.stream()
-            .sorted(worstFirst.reversed())
-            .map({ candidate ->
+        val ranking = top.sortedWith(worstFirst.reversed())
+            .map { candidate ->
                 RelatedGameCandidateProjection(
-                    candidate.id,
-                    BigDecimal.valueOf(candidate.score, 3),
+                    gameId = candidate.id,
+                    relatedScore = BigDecimal.valueOf(candidate.score, 3),
                 )
-            })
-            .toList()
+            }
+        return java.util.List.copyOf(ranking)
     }
 
-    @JvmRecord
-    private data class Candidate(val id: Long, val genres: LongArray, val igdbScore: Long) {}
+    private data class Candidate(val id: Long, val genres: LongArray, val igdbScore: Long)
 
-    @JvmRecord private data class ScoredCandidate(val id: Long, val score: Long) {}
+    private data class ScoredCandidate(val id: Long, val score: Long)
 
     companion object {
-        private const val SHARED_GENRE_SCORE: Long = 15000L
+        private const val SHARED_GENRE_SCORE = 15000L
+        private val IGDB_RATING_WEIGHT = BigDecimal("0.5")
     }
 }

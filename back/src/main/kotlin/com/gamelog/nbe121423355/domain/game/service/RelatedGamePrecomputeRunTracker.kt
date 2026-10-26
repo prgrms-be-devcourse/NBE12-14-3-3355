@@ -3,19 +3,18 @@ package com.gamelog.nbe121423355.domain.game.service
 import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeObserver
 import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeObserver.Progress
 import java.time.Duration
-import java.util.function.LongSupplier
 import org.springframework.stereotype.Component
 
 @Component
 class RelatedGamePrecomputeRunTracker(private val store: RelatedGamePrecomputeRunStore) {
     fun observer(runId: String): RelatedGamePrecomputeObserver =
-        observer(runId, LongSupplier { System.nanoTime() })
+        observer(runId, System::nanoTime)
 
-    fun observer(runId: String, nanoTime: LongSupplier): RelatedGamePrecomputeObserver =
+    fun observer(runId: String, nanoTime: () -> Long): RelatedGamePrecomputeObserver =
         object : RelatedGamePrecomputeObserver {
             private var latest = Progress(0, 0, 0)
             private var savedProcessed = 0L
-            private var savedAt = nanoTime.asLong
+            private var savedAt = nanoTime()
 
             override fun onAcquired() = store.start(runId)
 
@@ -23,11 +22,11 @@ class RelatedGamePrecomputeRunTracker(private val store: RelatedGamePrecomputeRu
 
             override fun onPrepared(upperId: Long?, estimatedTotal: Long) {
                 store.prepared(runId, upperId, estimatedTotal)
-                savedAt = nanoTime.asLong
+                savedAt = nanoTime()
             }
 
             override fun onProcessed(gameId: Long, progress: Progress, failure: RuntimeException?) {
-                val now = nanoTime.asLong
+                val now = nanoTime()
                 val due = progress.processed - savedProcessed >= 100 ||
                     now - savedAt >= Duration.ofSeconds(5).toNanos()
                 if (failure != null) {

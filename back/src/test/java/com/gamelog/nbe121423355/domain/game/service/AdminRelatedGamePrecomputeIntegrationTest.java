@@ -165,7 +165,7 @@ class AdminRelatedGamePrecomputeIntegrationTest {
             assertThat(query.detail(staleId).status()).isEqualTo(RelatedGamePrecomputeRunStatus.RUNNING);
             assertThat(service.status().recoveryDeferred()).isTrue();
             return 0;
-        }).orElseThrow();
+        });
         int recovered = recovery.recover();
 
         // then: 실제 잠금이 없어진 뒤 오래된 이력만 중단으로 정리하고 계산은 재개하지 않는다.
@@ -186,7 +186,7 @@ class AdminRelatedGamePrecomputeIntegrationTest {
         store.heartbeat(runId, owner);
 
         // when: 공통 잠금을 획득한 복구 구간에서 이전 기준 시각으로 중단 처리를 시도한다.
-        boolean interrupted = lock.tryRun(check -> store.interruptStale(runId, cutoff)).orElseThrow();
+        boolean interrupted = lock.tryRun(check -> store.interruptStale(runId, cutoff));
 
         // then: 행을 다시 읽어 갱신된 생존 신호를 확인하고 중단하지 않는다.
         assertThat(interrupted).isFalse();

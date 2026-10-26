@@ -67,7 +67,7 @@ class ChangedRelatedGamePrecomputeTest {
         tx(() -> { recorder.record(source, RelatedGameChangeReason.GAME_INFORMATION, List.of(oldGenre)); return null; });
 
         // when: 저장된 후보 목록을 사용하지 않고 변경 원천을 영향 기준 게임으로 확장한다.
-        preparation.expandPending(() -> {});
+        preparation.expandPending(() -> kotlin.Unit.INSTANCE);
 
         // then: 이전·현재 장르 관계와 변경 게임 자신을 포함하고 무관한 게임은 제외한다.
         assertThat(targets.findPendingIds(0, Long.MAX_VALUE, 100)).containsExactly(source, oldBase, newBase);

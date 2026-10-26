@@ -16,16 +16,16 @@ class RelatedGameChangePreparation(
 ) {
     // 호출자는 공통 계산 잠금을 유지한다. 페이지마다 읽기 시점을 바꾸지 않는다.
     @Transactional(readOnly = true, propagation = REQUIRES_NEW, isolation = REPEATABLE_READ)
-    fun expandPending(checkOwnership: Runnable) {
+    fun expandPending(checkOwnership: () -> Unit) {
         var afterId = 0L
         while (true) {
-            checkOwnership.run()
+            checkOwnership()
             val page = changes.findPendingAfter(afterId, 100)
             if (page.isEmpty()) return
             for (change in page) {
-                checkOwnership.run()
+                checkOwnership()
                 expansion.expand(change)
-                checkOwnership.run()
+                checkOwnership()
             }
             afterId = page.last().gameId
         }

@@ -6,29 +6,23 @@ import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeS
 import com.gamelog.nbe121423355.global.interop.formatted
 import java.math.BigDecimal
 import java.sql.ResultSet
-import java.sql.ResultSet.CONCUR_READ_ONLY
-import java.sql.ResultSet.TYPE_FORWARD_ONLY
-import java.util.ArrayList
-import java.util.HashMap
-import java.util.HashSet
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.PreparedStatementCreator
 import org.springframework.jdbc.core.RowCallbackHandler
 import org.springframework.stereotype.Repository
-import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Isolation.REPEATABLE_READ
 import org.springframework.transaction.annotation.Transactional
 
 @Repository
-class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTemplate: JdbcTemplate) {
+class RelatedGamePrecomputeSnapshotRepository(private val jdbcTemplate: JdbcTemplate) {
     // 같은 읽기 스냅샷에서 장르·후보 자격·행동 기준 게임을 준비하고 트랜잭션을 종료한다.
-    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    @Transactional(readOnly = true, isolation = REPEATABLE_READ)
     fun load(
-        mode: RelatedGamePrecomputeMode?,
+        mode: RelatedGamePrecomputeMode,
         upperId: Long,
         limit: Int,
     ): RelatedGamePrecomputeSnapshot {
-        val genres: MutableMap<Long, MutableList<Long>> = HashMap()
+        val genres = mutableMapOf<Long, MutableList<Long>>()
         read(
             """
             SELECT g.id, gg.genre_id
@@ -40,7 +34,7 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
             """,
             upperId,
             RowCallbackHandler { row: ResultSet ->
-                val ids = genres.computeIfAbsent(row.getLong(1), { ignored -> ArrayList() })
+                val ids = genres.getOrPut(row.getLong(1)) { mutableListOf() }
                 val genre = row.getLong(2)
                 if (!row.wasNull()) {
                     ids.add(genre)
@@ -48,7 +42,7 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
             },
         )
         val readyCondition =
-            if (mode == RelatedGamePrecomputeMode.REFRESH)
+            if (mode == REFRESH)
                 """
             AND EXISTS (
                 SELECT 1 FROM related_game_calculations calculation
@@ -57,7 +51,7 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
 
             """
             else ""
-        val ratings: MutableMap<Long, BigDecimal> = HashMap()
+        val ratings = mutableMapOf<Long, BigDecimal>()
         read(
             """
             SELECT g.id, g.igdb_rating
@@ -78,10 +72,10 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
                 .formatted(readyCondition),
             upperId,
             RowCallbackHandler { row: ResultSet ->
-                ratings.put(row.getLong(1), row.getBigDecimal(2))
+                ratings[row.getLong(1)] = requireNotNull(row.getBigDecimal(2)) { "추천 후보의 IGDB 평점이 없습니다." }
             },
         )
-        val interactionSources: MutableSet<Long> = HashSet()
+        val interactionSources = mutableSetOf<Long>()
         read(
             """
             SELECT DISTINCT ug.game_id
@@ -95,10 +89,16 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
             upperId,
             RowCallbackHandler { row: ResultSet -> interactionSources.add(row.getLong(1)) },
         )
-        return RelatedGamePrecomputeSnapshot(mode, limit, genres, ratings, interactionSources)
+        return RelatedGamePrecomputeSnapshot(
+            mode = mode,
+            limit = limit,
+            sourceGenres = genres,
+            eligibleRatings = ratings,
+            interactionSources = interactionSources,
+        )
     }
 
-    private fun read(sql: String?, upperId: Long, handler: RowCallbackHandler) {
+    private fun read(sql: String, upperId: Long, handler: RowCallbackHandler) {
         // MySQL 결과를 순차 소비하여 전체 행 배열과 JPA 엔티티를 중복 적재하지 않는다.
         jdbcTemplate.query(
             PreparedStatementCreator { connection: java.sql.Connection ->
@@ -108,7 +108,7 @@ class RelatedGamePrecomputeSnapshotRepository constructor(private val jdbcTempla
                         ResultSet.TYPE_FORWARD_ONLY,
                         ResultSet.CONCUR_READ_ONLY,
                     )
-                statement.setFetchSize(Int.MIN_VALUE)
+                statement.fetchSize = Int.MIN_VALUE
                 statement.setLong(1, upperId)
                 statement
             },

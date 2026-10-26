@@ -8,4 +8,4 @@ data class PersonalizedGameRecordProjection(
     val gameId: Long,
     val genreId: Long?,
     val rating: BigDecimal?,
-) {}
+)
