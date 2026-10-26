@@ -28,7 +28,7 @@ class ApiV1UserController(
 ) {
     @PostMapping("/signup")
     @Operation(summary = "회원가입", description = "닉네임, 이메일과 비밀번호로 일반 사용자 계정을 생성합니다.")
-    fun signUp(@Valid @RequestBody signupRequestDto: @Valid SignupRequestDto): RsData<UserDto> {
+    fun signUp(@Valid @RequestBody signupRequestDto: SignupRequestDto): RsData<UserDto> {
         val userDto = userService.signUp(signupRequestDto)
         return RsData<UserDto>("201-1", "회원가입 성공", userDto)
     }
@@ -36,7 +36,7 @@ class ApiV1UserController(
     @PostMapping("/login")
     @Operation(summary = "로그인", description = "accessToken을 응답하고 refreshToken을 HttpOnly 쿠키로 설정합니다.")
     fun login(
-        @Valid @RequestBody loginRequestDto: @Valid LoginRequestDto,
+        @Valid @RequestBody loginRequestDto: LoginRequestDto,
         @Parameter(hidden = true) httpServletResponse: HttpServletResponse,
     ): RsData<LoginResponseDto> {
         val result = userService.login(loginRequestDto)
@@ -103,7 +103,7 @@ class ApiV1UserController(
     )
     fun updateProfile(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
-        @Valid @RequestBody updateProfileRequestDto: @Valid UpdateProfileRequestDto,
+        @Valid @RequestBody updateProfileRequestDto: UpdateProfileRequestDto,
     ): RsData<UserDto> {
         val userDto = userService.updateProfile(securityUser.id, updateProfileRequestDto)
         return RsData<UserDto>("200-10", "내 정보 수정 성공", userDto)
@@ -135,7 +135,7 @@ class ApiV1UserController(
     )
     fun updatePreferredGenres(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
-        @Valid @RequestBody requestDto: @Valid PreferredGenreRequestDto,
+        @Valid @RequestBody requestDto: PreferredGenreRequestDto,
     ): RsData<List<PreferredGenreResponseDto>> {
         val result =
             userPreferenceGenreService.updatePreferredGenres(
@@ -163,7 +163,7 @@ class ApiV1UserController(
     )
     fun updatePreferredGames(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
-        @Valid @RequestBody requestDto: @Valid PreferredGameRequestDto,
+        @Valid @RequestBody requestDto: PreferredGameRequestDto,
     ): RsData<List<PreferredGameResponseDto>> {
         val result =
             userPreferenceGameService.updatePreferredGames(
@@ -191,7 +191,7 @@ class ApiV1UserController(
     )
     fun changePassword(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
-        @Valid @RequestBody changePasswordRequestDto: @Valid ChangePasswordRequestDto,
+        @Valid @RequestBody changePasswordRequestDto: ChangePasswordRequestDto,
         @Parameter(hidden = true) httpServletResponse: HttpServletResponse,
     ): RsData<Void> {
         val session = userService.changePassword(securityUser.id, changePasswordRequestDto)
@@ -209,7 +209,7 @@ class ApiV1UserController(
     )
     fun withdraw(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
-        @Valid @RequestBody withdrawRequestDto: @Valid WithdrawRequestDto,
+        @Valid @RequestBody withdrawRequestDto: WithdrawRequestDto,
         @Parameter(hidden = true) httpServletResponse: HttpServletResponse,
     ): RsData<Void> {
         userService.withdraw(securityUser.id, withdrawRequestDto)

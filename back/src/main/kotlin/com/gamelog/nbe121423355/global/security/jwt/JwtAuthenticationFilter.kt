@@ -6,10 +6,8 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.jsonwebtoken.Claims
 import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-import java.io.IOException
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseCookie
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -28,7 +26,6 @@ class JwtAuthenticationFilter(
 
     // 필터는 spring mvc의 dispatcherservlet보다 앞단에서 실행
     // 그로 인해 globalexceptionhandler 관여 x
-    @Throws(ServletException::class, IOException::class)
     override fun doFilterInternal(
         servletRequest: HttpServletRequest,
         serveletResponse: HttpServletResponse,

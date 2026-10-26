@@ -20,10 +20,10 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
         if (contentType == null || !contentType.startsWith("image/")) {
             throw ServiceException("400-5", "이미지 파일만 업로드할 수 있습니다.")
         }
-        try {
+        return try {
             val result: MutableMap<*, *> =
                 cloudinary.uploader().upload(file.bytes, ObjectUtils.emptyMap())
-            return result["secure_url"] as String?
+            result["secure_url"] as String?
         } catch (e: IOException) {
             throw ServiceException("500-2", "이미지 업로드에 실패했습니다.", e)
         } catch (e: RuntimeException) {

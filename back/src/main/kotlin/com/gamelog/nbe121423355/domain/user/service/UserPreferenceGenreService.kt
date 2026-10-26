@@ -34,17 +34,15 @@ class UserPreferenceGenreService(
         }
         userPreferenceGenreRepository.deleteByUser_Id(userId)
         val newPreferences: List<UserPreferenceGenre> =
-            genres.stream().map { genre -> UserPreferenceGenre(user, genre) }.toList()
+            genres.map { genre -> UserPreferenceGenre(user, genre) }
         userPreferenceGenreRepository.saveAll(newPreferences)
-        return newPreferences.stream().map { value -> PreferredGenreResponseDto(value) }.toList()
+        return newPreferences.map { value -> PreferredGenreResponseDto(value) }
     }
 
     // 온보딩 장르정보 가져오기
     fun getPreferredGenres(userId: Long?): List<PreferredGenreResponseDto> {
         return userPreferenceGenreRepository
             .findByUser_Id(userId)
-            .stream()
             .map { value -> PreferredGenreResponseDto(value) }
-            .toList()
     }
 }

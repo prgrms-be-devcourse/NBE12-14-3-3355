@@ -57,19 +57,16 @@ class UserFollowService(
                 result.content.map { requireNotNull(it.id) },
             )
         val users =
-            result.content
-                .stream()
-                .map { user ->
-                    FollowUserResponseDto(
-                        user.id,
-                        user.nickname,
-                        user.profileImageUrl,
-                        null,
-                        followedIds.contains(user.id),
-                        (user.id == loginUserId),
-                    )
-                }
-                .toList()
+            result.content.map { user ->
+                FollowUserResponseDto(
+                    user.id,
+                    user.nickname,
+                    user.profileImageUrl,
+                    null,
+                    followedIds.contains(user.id),
+                    (user.id == loginUserId),
+                )
+            }
         return FollowPageResponseDto(
             users,
             result.number,
@@ -174,20 +171,17 @@ class UserFollowService(
         val displayedUserIds = followPage.content.map { requireNotNull(userExtractor(it).id) }
         val followedUserIds = findFollowedUserIds(loginUserId, displayedUserIds)
         val users: List<FollowUserResponseDto> =
-            followPage.content
-                .stream()
-                .map { userFollow ->
-                    val user = userExtractor(userFollow)
-                    FollowUserResponseDto(
-                        user.id,
-                        user.nickname,
-                        user.profileImageUrl,
-                        userFollow.createdDate,
-                        followedUserIds.contains(user.id),
-                        loginUserId != null && loginUserId == user.id,
-                    )
-                }
-                .toList()
+            followPage.content.map { userFollow ->
+                val user = userExtractor(userFollow)
+                FollowUserResponseDto(
+                    user.id,
+                    user.nickname,
+                    user.profileImageUrl,
+                    userFollow.createdDate,
+                    followedUserIds.contains(user.id),
+                    loginUserId != null && loginUserId == user.id,
+                )
+            }
         return FollowPageResponseDto.from(followPage, users)
     }
 
