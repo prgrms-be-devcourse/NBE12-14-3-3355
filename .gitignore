@@ -55,3 +55,6 @@ out/
 # Local usergame development documents
 /back/docs/usergame*
 /docs/**/usergame*
+
+# Local notification design document
+/docs/notifications-design.md
