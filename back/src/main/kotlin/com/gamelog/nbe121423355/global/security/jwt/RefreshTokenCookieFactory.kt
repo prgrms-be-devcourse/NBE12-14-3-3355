@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 
 // refreshToken 쿠키 생성 (로그인, 로그아웃, /refresh, 자동 재발급 필터에서 공통 사용)
 @Component
-class RefreshTokenCookieFactory constructor(private val cookieProperties: CookieProperties) {
+class RefreshTokenCookieFactory(private val cookieProperties: CookieProperties) {
     // maxAge = 세션 만료까지 남은 시간 (Rotation돼도 로그인 시점 기준 절대 만료라 점점 줄어듦)
     // expiryDate는 ZoneId.systemDefault() 기준으로 저장되므로 비교도 LocalDateTime.now()
     fun create(refreshToken: String?, expiryDate: LocalDateTime?): ResponseCookie {
@@ -34,7 +34,7 @@ class RefreshTokenCookieFactory constructor(private val cookieProperties: Cookie
     }
 
     companion object {
-        val COOKIE_NAME = "refreshToken"
+        const val COOKIE_NAME = "refreshToken"
     }
 }
 

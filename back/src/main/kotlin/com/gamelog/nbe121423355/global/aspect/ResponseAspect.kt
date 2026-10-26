@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 
 @Aspect
 @Component
-class ResponseAspect constructor(private val response: HttpServletResponse) {
+class ResponseAspect(private val response: HttpServletResponse) {
     @Around(
         """
         (
@@ -33,7 +33,6 @@ class ResponseAspect constructor(private val response: HttpServletResponse) {
 
         """
     )
-    @Throws(Throwable::class)
     fun responseAspect(joinPoint: ProceedingJoinPoint): Any? {
         val rst = joinPoint.proceed()
         if (rst is RsData<*>) {
