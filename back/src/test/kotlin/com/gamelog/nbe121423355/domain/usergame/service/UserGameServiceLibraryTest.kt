@@ -7,9 +7,9 @@ import com.gamelog.nbe121423355.domain.game.repository.PlatformRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserFavoriteGameRepository
-import com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.dto.UserGameReqBody
+import com.gamelog.nbe121423355.domain.usergame.dto.UserGameSearchRequest
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
@@ -38,8 +38,6 @@ import org.mockito.junit.jupiter.MockitoExtension
 class UserGameServiceLibraryTest {
     private val matcherUserGame = createUserGame()
 
-    @Mock
-    private lateinit var userFollowRepository: UserFollowRepository
 
     @Mock
     private lateinit var userFavoriteGameRepository: UserFavoriteGameRepository
@@ -64,6 +62,21 @@ class UserGameServiceLibraryTest {
 
     @Mock
     private lateinit var platformRepository: PlatformRepository
+
+    @Test
+    @DisplayName("존재하지 않는 사용자의 공개 게임 목록은 조회할 수 없다")
+    fun missingPublicGameList() {
+        val missingUserId = 999L
+        val request = UserGameSearchRequest()
+
+        assertThatThrownBy {
+            userGameService.getPublicUserGameList(
+                missingUserId,
+                request
+            )
+        }.isInstanceOf(ServiceException::class.java)
+        verifyNoInteractions(userGameRepository)
+    }
 
     @Test
     @DisplayName("라이브러리에 게임을 등록할 수 있다")

@@ -2,6 +2,7 @@ package com.gamelog.nbe121423355.domain.usergame.controller
 
 import com.gamelog.nbe121423355.domain.usergame.dto.*
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
+import com.gamelog.nbe121423355.domain.usergame.service.UserGameProfileService
 import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.swagger.v3.oas.annotations.Operation
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*
 @Tag(name = "user-game-profile-controller", description = "사용자 게임 프로필·공개 게임 목록·인생 게임 API")
 class UserGameProfileController(
     private val userGameService: UserGameService,
+    private val userGameProfileService: UserGameProfileService,
 ) {
     @GetMapping("/{userId}/games")
     @Operation(summary = "사용자 프로필 게임 목록 조회", description = "특정 사용자의 공개 게임 기록을 페이지 단위로 조회합니다.")
@@ -47,7 +49,7 @@ class UserGameProfileController(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
     ): RsData<UserProfileResponse> {
         val response =
-            userGameService.profileTab(
+            userGameProfileService.profileTab(
                 targetUserId = user.id,
                 currentUserId = user.id,
             )
@@ -67,7 +69,7 @@ class UserGameProfileController(
     ): RsData<UserProfileResponse> {
         val currentUserId = user?.id
         val response =
-            userGameService.profileTab(
+            userGameProfileService.profileTab(
                 targetUserId = userId,
                 currentUserId = currentUserId,
             )
@@ -90,7 +92,7 @@ class UserGameProfileController(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<List<UserFavoriteGameResponse>> {
         val response: List<UserFavoriteGameResponse> =
-            userGameService.updateFavoriteGames(
+            userGameProfileService.updateFavoriteGames(
                 userId = user.id,
                 gameIds = request.gameIds,
             )

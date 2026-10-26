@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class UserGameFavoriteTest {
     @Autowired private lateinit var service: UserGameService
+    @Autowired private lateinit var profileService: UserGameProfileService
     @Autowired private lateinit var users: UserRepository
     @Autowired private lateinit var games: GameRepository
     @Autowired private lateinit var records: UserGameRepository
@@ -103,13 +104,19 @@ class UserGameFavoriteTest {
         val uid = checkNotNull(user.id)
         val gid = checkNotNull(game.id)
         val record = service.addOrUpdateGameToLibrary(uid, gid, request(BigDecimal.TEN)).userGame
+
         favorites.saveAndFlush(UserFavoriteGame(user, game, 1))
+
         val recordId = checkNotNull(record.id)
+
         service.updatePlayRecord(uid, gid, request(BigDecimal("0.0")))
         em.flush()
         em.clear()
+
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid)).isEmpty()
+
         val saved = checkNotNull(records.findByUser_IdAndGame_Id(uid, gid))
+
         assertThat(saved.id).isEqualTo(recordId)
         assertThat(saved.inLibrary).isFalse()
         assertThat(saved.playTimeHours).isEqualByComparingTo(BigDecimal.ZERO)
@@ -123,6 +130,7 @@ class UserGameFavoriteTest {
         val record = service.addOrUpdateGameToLibrary(
             uid, gid, request(BigDecimal.TEN, playing = true),
         ).userGame
+
         assertThat(record.playing).isTrue()
         favorites.saveAndFlush(UserFavoriteGame(user, game, 1))
 
@@ -131,6 +139,7 @@ class UserGameFavoriteTest {
         em.clear()
 
         val saved = checkNotNull(records.findByUser_IdAndGame_Id(uid, gid))
+
         assertThat(saved.playing).isFalse()
         assertThat(saved.playTimeHours).isEqualByComparingTo(BigDecimal.TEN)
         assertThat(saved.inLibrary).isTrue()
@@ -145,18 +154,23 @@ class UserGameFavoriteTest {
         val other = games.save(Game.createFromIgdb(IgdbGameResponse(987655L, "other", "test",
             null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
         val eligible = UserGame(user, other)
+
         eligible.changeWishlist(true)
         records.saveAndFlush(eligible)
+
         val uid = checkNotNull(user.id)
         val otherId = checkNotNull(other.id)
-        service.updateFavoriteGames(uid, listOf(otherId))
-        assertThatThrownBy { service.updateFavoriteGames(uid, listOf(checkNotNull(game.id))) }
+
+        profileService.updateFavoriteGames(uid, listOf(otherId))
+
+        assertThatThrownBy { profileService.updateFavoriteGames(uid, listOf(checkNotNull(game.id))) }
             .isInstanceOfSatisfying(ServiceException::class.java) { error ->
                 assertThat(error.resultCode).isEqualTo("400-11")
                 assertThat(error.msg).isEqualTo("라이브러리에 없는 게임이 포함되어 있습니다. 선택 목록을 확인해 주세요.")
             }
         em.flush()
         em.clear()
+
         assertThat(favorites.findAllByUserIdOrderByDisplayOrderAsc(uid).map { it.game.id })
             .containsExactly(otherId)
     }

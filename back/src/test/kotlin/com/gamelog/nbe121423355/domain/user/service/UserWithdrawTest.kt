@@ -27,6 +27,7 @@ import com.gamelog.nbe121423355.domain.usergame.dto.UserGameSearchRequest
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
+import com.gamelog.nbe121423355.domain.usergame.service.UserGameProfileService
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.upload.ImageUploadService
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
@@ -55,6 +56,7 @@ constructor(
     private val userService: UserService,
     private val userFollowService: UserFollowService,
     private val userGameService: UserGameService,
+    private val userGameProfileService: UserGameProfileService,
     private val tokenReissueService: TokenReissueService,
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
@@ -262,7 +264,7 @@ constructor(
 
         assertThatThrownBy { userGameService.getPublicUserGameList(user.requiredId, UserGameSearchRequest()) }
             .satisfies({ e -> assertResultCode(e, "404-1") })
-        assertThatThrownBy { userGameService.profileTab(user.requiredId, viewer.id) }
+        assertThatThrownBy { userGameProfileService.profileTab(user.requiredId, viewer.id) }
             .satisfies({ e -> assertResultCode(e, "404-1") })
     }
 
