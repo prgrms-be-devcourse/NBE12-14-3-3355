@@ -1,5 +1,6 @@
-package com.gamelog.nbe121423355.domain.notification
+package com.gamelog.nbe121423355.domain.notification.service
 
+import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
 import java.time.LocalDateTime
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

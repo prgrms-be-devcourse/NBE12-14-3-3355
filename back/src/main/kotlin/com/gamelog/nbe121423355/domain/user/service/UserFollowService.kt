@@ -1,6 +1,9 @@
 package com.gamelog.nbe121423355.domain.user.service
 
-import com.gamelog.nbe121423355.domain.notification.*
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.user.dto.FollowPageResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowStatusResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowUserResponseDto

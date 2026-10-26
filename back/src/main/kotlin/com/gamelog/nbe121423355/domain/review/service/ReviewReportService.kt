@@ -1,16 +1,16 @@
 package com.gamelog.nbe121423355.domain.review.service
 
-import com.gamelog.nbe121423355.domain.notification.*
 import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
 import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportGroupResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportPageResponse
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewReportResponse
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
-import com.gamelog.nbe121423355.domain.review.entity.ReportStatus.APPROVED
-import com.gamelog.nbe121423355.domain.review.entity.ReportStatus.PENDING
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport
 import com.gamelog.nbe121423355.domain.review.repository.ReviewReportRepository

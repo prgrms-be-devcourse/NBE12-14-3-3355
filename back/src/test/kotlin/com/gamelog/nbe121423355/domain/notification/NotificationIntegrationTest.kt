@@ -2,6 +2,13 @@ package com.gamelog.nbe121423355.domain.notification
 
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.domain.game.entity.Game
+import com.gamelog.nbe121423355.domain.notification.service.NotificationRetentionService
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
+import com.gamelog.nbe121423355.domain.notification.entity.Notification
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
+import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
@@ -97,13 +104,18 @@ class NotificationIntegrationTest {
     @Test
     fun likesExcludeSelfCancelAndRecreateUnread() {
         reviewLikes.addLike(authorId, reviewId)
+
         assertThat(notifications.unread(authorId)).isZero()
+
         reviewLikes.addLike(readerId, reviewId)
         val first = notifications.list(authorId, null).items.first()
         notifications.read(authorId, first.id)
         reviewLikes.removeLike(readerId, reviewId)
+
         assertThat(notifications.list(authorId, null).items).isEmpty()
+
         reviewLikes.addLike(readerId, reviewId)
+
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
         assertThat(notifications.list(authorId, null).items.first().id).isNotEqualTo(first.id)
     }
@@ -112,10 +124,15 @@ class NotificationIntegrationTest {
     fun followIsIdempotentAndCancelRemovesNotice() {
         follows.follow(readerId, authorId)
         follows.follow(readerId, authorId)
+
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
+
         follows.unfollow(readerId, authorId)
+
         assertThat(notifications.unread(authorId)).isZero()
+
         follows.follow(readerId, authorId)
+
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
     }
 
@@ -125,21 +142,30 @@ class NotificationIntegrationTest {
         notifications.readAll(authorId)
         val reply = comments.create(reviewId, thirdId, body("답글", root.id))
         val replyId = checkNotNull(reply.id)
+
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
         assertThat(notifications.unread(readerId)).isEqualTo(1L)
         assertThat(notifications.unread(thirdId)).isZero()
+
         comments.like(reviewId, replyId, readerId, true)
         comments.like(reviewId, replyId, readerId, true)
+
         assertThat(notifications.unread(thirdId)).isEqualTo(1L)
+
         comments.like(reviewId, replyId, readerId, false)
+
         assertThat(notifications.unread(thirdId)).isZero()
+
         comments.like(reviewId, replyId, readerId, true)
         comments.delete(reviewId, replyId, thirdId)
+
         assertThat(notifications.unread(readerId)).isZero()
         assertThat(notifications.unread(authorId)).isZero()
         assertThat(notifications.unread(thirdId)).isZero()
+
         val ownRoot = comments.create(reviewId, authorId, body("작성자 댓글"))
         comments.create(reviewId, thirdId, body("작성자에게 답글", ownRoot.id))
+
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
     }
 
@@ -147,16 +173,20 @@ class NotificationIntegrationTest {
     fun hiddenNoticeContainsNoReportTextAndIsCreatedOnlyOnActualTransition() {
         val first = reports.createReport(readerId, reviewId, ReviewReportCreateRequest("신고자 비공개 내용"))
         reports.createReport(thirdId, reviewId, ReviewReportCreateRequest("다른 비공개 내용"))
+
         assertThat(notifications.unread(authorId)).isZero()
+
         val reportId = checkNotNull(first.reportId)
         reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
         val item = notifications.list(authorId, null).items.first()
+
         assertThat(item.kind).isEqualTo(NotificationKind.REVIEW_HIDDEN)
         assertThat(item.gameTitle).isEqualTo("알림 게임")
         assertThat(item.actorName).isNull()
         assertThat(item.url).isNull()
         assertThat(item.unavailable).isFalse()
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
+
         assertThatThrownBy {
             reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
         }.hasMessageContaining("이미 처리")
@@ -166,6 +196,7 @@ class NotificationIntegrationTest {
     fun apiScopesOwnershipAndOpeningListDoesNotRead() {
         follows.follow(readerId, authorId)
         val id = notifications.list(authorId, null).items.first().id
+
         mvc.perform(get("/api/v1/notifications"))
             .andExpect(status().isUnauthorized)
         mvc.perform(get("/api/v1/notifications").header("Authorization", token(reader)))
@@ -194,6 +225,7 @@ class NotificationIntegrationTest {
         review.deleteByUser()
         em.flush()
         val item = notifications.list(authorId, null).items.first()
+
         assertThat(item.actorName).isEqualTo("탈퇴한 사용자")
         assertThat(item.unavailable).isTrue()
         assertThat(item.url).isNull()
@@ -215,14 +247,20 @@ class NotificationIntegrationTest {
                 )
             )
         }
+
         val first = notifications.list(authorId, null)
+
         assertThat(first.items).hasSize(20)
+
         val second = notifications.list(authorId, first.nextCursor)
+
         assertThat(second.items).hasSize(3)
         assertThat(second.nextCursor).isNull()
         assertThat(second.items.map { it.id })
             .doesNotContainAnyElementsOf(first.items.map { it.id })
+
         notifications.readAll(authorId)
+
         assertThat(notifications.unread(authorId)).isZero()
     }
 
@@ -231,6 +269,7 @@ class NotificationIntegrationTest {
         val template = TransactionTemplate(transactions).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }
+
         val recipientId = checkNotNull(template.execute { transaction ->
             val recipient = User("롤백수신자", "rollback-recipient@test.com", "password")
             val actor = User("롤백행위자", "rollback-actor@test.com", "password")
@@ -242,6 +281,7 @@ class NotificationIntegrationTest {
             transaction.setRollbackOnly()
             id
         })
+
         assertThat(notifications.unread(recipientId)).isZero()
     }
 
@@ -254,21 +294,27 @@ class NotificationIntegrationTest {
                 }
             )
         }
+
         repository.save(notice(kind = NotificationKind.REVIEW_HIDDEN, key = "filter:hidden"))
         follows.follow(authorId, thirdId)
         em.flush()
         val first = notifications.list(authorId, null, unreadOnly = true)
+
         assertThat(first.items).hasSize(20).allMatch { !it.read }
         assertThat(first.items.first().kind).isEqualTo(NotificationKind.REVIEW_HIDDEN)
         assertThat(first.nextCursor).isNotNull()
+
         val next = notifications.list(authorId, first.nextCursor, unreadOnly = true)
+
         assertThat(next.items).hasSize(1).allMatch { !it.read }
         assertThat(next.nextCursor).isNull()
         assertThat(notifications.unread(authorId)).isEqualTo(21L)
+
         mvc.perform(get("/api/v1/notifications?unreadOnly=true").header("Authorization", token(author)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.items[0].read").value(false))
         notifications.readAll(authorId)
+
         assertThat(notifications.list(authorId, null, unreadOnly = true).items).isEmpty()
         assertThat(notifications.list(authorId, null).items).hasSize(20)
         assertThat(notifications.unread(thirdId)).isEqualTo(1L)
@@ -286,6 +332,7 @@ class NotificationIntegrationTest {
         val keptHiddenRead = agedNotification(NotificationKind.REVIEW_HIDDEN, now.minusDays(90).plusSeconds(1), now.minusDays(20), "keep:hidden-read")
         val keptHiddenUnread = agedNotification(NotificationKind.REVIEW_HIDDEN, now.minusDays(89), null, "keep:hidden-unread")
         em.clear()
+
         assertThat(retention.deleteExpiredBatch(now)).isEqualTo(4)
         assertThat(repository.findAllById(listOf(expiredRead, expiredUnread, expiredHiddenRead, expiredHiddenUnread))).isEmpty()
         assertThat(repository.findAllById(listOf(keptRead, keptUnread, keptHiddenRead, keptHiddenUnread))).hasSize(4)
@@ -307,14 +354,19 @@ class NotificationIntegrationTest {
             """.trimIndent(),
             batch,
         )
+
         val recentlyRead = agedNotification(NotificationKind.REVIEW_LIKE, now.minusDays(29), null, "read-all-kept")
         notifications.readAll(authorId)
         em.clear()
+
         assertThat(retention.deleteExpiredBatch(now)).isZero()
+
         val readAt = checkNotNull(repository.findById(recentlyRead).orElseThrow().readAt)
         assertThat(retention.deleteExpiredBatch(readAt.plusDays(7))).isEqualTo(1000)
         assertThat(retention.deleteExpiredBatch(readAt.plusDays(7))).isEqualTo(6)
+
         em.clear()
+
         assertThat(repository.findById(recentlyRead)).isEmpty()
     }
 

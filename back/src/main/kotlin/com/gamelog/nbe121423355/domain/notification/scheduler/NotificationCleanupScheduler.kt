@@ -1,9 +1,10 @@
-package com.gamelog.nbe121423355.domain.notification
+package com.gamelog.nbe121423355.domain.notification.scheduler
 
-import java.time.LocalDateTime
+import com.gamelog.nbe121423355.domain.notification.service.NotificationRetentionService
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.time.LocalDateTime
 
 @Component
 class NotificationCleanupScheduler(private val retention: NotificationRetentionService) {

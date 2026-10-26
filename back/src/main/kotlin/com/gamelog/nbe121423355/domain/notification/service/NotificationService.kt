@@ -1,5 +1,14 @@
-package com.gamelog.nbe121423355.domain.notification
+package com.gamelog.nbe121423355.domain.notification.service
 
+import com.gamelog.nbe121423355.domain.notification.dto.NotificationPageResponse
+import com.gamelog.nbe121423355.domain.notification.dto.NotificationResponse
+import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
+import com.gamelog.nbe121423355.domain.notification.entity.CommentNotificationsCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.Notification
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewCommentRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
@@ -20,19 +29,6 @@ class NotificationService(
     private val reviews: ReviewRepository,
     private val comments: ReviewCommentRepository,
 ) {
-    data class Item(
-        val id: Long,
-        val kind: NotificationKind,
-        val actorName: String?,
-        val gameTitle: String?,
-        val createdAt: LocalDateTime,
-        val read: Boolean,
-        val url: String?,
-        val unavailable: Boolean,
-    )
-
-    data class Page(val items: List<Item>, val nextCursor: Long?)
-
     // Synchronous listeners participate in the source transaction; never persist after commit.
     @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
@@ -73,19 +69,19 @@ class NotificationService(
     fun unread(userId: Long): Long = notifications.countByRecipientIdAndReadAtIsNull(userId)
 
     @JvmOverloads
-    fun list(userId: Long, before: Long?, unreadOnly: Boolean = false): Page {
+    fun list(userId: Long, before: Long?, unreadOnly: Boolean = false): NotificationPageResponse {
         if (before != null && before < 1) {
             throw ServiceException("400-30", "잘못된 알림 커서입니다.")
         }
         val rows = notifications.list(userId, before, unreadOnly, PageRequest.of(0, 21))
-        return Page(
+        return NotificationPageResponse(
             items = rows.take(20).map(::item),
             nextCursor = if (rows.size > 20) rows[19].id else null,
         )
     }
 
     @Transactional
-    fun read(userId: Long, id: Long): Item {
+    fun read(userId: Long, id: Long): NotificationResponse {
         val notification = notifications.findByIdAndRecipientId(id, userId)
             ?: throw ServiceException("404-30", "알림을 찾을 수 없습니다.")
         notification.read()
@@ -97,7 +93,7 @@ class NotificationService(
         notifications.readAll(userId, LocalDateTime.now())
     }
 
-    private fun item(notification: Notification): Item {
+    private fun item(notification: Notification): NotificationResponse {
         val actor = notification.actorId?.let { users.findByIdOrNull(it) }
         val actorName = when {
             notification.actorId == null -> null
@@ -124,7 +120,7 @@ class NotificationService(
                 }
             }
         }
-        return Item(
+        return NotificationResponse(
             id = requireNotNull(notification.id),
             kind = notification.kind,
             actorName = actorName,

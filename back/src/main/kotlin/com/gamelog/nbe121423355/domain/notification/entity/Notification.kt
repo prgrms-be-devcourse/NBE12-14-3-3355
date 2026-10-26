@@ -1,4 +1,4 @@
-package com.gamelog.nbe121423355.domain.notification
+package com.gamelog.nbe121423355.domain.notification.entity
 
 import jakarta.persistence.*
 import java.time.LocalDateTime

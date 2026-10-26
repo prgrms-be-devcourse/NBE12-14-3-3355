@@ -1,9 +1,13 @@
-package com.gamelog.nbe121423355.domain.notification
+package com.gamelog.nbe121423355.domain.notification.repository
 
-import java.time.LocalDateTime
+import com.gamelog.nbe121423355.domain.notification.entity.Notification
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import org.springframework.data.domain.Pageable
-import org.springframework.data.jpa.repository.*
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDateTime
 
 interface NotificationRepository : JpaRepository<Notification, Long> {
     @Query("SELECT n FROM Notification n WHERE n.recipientId = :userId AND (:unreadOnly = false OR n.readAt IS NULL) AND (:before IS NULL OR n.id < :before) ORDER BY n.id DESC")
