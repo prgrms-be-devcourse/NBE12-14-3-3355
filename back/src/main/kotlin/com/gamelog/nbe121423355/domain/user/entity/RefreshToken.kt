@@ -36,7 +36,6 @@ class RefreshToken protected constructor() : BaseEntity() {
         protected set
 
     companion object {
-        @JvmStatic
         fun create(
             user: User,
             familyId: String,

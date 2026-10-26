@@ -17,6 +17,7 @@ import com.gamelog.nbe121423355.domain.usergame.dto.UserGameSearchRequest;
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame;
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository;
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService;
+import com.gamelog.nbe121423355.domain.usergame.service.UserGameProfileService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +38,7 @@ class ReviewLibraryLifecycleTest {
     @Autowired GameRecordReviewService gameRecordReviewService;
     @Autowired ReviewReportService reports;
     @Autowired UserGameService library;
+    @Autowired UserGameProfileService profile;
     @Autowired UserRepository users;
     @Autowired GameRepository games;
     @Autowired ReviewRepository reviews;
@@ -82,7 +84,7 @@ class ReviewLibraryLifecycleTest {
     void deleteAndRestoreReviewOnly() {
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(false), rating()));
         Long recordId = response.userGame().getId(), reviewId = response.review().reviewId();
-        library.updateFavoriteGames(userId, List.of(gameId));
+        profile.updateFavoriteGames(userId, List.of(gameId));
         gameRecordReviewService.deleteReview(userId, reviewId, response.review().version());
         UserGame saved = reload();
         assertThat(saved.isInLibrary()).isFalse();
@@ -100,7 +102,7 @@ class ReviewLibraryLifecycleTest {
     @DisplayName("신고 승인으로 리뷰가 숨겨지면 다른 플레이 기록의 유무에 따라 라이브러리와 인생게임을 갱신한다")
     void hidingReviewRecalculatesMembership(boolean playing) {
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(playing), rating()));
-        library.updateFavoriteGames(userId, List.of(gameId));
+        profile.updateFavoriteGames(userId, List.of(gameId));
         Long reporterId = users.save(new User("reporter", "reporter@example.com", "password")).getId();
         var report = reports.createReport(reporterId, response.review().reviewId(), new ReviewReportCreateRequest("신고 테스트"));
         reports.updateStatus(report.reportId(), new ReviewReportStatusUpdateRequest(ReportStatus.APPROVED));
@@ -114,7 +116,7 @@ class ReviewLibraryLifecycleTest {
     @DisplayName("게임 상태나 기록을 지워도 활성 리뷰가 남으면 라이브러리와 인생게임이 유지된다")
     void activeReviewSurvivesGameRecordChanges(String route) {
         gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(true), rating()));
-        library.updateFavoriteGames(userId, List.of(gameId));
+        profile.updateFavoriteGames(userId, List.of(gameId));
         library.changePlaying(userId, gameId, false);
         switch (route) {
             case "played" -> library.changePlayed(userId, gameId, null);
@@ -132,7 +134,7 @@ class ReviewLibraryLifecycleTest {
     @DisplayName("기존 기록을 모두 지우면서 새 리뷰를 작성해도 인생게임이 중간에 해제되지 않는다")
     void replacingRecordsWithNewReviewKeepsFavorite() {
         library.addOrUpdateGameToLibrary(userId, gameId, record(true));
-        library.updateFavoriteGames(userId, List.of(gameId));
+        profile.updateFavoriteGames(userId, List.of(gameId));
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(false), rating()));
         assertThat(response.userGame().getInLibrary()).isTrue();
         assertThat(reload().isInLibrary()).isTrue();
@@ -143,7 +145,7 @@ class ReviewLibraryLifecycleTest {
     @DisplayName("빈 리뷰 요청은 기존 활성 리뷰를 유지하고 게임 기록을 비워도 인생게임을 유지한다")
     void emptyReviewRequestPreservesReviewAndFavorite() {
         gameRecordReviewService.saveDetailedReview(userId, gameId, new DetailedReviewSaveRequest(record(true), rating()));
-        library.updateFavoriteGames(userId, List.of(gameId));
+        profile.updateFavoriteGames(userId, List.of(gameId));
         var response = gameRecordReviewService.saveDetailedReview(userId, gameId,
                 new DetailedReviewSaveRequest(record(false), new ReviewSaveRequest(null, " ", false)));
         assertThat(response.review().rating()).isEqualByComparingTo("4.0");

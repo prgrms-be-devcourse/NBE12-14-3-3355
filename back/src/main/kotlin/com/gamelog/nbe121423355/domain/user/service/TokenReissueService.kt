@@ -27,7 +27,6 @@ class TokenReissueService(
 ) {
     // 재발급 결과 (필터는 userId/role로 SecurityContext를 세팅, 둘 다 refreshToken을 쿠키로 다시 내려줌)
     // refreshTokenExpiryDate: 쿠키 maxAge 계산용 (세션의 절대 만료 시각)
-    @JvmRecord
     data class ReissueResult(
         val userId: Long?,
         val role: String,

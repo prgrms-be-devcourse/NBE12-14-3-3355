@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class UserGameReviewStatisticsTest {
     @Autowired private lateinit var library: UserGameService
+    @Autowired private lateinit var profileService: UserGameProfileService
     @Autowired private lateinit var gameRecordReviewService: GameRecordReviewService
     @Autowired private lateinit var users: UserRepository
     @Autowired private lateinit var games: GameRepository
@@ -92,7 +93,7 @@ class UserGameReviewStatisticsTest {
         em.flush()
         em.clear()
 
-        val profile = library.profileTab(userId, userId)
+        val profile = profileService.profileTab(userId, userId)
 
         assertThat(profile.stats.playedGameCount).isEqualTo(7L)
         assertThat(profile.stats.averageRating).isEqualByComparingTo("3.0")
@@ -145,7 +146,7 @@ class UserGameReviewStatisticsTest {
         em.clear()
         library.changeLiked(userId, gameId, true)
         assertThat(checkNotNull(records.findByIdOrNull(recordId)).inLibrary).isTrue()
-        val profile = library.profileTab(userId, userId)
+        val profile = profileService.profileTab(userId, userId)
         assertThat(profile.stats.playedGameCount).isEqualTo(2L)
         assertThat(profile.stats.averageRating).isEqualByComparingTo("3.0")
         assertThat(profile.scatterData.map { it.gameId }).containsExactly(gameId)
@@ -165,7 +166,7 @@ class UserGameReviewStatisticsTest {
         )
         em.flush()
         em.clear()
-        val profile = library.profileTab(userId, userId)
+        val profile = profileService.profileTab(userId, userId)
         assertThat(profile.stats.playedGameCount).isZero()
         assertThat(profile.stats.averageRating).isEqualByComparingTo(BigDecimal.ZERO)
         assertThat(profile.scatterData).isEmpty()
