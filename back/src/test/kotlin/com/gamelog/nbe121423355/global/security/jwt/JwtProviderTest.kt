@@ -23,11 +23,11 @@ class JwtProviderTest {
     }
 
     @Test
-    @DisplayName("getExpiredAccessTokenClaims - 아직 만료되지 않은 accessToken이면 empty")
-    fun getExpiredAccessTokenClaims_empty_whenNotExpired() {
+    @DisplayName("getExpiredAccessTokenClaims - 아직 만료되지 않은 accessToken이면 null")
+    fun getExpiredAccessTokenClaims_null_whenNotExpired() {
         val token = jwtProvider.generateAccessToken(1L, "USER")
 
-        assertThat(jwtProvider.getExpiredAccessTokenClaims(token)).isEmpty()
+        assertThat(jwtProvider.getExpiredAccessTokenClaims(token)).isNull()
     }
 
     @Test
@@ -35,33 +35,32 @@ class JwtProviderTest {
     fun getExpiredAccessTokenClaims_present_whenExpired() {
         val expiredToken = createToken(secretKey, "Access", expiredIssuedAt(), expiredExpiration())
 
-        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken))
-            .hasValueSatisfying { claims -> assertThat(claims.subject).isEqualTo("1") }
+        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken)?.subject).isEqualTo("1")
     }
 
     @Test
-    @DisplayName("getExpiredAccessTokenClaims - 만료된 refreshToken이면 empty (refreshToken으로 재발급 경로 진입 차단)")
-    fun getExpiredAccessTokenClaims_empty_whenExpiredRefreshToken() {
+    @DisplayName("getExpiredAccessTokenClaims - 만료된 refreshToken이면 null (refreshToken으로 재발급 경로 진입 차단)")
+    fun getExpiredAccessTokenClaims_null_whenExpiredRefreshToken() {
         val expiredToken = createToken(secretKey, "Refresh", expiredIssuedAt(), expiredExpiration())
 
-        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken)).isEmpty()
+        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken)).isNull()
     }
 
     @Test
-    @DisplayName("getExpiredAccessTokenClaims - token_type이 없는 기존 토큰이 만료되면 empty")
-    fun getExpiredAccessTokenClaims_empty_whenNoTokenType() {
+    @DisplayName("getExpiredAccessTokenClaims - token_type이 없는 기존 토큰이 만료되면 null")
+    fun getExpiredAccessTokenClaims_null_whenNoTokenType() {
         val expiredToken = createToken(secretKey, null, expiredIssuedAt(), expiredExpiration())
 
-        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken)).isEmpty()
+        assertThat(jwtProvider.getExpiredAccessTokenClaims(expiredToken)).isNull()
     }
 
     @Test
-    @DisplayName("getExpiredAccessTokenClaims - 서명이 위조된 토큰이면 empty (만료가 아니라 무효라서 재발급 대상 아님)")
-    fun getExpiredAccessTokenClaims_empty_whenTampered() {
+    @DisplayName("getExpiredAccessTokenClaims - 서명이 위조된 토큰이면 null (만료가 아니라 무효라서 재발급 대상 아님)")
+    fun getExpiredAccessTokenClaims_null_whenTampered() {
         val wrongKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
         val tamperedToken = createToken(wrongKey, "Access", Date(), Date(System.currentTimeMillis() + 1000 * 60 * 60))
 
-        assertThat(jwtProvider.getExpiredAccessTokenClaims(tamperedToken)).isEmpty()
+        assertThat(jwtProvider.getExpiredAccessTokenClaims(tamperedToken)).isNull()
     }
 
     @Test
