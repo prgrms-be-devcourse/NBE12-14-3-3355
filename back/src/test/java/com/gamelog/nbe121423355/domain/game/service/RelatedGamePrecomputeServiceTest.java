@@ -284,6 +284,27 @@ class RelatedGamePrecomputeServiceTest {
         assertThat(calculationRepository.existsById(Long.MAX_VALUE)).isFalse();
     }
 
+    @Test
+    void reloadsStoredCandidateUsingAnEquivalentCompositeKey() {
+        // given: 기준 게임과 후보 한 개를 저장한다.
+        Fixture fixture = createFixture(1, 0);
+
+        // when: 추천 후보를 계산하여 JDBC로 저장한다.
+        service.precompute(fixture.sourceId(), RelatedGamePrecomputeMode.INITIAL_LOAD);
+
+        // then: 새 영속성 컨텍스트에서 동일한 복합키로 후보와 필수 점수를 복원한다.
+        inTransaction(() -> {
+            entityManager.clear();
+            var key = new RelatedGameCandidateId(fixture.sourceId(), fixture.candidateIds().getFirst());
+            var loaded = entityManager.find(RelatedGameCandidate.class, key);
+            assertThat(loaded).isNotNull();
+            assertThat(loaded.getId()).isEqualTo(key);
+            assertThat(loaded.getRelatedScore()).isPositive();
+            assertThat(loaded.getRelatedRank()).isEqualTo(1);
+            return null;
+        });
+    }
+
     private void assertPreviousResultAndFailedState(Fixture fixture) {
         assertThat(storedCandidates(fixture.sourceId())).containsExactly(
                 new RelatedGameCandidateProjection(fixture.candidateIds().getFirst(), new BigDecimal("1.0000")));

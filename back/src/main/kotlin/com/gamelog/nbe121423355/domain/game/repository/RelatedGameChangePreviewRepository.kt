@@ -4,7 +4,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 
 @JvmRecord
-data class RelatedGamePreviewTarget(val gameId: String, val title: String?)
+data class RelatedGamePreviewTarget(val gameId: String, val title: String)
 
 /** 실행 준비와 같은 영향 범위를 조회하되 원천·대기 버전을 변경하지 않는다. */
 @Repository
@@ -13,7 +13,12 @@ class RelatedGameChangePreviewRepository(private val jdbc: JdbcTemplate) {
 
     fun findPage(offset: Long, size: Int): List<RelatedGamePreviewTarget> = jdbc.query(
         "$PREVIEW SELECT g.id, g.title FROM preview_ids p JOIN games g ON g.id = p.game_id ORDER BY g.id LIMIT ? OFFSET ?",
-        { row, _ -> RelatedGamePreviewTarget(row.getLong("id").toString(), row.getString("title")) }, size, offset,
+        { row, _ ->
+            RelatedGamePreviewTarget(
+                gameId = row.getLong("id").toString(),
+                title = requireNotNull(row.getString("title")) { "조회한 게임의 제목이 없습니다." },
+            )
+        }, size, offset,
     )
 
     companion object {

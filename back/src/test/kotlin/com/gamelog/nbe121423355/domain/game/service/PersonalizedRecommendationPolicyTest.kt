@@ -4,7 +4,7 @@ import com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedGa
 import com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedRelatedGameProjection
 import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.catchThrowable
 import org.assertj.core.data.Offset.offset
 import org.junit.jupiter.api.Test
 
@@ -87,8 +87,19 @@ class PersonalizedRecommendationPolicyTest {
         // then: 순위별 약속한 점수를 합산하고 직접 선택한 후보만 제외한다.
         assertThat(rankScores).containsExactlyInAnyOrderEntriesOf(mapOf(10L to 37, 20L to 14, 30L to 11, 40L to 8))
         assertThat(onboardingScores).containsExactlyInAnyOrderEntriesOf(mapOf(10L to 37, 30L to 11, 40L to 8))
-        assertThatThrownBy { rankCalculator.calculate(listOf(row(1, 10, 6))) }
-            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `연관 순위 1위부터 5위 이외의 점수 계산은 거부한다`() {
+        // given: 지원하지 않는 6위 연관 추천을 준비한다.
+        val calculator = PersonalizedRelatedRankScoreCalculator()
+        val related = listOf(row(1, 10, 6))
+
+        // when: 잘못된 순위의 점수를 계산한다.
+        val failure = catchThrowable { calculator.calculate(related) }
+
+        // then: 임의 점수를 부여하지 않고 잘못된 입력임을 알린다.
+        assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test

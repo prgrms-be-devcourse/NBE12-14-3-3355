@@ -33,5 +33,5 @@ interface GameGenreRepository : JpaRepository<GameGenre, GameGenreId> {
 
             """
     )
-    fun findAllWithGenreByGameId(@Param("gameId") gameId: Long?): MutableList<GameGenre>
+    fun findAllWithGenreByGameId(@Param("gameId") gameId: Long): List<GameGenre>
 }

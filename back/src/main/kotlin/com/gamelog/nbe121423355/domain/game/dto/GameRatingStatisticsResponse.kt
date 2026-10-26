@@ -9,4 +9,4 @@ data class GameRatingStatisticsResponse(
     val ratingCount: Long,
     val reviewCount: Long,
     val ratingDistribution: List<GameRatingDistributionResponse>,
-) {}
+)

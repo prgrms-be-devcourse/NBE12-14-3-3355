@@ -33,14 +33,28 @@ data class AdminRelatedGamePrecomputeRunResponse(
     companion object {
         fun from(run: RelatedGamePrecomputeRun, now: LocalDateTime, staleAfter: Duration) =
             AdminRelatedGamePrecomputeRunResponse(
-                run.id, run.requestedBy, run.targetType, run.target().gameIds,
-                run.sourceRunId, run.status, run.upperGameId, run.estimatedTotal,
-                run.processed, run.succeeded, run.failed, run.requestedAt, run.startedAt,
-                run.finishedAt, run.progressUpdatedAt, run.heartbeatAt,
-                !run.status.isTerminal() && !run.heartbeatAt.isAfter(now.minus(staleAfter)),
-                Duration.between(run.startedAt ?: run.requestedAt, run.finishedAt ?: now)
+                runId = run.id,
+                requestedBy = run.requestedBy,
+                type = run.targetType,
+                gameIds = run.target().gameIds,
+                sourceRunId = run.sourceRunId,
+                status = run.status,
+                upperGameId = run.upperGameId,
+                estimatedTotal = run.estimatedTotal,
+                processed = run.processed,
+                succeeded = run.succeeded,
+                failed = run.failed,
+                requestedAt = run.requestedAt,
+                startedAt = run.startedAt,
+                finishedAt = run.finishedAt,
+                progressUpdatedAt = run.progressUpdatedAt,
+                heartbeatAt = run.heartbeatAt,
+                heartbeatExpired = !run.status.isTerminal() && !run.heartbeatAt.isAfter(now.minus(staleAfter)),
+                elapsedSeconds = Duration.between(run.startedAt ?: run.requestedAt, run.finishedAt ?: now)
                     .seconds.coerceAtLeast(0),
-                run.error, run.initializeBaseline, run.baselineRegisteredAt,
+                error = run.error,
+                initializeBaseline = run.initializeBaseline,
+                baselineRegisteredAt = run.baselineRegisteredAt,
             )
     }
 }

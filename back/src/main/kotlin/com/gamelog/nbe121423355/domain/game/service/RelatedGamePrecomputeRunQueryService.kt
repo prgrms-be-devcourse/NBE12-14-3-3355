@@ -9,6 +9,7 @@ import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeA
 import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeTarget
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -34,7 +35,11 @@ class RelatedGamePrecomputeRunQueryService(
             Sort.Order.desc("requestedAt"), Sort.Order.desc("id"),
         )))
         return AdminRelatedGamePrecomputePage(
-            result.content.map(::response), page, size, result.totalElements, result.totalPages,
+            content = result.content.map(::response),
+            page = page,
+            size = size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 
@@ -42,8 +47,17 @@ class RelatedGamePrecomputeRunQueryService(
         load(runId)
         val result = failures.findByRun_IdOrderByGameIdAsc(runId, paging(page, size))
         return AdminRelatedGamePrecomputePage(
-            result.content.map { AdminRelatedGamePrecomputeFailureResponse(it.gameId, it.error, it.occurredAt) },
-            page, size, result.totalElements, result.totalPages,
+            content = result.content.map { failure ->
+                AdminRelatedGamePrecomputeFailureResponse(
+                    gameId = failure.gameId,
+                    error = failure.error,
+                    occurredAt = failure.occurredAt,
+                )
+            },
+            page = page,
+            size = size,
+            totalElements = result.totalElements,
+            totalPages = result.totalPages,
         )
     }
 
@@ -55,13 +69,15 @@ class RelatedGamePrecomputeRunQueryService(
         val active = runs.findByStatusInOrderByRequestedAtDescIdDesc(ACTIVE_STATUSES, PageRequest.of(0, 20))
             .map(::response)
         return AdminRelatedGamePrecomputeStatusResponse(
-            databaseLocked, localRequestActive, active,
-            databaseLocked && active.any { it.heartbeatExpired },
+            databaseLocked = databaseLocked,
+            localRequestActive = localRequestActive,
+            activeRuns = active,
+            recoveryDeferred = databaseLocked && active.any { it.heartbeatExpired },
         )
     }
 
-    private fun load(runId: String): RelatedGamePrecomputeRun = runs.findById(runId)
-        .orElseThrow { ServiceException("404-10", "추천 갱신 실행 이력이 없습니다.") }
+    private fun load(runId: String): RelatedGamePrecomputeRun = runs.findByIdOrNull(runId)
+        ?: throw ServiceException("404-10", "추천 갱신 실행 이력이 없습니다.")
 
     private fun response(run: RelatedGamePrecomputeRun) =
         AdminRelatedGamePrecomputeRunResponse.from(run, LocalDateTime.now(), properties.staleAfter)

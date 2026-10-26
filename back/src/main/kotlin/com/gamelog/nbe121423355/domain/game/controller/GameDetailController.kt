@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/games")
 @Tag(name = "game-detail-controller", description = "게임 상세 및 연관 게임 조회 API")
-class GameDetailController constructor(private val gameDetailService: GameDetailService) {
+class GameDetailController(private val gameDetailService: GameDetailService) {
     // GameLog DB ID를 기준으로 게임 상세 정보 조회
     @GetMapping("/{gameId}")
     @Operation(summary = "게임 상세 조회", description = "GameLog 데이터베이스 ID로 게임 정보와 커뮤니티 통계를 조회합니다.")
@@ -29,7 +29,7 @@ class GameDetailController constructor(private val gameDetailService: GameDetail
         gameId: Long
     ): RsData<GameDetailResponse> {
         val response = gameDetailService.getGameDetail(gameId)
-        return RsData<GameDetailResponse>("200-1", "게임 상세 정보를 조회했습니다.", response)
+        return RsData("200-1", "게임 상세 정보를 조회했습니다.", response)
     }
 
     // GameLog DB ID를 기준으로 연관 추천 게임 상위 5개 조회
@@ -45,6 +45,6 @@ class GameDetailController constructor(private val gameDetailService: GameDetail
         gameId: Long
     ): RsData<List<RelatedGameResponse>> {
         val response = gameDetailService.getRelatedGames(gameId)
-        return RsData<List<RelatedGameResponse>>("200-1", "연관 추천 게임을 조회했습니다.", response)
+        return RsData("200-1", "연관 추천 게임을 조회했습니다.", response)
     }
 }

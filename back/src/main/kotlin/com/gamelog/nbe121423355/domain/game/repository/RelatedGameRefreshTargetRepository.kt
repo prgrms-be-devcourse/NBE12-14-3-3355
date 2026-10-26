@@ -85,7 +85,7 @@ class RelatedGameRefreshTargetRepository(private val jdbcTemplate: JdbcTemplate)
     fun countPending(upperId: Long = Long.MAX_VALUE): Long = jdbcTemplate.queryForObject(
         "SELECT COUNT(*) FROM related_game_refresh_targets WHERE game_id <= ? AND required_version > applied_version",
         Long::class.javaObjectType, upperId,
-    ) ?: 0L
+    ) ?: error("갱신 대기 게임 수 집계 결과가 없습니다.")
 
     fun findPendingIds(afterId: Long, upperId: Long, limit: Int): List<Long> {
         require(afterId >= 0 && limit in 1..1000)
@@ -120,9 +120,14 @@ class RelatedGameRefreshTargetRepository(private val jdbcTemplate: JdbcTemplate)
         ).singleOrNull()
 
     private fun rowMapper(): RowMapper<RelatedGameRefreshTarget> = RowMapper { row, _ ->
-                RelatedGameRefreshTarget(
-                    row.getLong("game_id"), row.getLong("required_version"), row.getLong("applied_version"),
-                    row.getLong("reason_mask"), row.getObject("changed_at", LocalDateTime::class.java),
-                )
-            }
+        RelatedGameRefreshTarget(
+            gameId = row.getLong("game_id"),
+            requiredVersion = row.getLong("required_version"),
+            appliedVersion = row.getLong("applied_version"),
+            reasonMask = row.getLong("reason_mask"),
+            changedAt = requireNotNull(row.getObject("changed_at", LocalDateTime::class.java)) {
+                "갱신 대기 변경 시각이 없습니다."
+            },
+        )
+    }
 }

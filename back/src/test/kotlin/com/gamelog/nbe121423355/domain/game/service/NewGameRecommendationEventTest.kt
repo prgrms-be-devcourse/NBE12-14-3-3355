@@ -2,7 +2,7 @@ package com.gamelog.nbe121423355.domain.game.service
 
 import com.gamelog.nbe121423355.domain.game.service.NewGameRecommendationRegistration.GamesAdded
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.jupiter.api.Test
 
 class NewGameRecommendationEventTest {
@@ -28,9 +28,10 @@ class NewGameRecommendationEventTest {
         val event = GamesAdded(listOf(10L, 20L))
 
         // when: Java 컬렉션 API를 통해 이벤트 목록을 수정하려 한다.
+        val failure = catchThrowable { (event.gameIds as MutableList<Long>).clear() }
+
         // then: 수정 요청을 거부하고 최초 게임 목록을 유지한다.
-        assertThatThrownBy { (event.gameIds as MutableList<Long>).clear() }
-            .isInstanceOf(UnsupportedOperationException::class.java)
+        assertThat(failure).isInstanceOf(UnsupportedOperationException::class.java)
         assertThat(event.gameIds).containsExactly(10L, 20L)
     }
 }
