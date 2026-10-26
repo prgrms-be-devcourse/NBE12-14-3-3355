@@ -14,7 +14,6 @@ import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
-import java.util.Objects
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -166,19 +165,19 @@ constructor(
     }
 
     private fun validateOwner(userId: Long, userGame: UserGame) {
-        if (!Objects.equals(userGame.user.id, userId)) {
+        if (userGame.user.id != userId) {
             throw ServiceException("403-1", "본인의 리뷰만 작성하거나 변경할 수 있습니다.")
         }
     }
 
     private fun validateVersion(review: Review, requestedVersion: Long?) {
-        if (requestedVersion == null || !Objects.equals(review.version, requestedVersion)) {
+        if (requestedVersion == null || review.version != requestedVersion) {
             throw staleReviewException()
         }
     }
 
     private fun validateVersionWhenProvided(review: Review, requestedVersion: Long?) {
-        if (requestedVersion != null && !Objects.equals(review.version, requestedVersion)) {
+        if (requestedVersion != null && review.version != requestedVersion) {
             throw staleReviewException()
         }
     }

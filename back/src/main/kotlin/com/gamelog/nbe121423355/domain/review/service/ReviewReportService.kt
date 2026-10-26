@@ -19,7 +19,6 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import java.util.Objects
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -48,7 +47,7 @@ constructor(
         val reporter = getUser(reporterId)
         // 본인이 작성한 리뷰는 신고할 수 없음.
         val reviewWriterId = review.userGame.user.id
-        if (Objects.equals(reviewWriterId, reporterId)) {
+        if (reviewWriterId == reporterId) {
             throw ServiceException("400-3", "본인이 작성한 리뷰는 신고할 수 없습니다.")
         }
         // 같은 사용자가 같은 리뷰를 여러 번 신고할 수 없음.
@@ -64,7 +63,7 @@ constructor(
         pageable: Pageable,
     ): ReviewReportPageResponse {
         val groupPageable: Pageable =
-            PageRequest.of(pageable.getPageNumber(), pageable.getPageSize())
+            PageRequest.of(pageable.pageNumber, pageable.pageSize)
         val reviewIdPage: Page<Long> =
             reviewReportRepository.findReviewIdsGroupedByReview(status, groupPageable)
         if (reviewIdPage.isEmpty()) {
@@ -117,7 +116,7 @@ constructor(
             userGameService.synchronizeLibraryState(report.review.userGame)
         }
         pendingReports.forEach({ pendingReport -> pendingReport.changeStatus(request.status) })
-        return ReviewReportResponse.from(pendingReports.get(0))
+        return ReviewReportResponse.from(pendingReports.first())
     }
 
     private fun getReview(reviewId: Long): Review {
