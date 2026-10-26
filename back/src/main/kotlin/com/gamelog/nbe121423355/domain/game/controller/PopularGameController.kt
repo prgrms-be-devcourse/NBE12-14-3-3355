@@ -5,6 +5,10 @@ import com.gamelog.nbe121423355.domain.game.service.PopularGameService
 import com.gamelog.nbe121423355.global.dto.RsData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -17,9 +21,13 @@ import org.springframework.web.bind.annotation.RestController
 class PopularGameController(private val popularGameService: PopularGameService) {
     @GetMapping("/popular")
     @Operation(summary = "인기 게임 조회", description = "좋아하는 게임 등록 수가 많은 순서로 게임을 조회합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-1: 인기 게임 목록", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "400-9: size가 1~50 밖 / 400-0: 숫자 형식 오류", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun getPopularGames(
         @Parameter(
-            description = "조회할 게임 수",
+            description = "조회할 게임 수. 기본 5, 허용 범위 1~50",
             example = "5",
         )
         @RequestParam(defaultValue = "5")
