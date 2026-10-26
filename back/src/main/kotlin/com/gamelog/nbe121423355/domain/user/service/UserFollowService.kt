@@ -16,7 +16,6 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaTrim
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Order
 import org.springframework.context.ApplicationEventPublisher
@@ -37,12 +36,12 @@ class UserFollowService(
         size: Int,
     ): FollowPageResponseDto {
         validatePageRequest(page, size)
-        val term = if (keyword == null) "" else keyword.javaTrim()
+        val term = keyword?.javaTrim().orEmpty()
         if (term.isEmpty() || term.length > 50) {
             throw ServiceException("400-9", "검색어는 1자 이상 50자 이하로 입력해 주세요.")
         }
-        val pageable: Pageable = PageRequest.of(page, size, Sort.by("nickname", "id"))
-        val result: Page<User> =
+        val pageable = PageRequest.of(page, size, Sort.by("nickname", "id"))
+        val result =
             if (loginUserId == null)
                 userRepository.findByNicknameContainingIgnoreCaseAndDeletedAtIsNull(
                     term,
@@ -122,7 +121,7 @@ class UserFollowService(
     ): FollowPageResponseDto {
         getUser(targetUserId)
         validatePageRequest(page, size)
-        val pageable: Pageable =
+        val pageable =
             PageRequest.of(
                 page,
                 size,
@@ -131,7 +130,7 @@ class UserFollowService(
                     Order.desc("id.followingId"),
                 ),
             )
-        val followPage: Page<UserFollow> =
+        val followPage =
             userFollowRepository.findAllByFollower_Id(targetUserId, pageable)
         return createPageResponse(
             loginUserId,
@@ -148,7 +147,7 @@ class UserFollowService(
     ): FollowPageResponseDto {
         getUser(targetUserId)
         validatePageRequest(page, size)
-        val pageable: Pageable =
+        val pageable =
             PageRequest.of(
                 page,
                 size,
@@ -157,7 +156,7 @@ class UserFollowService(
                     Order.desc("id.followerId"),
                 ),
             )
-        val followPage: Page<UserFollow> =
+        val followPage =
             userFollowRepository.findAllByFollowee_Id(targetUserId, pageable)
         return createPageResponse(
             loginUserId,
@@ -173,7 +172,7 @@ class UserFollowService(
     ): FollowPageResponseDto {
         val displayedUserIds = followPage.content.map { requireNotNull(userExtractor(it).id) }
         val followedUserIds = findFollowedUserIds(loginUserId, displayedUserIds)
-        val users: List<FollowUserResponseDto> =
+        val users =
             followPage.content.map { userFollow ->
                 val user = userExtractor(userFollow)
                 FollowUserResponseDto(

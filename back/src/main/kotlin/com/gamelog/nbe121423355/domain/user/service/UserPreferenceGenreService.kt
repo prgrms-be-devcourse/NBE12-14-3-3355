@@ -32,7 +32,7 @@ class UserPreferenceGenreService(
             throw ServiceException("400-11", "존재하지 않는 장르가 포함되어 있습니다.")
         }
         userPreferenceGenreRepository.deleteByUser_Id(userId)
-        val newPreferences: List<UserPreferenceGenre> =
+        val newPreferences =
             genres.map { genre -> UserPreferenceGenre(user, genre) }
         userPreferenceGenreRepository.saveAll(newPreferences)
         return newPreferences.map { value -> PreferredGenreResponseDto(value) }

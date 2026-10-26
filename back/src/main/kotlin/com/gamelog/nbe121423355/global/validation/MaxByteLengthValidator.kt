@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.global.validation
 
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
-import java.nio.charset.StandardCharsets
 import java.nio.charset.StandardCharsets.UTF_8
 
 class MaxByteLengthValidator : ConstraintValidator<MaxByteLength, String> {
@@ -13,7 +12,6 @@ class MaxByteLengthValidator : ConstraintValidator<MaxByteLength, String> {
     }
 
     // null은 @NotBlank가 처리하므로 통과
-    override fun isValid(value: String?, context: ConstraintValidatorContext?): Boolean {
-        return value == null || value.toByteArray(StandardCharsets.UTF_8).size <= max
-    }
+    override fun isValid(value: String?, context: ConstraintValidatorContext?): Boolean =
+        value == null || value.toByteArray(UTF_8).size <= max
 }

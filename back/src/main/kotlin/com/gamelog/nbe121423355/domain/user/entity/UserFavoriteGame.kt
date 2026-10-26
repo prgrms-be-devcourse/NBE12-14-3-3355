@@ -43,7 +43,7 @@ class UserFavoriteGame {
     }
 
     fun validateDisplayOrder(displayOrder: Int?) {
-        require(!(displayOrder == null || displayOrder < 1 || displayOrder > 5)) {
+        require(displayOrder != null && displayOrder in 1..5) {
             "인생게임 순서는 1~5만 가능합니다."
         }
     }

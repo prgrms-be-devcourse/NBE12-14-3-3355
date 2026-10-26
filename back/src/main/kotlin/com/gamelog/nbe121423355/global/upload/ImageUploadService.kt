@@ -21,7 +21,7 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
             throw ServiceException("400-5", "이미지 파일만 업로드할 수 있습니다.")
         }
         return try {
-            val result: MutableMap<*, *> =
+            val result =
                 cloudinary.uploader().upload(file.bytes, ObjectUtils.emptyMap())
             result["secure_url"] as String?
         } catch (e: IOException) {
@@ -33,10 +33,7 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
 
     // 이미지 삭제 메소드
     fun deleteImage(imageUrl: String?) {
-        val publicId = extractPublicId(imageUrl)
-        if (publicId == null) {
-            return
-        }
+        val publicId = extractPublicId(imageUrl) ?: return
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap())
         } catch (e: IOException) {
@@ -47,7 +44,7 @@ class ImageUploadService(private val cloudinary: Cloudinary) {
     }
 
     private fun extractPublicId(imageUrl: String?): String? {
-        if (imageUrl == null || imageUrl.isEmpty()) {
+        if (imageUrl.isNullOrEmpty()) {
             return null
         }
         val uploadIndex = imageUrl.indexOf("/upload/")

@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.io.Decoders
 import io.jsonwebtoken.security.Keys
 import jakarta.servlet.http.Cookie
@@ -83,7 +82,7 @@ constructor(
 
     // 서명이 위조된(만료는 아닌) accessToken을 직접 생성
     private fun tamperedAccessToken(userId: Long?, role: String): String {
-        val wrongKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
+        val wrongKey = Jwts.SIG.HS256.key().build()
         return Jwts.builder()
             .subject(userId.toString())
             .claim("role", role)
