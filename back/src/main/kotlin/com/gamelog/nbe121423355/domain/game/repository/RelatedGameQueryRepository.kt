@@ -37,21 +37,19 @@ constructor(
     // 최초 전체 계산은 모든 게임을, 일반 갱신은 준비 완료된 게임만 후보로 사용한다.
     @Transactional(readOnly = true)
     fun findCandidatesForPrecompute(
-        gameId: Long?,
+        gameId: Long,
         limit: Int,
         readyCandidatesOnly: Boolean,
-    ): MutableList<RelatedGameCandidateProjection> {
-        kotlin.require(limit >= 1) { "후보 조회 개수는 1 이상이어야 합니다." }
-        return findRows(gameId, limit, readyCandidatesOnly)
-            .stream()
-            .map({ row ->
-                val columns: Array<Any?> = row as Array<Any?>
-                RelatedGameCandidateProjection(
-                    (columns[0] as Number).toLong(),
-                    toBigDecimal(columns[4]),
-                )
-            })
-            .toList()
+    ): List<RelatedGameCandidateProjection> {
+        require(limit >= 1) { "후보 조회 개수는 1 이상이어야 합니다." }
+        val candidates = findRows(gameId, limit, readyCandidatesOnly).map { row ->
+            val columns = row as Array<*>
+            RelatedGameCandidateProjection(
+                gameId = (columns[0] as Number).toLong(),
+                relatedScore = toBigDecimal(columns[4]),
+            )
+        }
+        return java.util.List.copyOf(candidates)
     }
 
     private fun findRows(gameId: Long?, limit: Int, readyCandidatesOnly: Boolean): MutableList<*> {

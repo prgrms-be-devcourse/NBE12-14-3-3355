@@ -141,7 +141,7 @@ class RelatedGamePrecomputeBatchServiceTest {
                 Map.of(10L, BigDecimal.valueOf(80), 20L, BigDecimal.valueOf(80), 30L, BigDecimal.valueOf(80)), Set.of());
         when(precomputeService.prepare(RelatedGamePrecomputeMode.REFRESH, 30L)).thenReturn(shared);
         when(precomputeService.precompute(anyLong(), eq(RelatedGamePrecomputeMode.REFRESH), same(shared)))
-                .thenAnswer(invocation -> shared.baselineFor(invocation.getArgument(0)).orElseThrow().size());
+                .thenAnswer(invocation -> shared.baselineFor(invocation.getArgument(0)).size());
         var observer = mock(RelatedGamePrecomputeObserver.class);
 
         // when: 변경 영향 갱신을 여러 페이지로 계산한다.

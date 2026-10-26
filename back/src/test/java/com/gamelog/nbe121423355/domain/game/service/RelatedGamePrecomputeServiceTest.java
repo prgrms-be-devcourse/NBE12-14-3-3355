@@ -146,6 +146,26 @@ class RelatedGamePrecomputeServiceTest {
     }
 
     @Test
+    void sharedEmptyBaselineIsSuccessfulWithoutFallingBackToSql() {
+        // given: 이전 정상 후보가 있는 게임에 장르가 없는 공통 스냅샷을 준비한다.
+        Fixture fixture = createFixture(1, 1);
+        seedPreviousResult(fixture);
+        var snapshot = new RelatedGamePrecomputeSnapshot(RelatedGamePrecomputeMode.REFRESH, 20,
+                Map.of(fixture.sourceId(), List.of()), Map.of(), Set.of());
+
+        // when: 정상 빈 결과를 제공하는 공통 스냅샷으로 갱신한다.
+        int count = service.precompute(fixture.sourceId(), RelatedGamePrecomputeMode.REFRESH, snapshot);
+
+        // then: SQL로 전환하지 않고 이전 후보를 비우며 준비 완료와 성공 상태를 유지한다.
+        assertThat(count).isZero();
+        verify(queryRepository, never()).findCandidatesForPrecompute(fixture.sourceId(), 20, true);
+        assertThat(storedCandidates(fixture.sourceId())).isEmpty();
+        var calculation = calculationRepository.findById(fixture.sourceId()).orElseThrow();
+        assertThat(calculation.isReady()).isTrue();
+        assertThat(calculation.getLastAttemptStatus()).isEqualTo(RelatedGameCalculationStatus.SUCCESS);
+    }
+
+    @Test
     void interactionSourceStillUsesExistingQueryAndAtomicStore() {
         Fixture fixture = createFixture(3, 0);
         var snapshot = new RelatedGamePrecomputeSnapshot(RelatedGamePrecomputeMode.INITIAL_LOAD, 20,
