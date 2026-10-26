@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/games")
 @Tag(name = "popular-game-controller", description = "인기 게임 조회 API")
-class PopularGameController constructor(private val popularGameService: PopularGameService) {
+class PopularGameController(private val popularGameService: PopularGameService) {
     @GetMapping("/popular")
     @Operation(summary = "인기 게임 조회", description = "좋아하는 게임 등록 수가 많은 순서로 게임을 조회합니다.")
     fun getPopularGames(
@@ -24,8 +24,8 @@ class PopularGameController constructor(private val popularGameService: PopularG
         )
         @RequestParam(defaultValue = "5")
         size: Int
-    ): RsData<MutableList<PopularGameResponse>> {
+    ): RsData<List<PopularGameResponse>> {
         val response = popularGameService.getPopularGames(size)
-        return RsData<MutableList<PopularGameResponse>>("200-1", "인기 게임을 조회했습니다.", response)
+        return RsData("200-1", "인기 게임을 조회했습니다.", response)
     }
 }

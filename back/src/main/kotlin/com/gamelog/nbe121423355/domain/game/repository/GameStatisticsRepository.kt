@@ -119,5 +119,5 @@ interface GameStatisticsRepository : Repository<UserGame, Long> {
 
             """
     )
-    fun findPopularGames(pageable: Pageable?): MutableList<PopularGameProjection>
+    fun findPopularGames(pageable: Pageable): List<PopularGameProjection>
 }
