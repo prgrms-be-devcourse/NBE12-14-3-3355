@@ -32,7 +32,7 @@ class UserPreferenceGameService(
             throw ServiceException("400-11", "존재하지 않는 게임이 포함되어 있습니다.")
         }
         userPreferenceGameRepository.deleteByUser_Id(userId)
-        val newPreferences: List<UserPreferenceGame> =
+        val newPreferences =
             games.map { game -> UserPreferenceGame(user, game) }
         userPreferenceGameRepository.saveAll(newPreferences)
         return newPreferences.map { value -> PreferredGameResponseDto(value) }

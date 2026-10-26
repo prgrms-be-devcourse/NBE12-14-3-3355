@@ -61,7 +61,7 @@ class UserService(
         }
         val encodePassword = passwordEncoder.encodeNotNull(signUpDto.password)
         val user = User(requireNotNull(signUpDto.nickname), requireNotNull(signUpDto.email), encodePassword)
-        val saveUser: User = userRepository.save(user)
+        val saveUser = userRepository.save(user)
         return UserDto(saveUser)
     }
 
