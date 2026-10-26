@@ -202,7 +202,8 @@ class ReviewE2ETest {
     }
 
     private fun fixtureUser(role: String, suffix: String) =
-        User("re2e-$role-$suffix", "review-e2e-$role-$suffix@test.com", encoder.encode(password))
+        User("re2e-$role-$suffix", "review-e2e-$role-$suffix@test.com",
+            checkNotNull(encoder.encode(password)) { "테스트 비밀번호 인코딩에 실패했습니다." })
 
     private fun login(user: User): String {
         val result = request("POST", "/api/v1/users/login",
