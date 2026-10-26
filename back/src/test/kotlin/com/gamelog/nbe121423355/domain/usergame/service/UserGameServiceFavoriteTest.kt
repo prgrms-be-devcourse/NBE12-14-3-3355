@@ -36,6 +36,9 @@ class UserGameServiceFavoriteTest {
     @Mock
     private lateinit var userFollowRepository: UserFollowRepository
 
+    @Mock
+    private lateinit var changeRecorder: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+
     @InjectMocks
     private lateinit var userGameService: UserGameService
 
@@ -82,8 +85,18 @@ class UserGameServiceFavoriteTest {
         assertThat(savedGames.map { it.game.id }).containsExactly(20L, 10L)
         assertThat(savedGames.map { it.displayOrder }).containsExactly(1, 2)
         assertThat(result).containsExactly(
-            UserFavoriteGameResponse(20L, "Game 2", null, 1),
-            UserFavoriteGameResponse(10L, "Game 1", null, 2),
+            UserFavoriteGameResponse(
+                gameId = 20L,
+                title = "Game 2",
+                coverImageUrl = null,
+                displayOrder = 1,
+            ),
+            UserFavoriteGameResponse(
+                gameId = 10L,
+                title = "Game 1",
+                coverImageUrl = null,
+                displayOrder = 2,
+            ),
         )
     }
 

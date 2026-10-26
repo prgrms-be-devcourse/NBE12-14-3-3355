@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 class RelatedGamePrecomputeService
 constructor(
     private val queryRepository: RelatedGameQueryRepository,
+    private val refreshTargets: com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository,
     private val store: RelatedGamePrecomputeStore,
     private val snapshotRepository: RelatedGamePrecomputeSnapshotRepository,
 ) {
@@ -73,11 +74,13 @@ constructor(
         gameId: Long,
         calculate: Supplier<MutableList<RelatedGameCandidateProjection>>,
     ): Int {
+        // 요구 버전은 배치의 준비 단계 이후 증가하지 않는다. 이후 원천 변경은 다음 실행에 남는다.
+        val capturedVersion = refreshTargets.findByGameId(gameId)?.requiredVersion
         val attemptedAt: LocalDateTime? = LocalDateTime.now()
         store.start(gameId, attemptedAt)
         try {
             val candidates: MutableList<RelatedGameCandidateProjection> = calculate.get()
-            store.replace(gameId, candidates, LocalDateTime.now())
+            store.replace(gameId, candidates, LocalDateTime.now(), capturedVersion)
             return candidates.size
         } catch (failure: RuntimeException) {
             try {

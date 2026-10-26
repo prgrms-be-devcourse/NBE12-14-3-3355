@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(propagation = REQUIRES_NEW)
 class RelatedGamePrecomputeStore
 constructor(
+    private val changeRecorder: RelatedGameChangeRecorder,
+    private val refreshTargets: com.gamelog.nbe121423355.domain.game.repository.RelatedGameRefreshTargetRepository,
     private val entityManager: EntityManager,
     private val gameRepository: GameRepository,
     private val calculationRepository: RelatedGameCalculationRepository,
@@ -44,10 +46,12 @@ constructor(
         calculation.start(attemptedAt)
     }
 
+    @JvmOverloads
     fun replace(
         gameId: Long,
         candidates: MutableList<RelatedGameCandidateProjection>,
         completedAt: LocalDateTime?,
+        capturedVersion: Long? = null,
     ) {
         val calculation: RelatedGameCalculation =
             calculationRepository
@@ -56,7 +60,12 @@ constructor(
         // 이 메서드는 별도 영속성 컨텍스트에서 실행하므로 이전 후보 엔티티를 로딩하지 않는다.
         candidateRepository.deleteAllBySourceGameId(gameId)
         candidateBatchRepository.insertAll(gameId, candidates)
+        val wasReady = calculation.isReady
         calculation.succeed(completedAt)
+        if (!wasReady) {
+            changeRecorder.record(gameId, com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.READY)
+        }
+        if (capturedVersion != null) refreshTargets.markApplied(gameId, capturedVersion)
         // JDBC 저장과 JPA 성공 상태 변경이 같은 연결·트랜잭션에서 반영된다.
         entityManager.flush()
     }

@@ -19,6 +19,8 @@ class RelatedGamePrecomputeRunTracker(private val store: RelatedGamePrecomputeRu
 
             override fun onAcquired() = store.start(runId)
 
+            override fun onBaselineRegistered() = store.baselineRegistered(runId)
+
             override fun onPrepared(upperId: Long?, estimatedTotal: Long) {
                 store.prepared(runId, upperId, estimatedTotal)
                 savedAt = nanoTime.asLong

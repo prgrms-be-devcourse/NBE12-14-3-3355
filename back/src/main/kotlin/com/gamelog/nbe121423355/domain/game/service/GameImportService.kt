@@ -18,11 +18,13 @@ constructor(
     private val gamePlatformRepository: GamePlatformRepository,
     private val gameSeriesRepository: GameSeriesRepository,
     private val gameSeriesGameRepository: GameSeriesGameRepository,
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val recommendationRegistration: NewGameRecommendationRegistration,
 ) {
     @Transactional
     fun saveGames(responses: MutableList<IgdbGameResponse>): Int {
         val newGames: MutableList<Game> = ArrayList()
+        val changedGames = ArrayList<Game>()
         for (response in responses) {
             var game = gameRepository.findByIgdbId(response.id).orElse(null)
             if (game == null) {
@@ -32,9 +34,15 @@ constructor(
             } else {
                 game.updateFromIgdb(response)
             }
+            changedGames.add(game)
             saveGenres(game, response.genres)
             savePlatforms(game, response.platforms)
             saveSeries(game, response.collections)
+        }
+        gameRepository.flush()
+        changedGames.sortedBy { it.id }.forEach { game ->
+            changeRecorder.record(requireNotNull(game.id),
+                if (game in newGames) RelatedGameChangeReason.GAME_ADDED else RelatedGameChangeReason.GAME_INFORMATION)
         }
         recommendationRegistration.register(newGames)
         return responses.size

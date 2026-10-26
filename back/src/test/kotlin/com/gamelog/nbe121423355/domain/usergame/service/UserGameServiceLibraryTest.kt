@@ -47,6 +47,9 @@ class UserGameServiceLibraryTest {
     @Mock
     private lateinit var reviewRepository: ReviewRepository
 
+    @Mock
+    private lateinit var changeRecorder: com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
+
     @InjectMocks
     private lateinit var userGameService: UserGameService
 
@@ -71,6 +74,8 @@ class UserGameServiceLibraryTest {
 
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
+        // given: 추천 입력 변경 추적에 사용할 저장된 게임 ID를 준비한다.
+        lenient().`when`(game.id).thenReturn(1L)
         val platform = mock(Platform::class.java)
 
         val request = createRequest(
@@ -111,6 +116,8 @@ class UserGameServiceLibraryTest {
 
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
+        // given: 추천 입력 변경 추적에 사용할 저장된 게임 ID를 준비한다.
+        lenient().`when`(game.id).thenReturn(1L)
         val platform = mock(Platform::class.java)
 
         val userGame = UserGame(user, game)
@@ -275,6 +282,8 @@ class UserGameServiceLibraryTest {
     fun createUserGameAndChangePlayedStatus() {
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
+        // given: 추천 입력 변경 추적에 사용할 저장된 게임 ID를 준비한다.
+        lenient().`when`(game.id).thenReturn(1L)
 
         stubNewUserGame(1L, 1L, user, game)
 
@@ -445,6 +454,8 @@ class UserGameServiceLibraryTest {
     private fun createUserGame(): UserGame {
         val user = User("테스트", "test@test.com", "password")
         val game = mock(Game::class.java)
+        // given: 추천 입력 변경 추적에 사용할 저장된 게임 ID를 준비한다.
+        lenient().`when`(game.id).thenReturn(1L)
 
         return UserGame(user, game)
     }
@@ -588,6 +599,8 @@ class UserGameServiceLibraryTest {
         )
 
         val game = mock(Game::class.java)
+        // given: 추천 입력 변경 추적에 사용할 저장된 게임 ID를 준비한다.
+        lenient().`when`(game.id).thenReturn(1L)
 
         val request = createRequest(
             PlayStatus.COMPLETED,

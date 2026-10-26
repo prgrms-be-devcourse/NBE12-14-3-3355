@@ -103,6 +103,7 @@ class UserGame() : BaseEntity() {
     val isInLibrary: Boolean
         get() = inLibrary
 
+    // Kotlin 기본 인자는 Java 생성자 오버로드로 노출되지 않으므로 Java 호출부를 위해 유지한다.
     constructor(user: User, game: Game) : this() {
         this.user = user
         this.game = game
@@ -112,34 +113,34 @@ class UserGame() : BaseEntity() {
     constructor(
         user: User,
         game: Game,
-        playStatus: PlayStatus?,
-        playing: Boolean,
-        backlog: Boolean,
-        wishlist: Boolean,
-        liked: Boolean,
-        platform: Platform?,
-        playTimeHours: BigDecimal?,
-        finishTimeHours: BigDecimal?,
-        masterTimeHours: BigDecimal?,
-        startedAt: LocalDate?,
-        completedAt: LocalDate?,
-        lastPlayedAt: LocalDateTime?,
+        playStatus: PlayStatus? = null,
+        playing: Boolean = false,
+        backlog: Boolean = false,
+        wishlist: Boolean = false,
+        liked: Boolean = false,
+        platform: Platform? = null,
+        playTimeHours: BigDecimal? = null,
+        finishTimeHours: BigDecimal? = null,
+        masterTimeHours: BigDecimal? = null,
+        startedAt: LocalDate? = null,
+        completedAt: LocalDate? = null,
+        lastPlayedAt: LocalDateTime? = null,
     ) : this() {
         this.user = user
         this.game = game
         updatePlayRecord(
-            playStatus,
-            playing,
-            backlog,
-            wishlist,
-            liked,
-            platform,
-            playTimeHours,
-            finishTimeHours,
-            masterTimeHours,
-            startedAt,
-            completedAt,
-            lastPlayedAt,
+            playStatus = playStatus,
+            playing = playing,
+            backlog = backlog,
+            wishlist = wishlist,
+            liked = liked,
+            platform = platform,
+            playTimeHours = playTimeHours,
+            finishTimeHours = finishTimeHours,
+            masterTimeHours = masterTimeHours,
+            startedAt = startedAt,
+            completedAt = completedAt,
+            lastPlayedAt = lastPlayedAt,
         )
     }
 

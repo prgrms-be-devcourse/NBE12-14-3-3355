@@ -3,6 +3,7 @@ package com.gamelog.nbe121423355.domain.game.sync
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse.NamedResource
 import com.gamelog.nbe121423355.domain.game.entity.*
+import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.game.service.NewGameRecommendationRegistration
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType
@@ -23,6 +24,7 @@ class IgdbSyncCatalog
 constructor(
     private val em: EntityManager,
     private val jdbc: NamedParameterJdbcTemplate,
+    private val changeRecorder: RelatedGameChangeRecorder,
     private val recommendationRegistration: NewGameRecommendationRegistration,
 ) {
 
@@ -43,8 +45,18 @@ constructor(
                 .getResultList()
                 .stream()
                 .collect(Collectors.toMap({ obj: Game -> obj.igdbId }, Function.identity()))
+        val previousGenres = existing.values.associate { game ->
+            requireNotNull(game.id) to jdbc.queryForList(
+                "SELECT genre_id FROM game_genres WHERE game_id = :id",
+                mapOf("id" to game.id), Long::class.javaObjectType,
+            ).map { requireNotNull(it) }
+        }
         val removed = page.filter { !eligible(it, cutoff) }.mapNotNull { existing[it.id] }
         if (!removed.isEmpty()) {
+            removed.forEach { game ->
+                changeRecorder.record(requireNotNull(game.id), RelatedGameChangeReason.GAME_DELETED,
+                    previousGenres[game.id].orEmpty())
+            }
             purge(removed.map { requireNotNull(it.id) }.toMutableList())
             removed.forEach { em.detach(it) }
         }
@@ -136,6 +148,12 @@ constructor(
                     game,
                 )
             )
+        }
+        em.flush()
+        games.sortedBy { it.id }.forEach { game ->
+            changeRecorder.record(requireNotNull(game.id),
+                if (game in newGames) RelatedGameChangeReason.GAME_ADDED else RelatedGameChangeReason.GAME_INFORMATION,
+                previousGenres[game.id].orEmpty())
         }
         recommendationRegistration.register(newGames)
         return Counts(

@@ -68,8 +68,12 @@ class UserGameControllerTest {
         em.persist(GameGenre(game, rpg))
         em.persist(GameGenre(game, action))
         val record = UserGame(
-            owner, game, PlayStatus.PLAYED, false, false, false, false, pc,
-            BigDecimal.TEN, null, null, null, null, LocalDateTime.of(2026, 8, 1, 12, 0),
+            user = owner,
+            game = game,
+            playStatus = PlayStatus.PLAYED,
+            platform = pc,
+            playTimeHours = BigDecimal.TEN,
+            lastPlayedAt = LocalDateTime.of(2026, 8, 1, 12, 0),
         )
         em.persist(record)
         em.persist(Review(record, BigDecimal("4.5"), "리뷰", false))
