@@ -30,7 +30,7 @@ class ApiV1UserController(
     @Operation(summary = "회원가입", description = "닉네임, 이메일과 비밀번호로 일반 사용자 계정을 생성합니다.")
     fun signUp(@Valid @RequestBody signupRequestDto: SignupRequestDto): RsData<UserDto> {
         val userDto = userService.signUp(signupRequestDto)
-        return RsData<UserDto>("201-1", "회원가입 성공", userDto)
+        return RsData("201-1", "회원가입 성공", userDto)
     }
 
     @PostMapping("/login")
@@ -44,13 +44,13 @@ class ApiV1UserController(
             refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
         httpServletResponse.addResponseCookie(responseCookie)
         val body = LoginResponseDto(result.user, result.accessToken)
-        return RsData<LoginResponseDto>("200-1", "로그인 성공", body)
+        return RsData("200-1", "로그인 성공", body)
     }
 
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "refreshToken을 폐기하고 인증 쿠키를 제거합니다.")
     fun logout(
-        @CookieValue(value = "refreshToken", required = false) refreshToken: String?,
+        @CookieValue(value = RefreshTokenCookieFactory.COOKIE_NAME, required = false) refreshToken: String?,
         @Parameter(hidden = true) httpServletResponse: HttpServletResponse,
     ): RsData<Void> {
         if (refreshToken != null) {
@@ -58,7 +58,7 @@ class ApiV1UserController(
         }
         val responseCookie = refreshTokenCookieFactory.delete()
         httpServletResponse.addResponseCookie(responseCookie)
-        return RsData<Void>("200-13", "로그아웃 성공")
+        return RsData("200-13", "로그아웃 성공")
     }
 
     @PostMapping("/refresh")
@@ -68,7 +68,7 @@ class ApiV1UserController(
             "HttpOnly refreshToken 쿠키를 사용해 새로운 accessToken을 발급하고, refreshToken을 교체한 쿠키로 다시 설정합니다.",
     )
     fun refresh(
-        @CookieValue(value = "refreshToken", required = false) refreshToken: String?,
+        @CookieValue(value = RefreshTokenCookieFactory.COOKIE_NAME, required = false) refreshToken: String?,
         @Parameter(hidden = true) httpServletResponse: HttpServletResponse,
     ): RsData<TokenResponseDto> {
         val result = userService.refresh(refreshToken)
@@ -76,14 +76,14 @@ class ApiV1UserController(
             refreshTokenCookieFactory.create(result.refreshToken, result.refreshTokenExpiryDate)
         httpServletResponse.addResponseCookie(responseCookie)
         val tokenResponseDto = TokenResponseDto(result.accessToken)
-        return RsData<TokenResponseDto>("200-2", "토큰 재발급 성공", tokenResponseDto)
+        return RsData("200-2", "토큰 재발급 성공", tokenResponseDto)
     }
 
     @GetMapping("/{userId}")
     @Operation(summary = "사용자 공개 정보 조회", description = "사용자 ID로 닉네임, 프로필 이미지와 자기소개를 조회합니다.")
     fun getOtherUser(@PathVariable userId: Long): RsData<PublicUserDto> {
         val userDto = userService.getUser(userId)
-        return RsData<PublicUserDto>("200-3", "유저 정보 조회 성공", userDto)
+        return RsData("200-3", "유저 정보 조회 성공", userDto)
     }
 
     @GetMapping("/me")
@@ -92,7 +92,7 @@ class ApiV1UserController(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
     ): RsData<UserDto> {
         val userDto = userService.getMe(securityUser.id)
-        return RsData<UserDto>("200-3", "내 정보 조회 성공", userDto)
+        return RsData("200-3", "내 정보 조회 성공", userDto)
     }
 
     @PatchMapping("/me")
@@ -106,7 +106,7 @@ class ApiV1UserController(
         @Valid @RequestBody updateProfileRequestDto: UpdateProfileRequestDto,
     ): RsData<UserDto> {
         val userDto = userService.updateProfile(securityUser.id, updateProfileRequestDto)
-        return RsData<UserDto>("200-10", "내 정보 수정 성공", userDto)
+        return RsData("200-10", "내 정보 수정 성공", userDto)
     }
 
     @PatchMapping("/me/onboarding")
@@ -115,7 +115,7 @@ class ApiV1UserController(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
     ): RsData<UserDto> {
         val userDto = userService.exitOnboarding(securityUser.id)
-        return RsData<UserDto>("200-4", "온보딩 완료", userDto)
+        return RsData("200-4", "온보딩 완료", userDto)
     }
 
     @PatchMapping("/me/onboarding/skip")
@@ -124,7 +124,7 @@ class ApiV1UserController(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
     ): RsData<UserDto> {
         val userDto = userService.skipOnboarding(securityUser.id)
-        return RsData<UserDto>("200-5", "온보딩 스킵", userDto)
+        return RsData("200-5", "온보딩 스킵", userDto)
     }
 
     @PutMapping("/me/preferred-genres")
@@ -142,7 +142,7 @@ class ApiV1UserController(
                 securityUser.id,
                 requireNotNull(requestDto.genreIds),
             )
-        return RsData<List<PreferredGenreResponseDto>>("200-6", "선호 장르 저장 성공", result)
+        return RsData("200-6", "선호 장르 저장 성공", result)
     }
 
     @GetMapping("/me/preferred-genres")
@@ -152,7 +152,7 @@ class ApiV1UserController(
     ): RsData<List<PreferredGenreResponseDto>> {
         val result =
             userPreferenceGenreService.getPreferredGenres(securityUser.id)
-        return RsData<List<PreferredGenreResponseDto>>("200-7", "선호 장르 조회 성공", result)
+        return RsData("200-7", "선호 장르 조회 성공", result)
     }
 
     @PutMapping("/me/preferred-games")
@@ -170,7 +170,7 @@ class ApiV1UserController(
                 securityUser.id,
                 requireNotNull(requestDto.gameIds),
             )
-        return RsData<List<PreferredGameResponseDto>>("200-8", "선호 게임 저장 성공", result)
+        return RsData("200-8", "선호 게임 저장 성공", result)
     }
 
     @GetMapping("/me/preferred-games")
@@ -179,7 +179,7 @@ class ApiV1UserController(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser
     ): RsData<List<PreferredGameResponseDto>> {
         val result = userPreferenceGameService.getPreferredGames(securityUser.id)
-        return RsData<List<PreferredGameResponseDto>>("200-9", "선호 게임 조회 성공", result)
+        return RsData("200-9", "선호 게임 조회 성공", result)
     }
 
     @PatchMapping("/me/password")
@@ -198,7 +198,7 @@ class ApiV1UserController(
         val responseCookie =
             refreshTokenCookieFactory.create(session.refreshToken, session.expiryDate)
         httpServletResponse.addResponseCookie(responseCookie)
-        return RsData<Void>("200-14", "비밀번호 변경 성공")
+        return RsData("200-14", "비밀번호 변경 성공")
     }
 
     @DeleteMapping("/me")
@@ -215,7 +215,7 @@ class ApiV1UserController(
         userService.withdraw(securityUser.id, withdrawRequestDto)
         val responseCookie = refreshTokenCookieFactory.delete()
         httpServletResponse.addResponseCookie(responseCookie)
-        return RsData<Void>("200-19", "회원탈퇴 성공")
+        return RsData("200-19", "회원탈퇴 성공")
     }
 
     @GetMapping("/check-email")

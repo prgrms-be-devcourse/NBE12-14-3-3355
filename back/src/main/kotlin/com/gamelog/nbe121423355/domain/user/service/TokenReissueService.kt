@@ -36,9 +36,7 @@ class TokenReissueService(
     )
 
     // /refresh API용 (비교할 accessToken이 없음)
-    fun reissue(refreshToken: String?): ReissueResult {
-        return reissue(refreshToken, null)
-    }
+    fun reissue(refreshToken: String?): ReissueResult = reissue(refreshToken, null)
 
     // expectedUserId: 자동 재발급 시 만료된 accessToken의 사용자 ID
     // → refreshToken의 사용자와 다르면 재발급 거부 (한 브라우저 두 탭에서 다른 계정 사용 시 세션 섞임 방지)

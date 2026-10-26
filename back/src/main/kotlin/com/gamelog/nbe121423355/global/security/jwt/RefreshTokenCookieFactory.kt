@@ -19,12 +19,10 @@ class RefreshTokenCookieFactory(private val cookieProperties: CookieProperties) 
     }
 
     // 쿠키 삭제용 (로그아웃)
-    fun delete(): ResponseCookie {
-        return build("", Duration.ZERO)
-    }
+    fun delete(): ResponseCookie = build("", Duration.ZERO)
 
     private fun build(value: String?, maxAge: Duration): ResponseCookie {
-        return ResponseCookie.from(RefreshTokenCookieFactory.COOKIE_NAME, value)
+        return ResponseCookie.from(COOKIE_NAME, value)
             .httpOnly(true)
             .path("/")
             .maxAge(maxAge)
