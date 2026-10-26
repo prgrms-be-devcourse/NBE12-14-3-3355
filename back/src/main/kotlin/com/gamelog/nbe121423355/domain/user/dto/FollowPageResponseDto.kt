@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.data.domain.Page
 
 @Schema(description = "팔로우 사용자 페이지")
-@JvmRecord
 data class FollowPageResponseDto(
     @field:Schema(description = "사용자 목록") val users: List<FollowUserResponseDto>,
     @field:Schema(description = "현재 페이지 번호", example = "0") val page: Int,
@@ -16,7 +15,6 @@ data class FollowPageResponseDto(
 ) {
 
     companion object {
-        @JvmStatic
         fun from(
             followPage: Page<UserFollow>,
             users: List<FollowUserResponseDto>,
