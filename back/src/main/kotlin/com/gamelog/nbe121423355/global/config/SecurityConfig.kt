@@ -21,9 +21,7 @@ import tools.jackson.databind.ObjectMapper
 @Configuration
 class SecurityConfig {
     @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
     @Bean
     fun filterChain(

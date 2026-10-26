@@ -25,7 +25,7 @@ class JwtAuthenticationFilter(
     // 그로 인해 globalexceptionhandler 관여 x
     override fun doFilterInternal(
         servletRequest: HttpServletRequest,
-        serveletResponse: HttpServletResponse,
+        servletResponse: HttpServletResponse,
         filterChain: FilterChain,
     ) {
         val token = resolveToken(servletRequest)
@@ -35,10 +35,10 @@ class JwtAuthenticationFilter(
             jwtProvider
                 .getExpiredAccessTokenClaims(token)
                 ?.let { expiredClaims ->
-                    tryAutoReissue(servletRequest, serveletResponse, expiredClaims)
+                    tryAutoReissue(servletRequest, servletResponse, expiredClaims)
                 }
         }
-        filterChain.doFilter(servletRequest, serveletResponse)
+        filterChain.doFilter(servletRequest, servletResponse)
     }
 
     // accessToken 유효성 검증 후 인증정보 등록
@@ -81,7 +81,7 @@ class JwtAuthenticationFilter(
         }
     }
 
-    // SecurityContest에 인증 정보 세팅
+    // SecurityContext에 인증 정보 세팅
     private fun setSecurityContext(userId: Long?, role: String?) {
         val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
         val securityUser = SecurityUser(requireNotNull(userId), authorities)
@@ -91,15 +91,14 @@ class JwtAuthenticationFilter(
     }
 
     // Authorization 헤더에서 accessToken 추출
-    private fun resolveToken(serveletRequest: HttpServletRequest): String? {
-        val header = serveletRequest.getHeader("Authorization")
+    private fun resolveToken(servletRequest: HttpServletRequest): String? {
+        val header = servletRequest.getHeader("Authorization")
         return header?.takeIf { it.startsWith("Bearer ") }?.substring(7)
     }
 
     // 쿠키에서 refreshToken 추출
-    private fun resolveTokenFromCookie(serveletRequest: HttpServletRequest): String? {
-        return serveletRequest.cookies?.firstOrNull { it.name == "refreshToken" }?.value
-    }
+    private fun resolveTokenFromCookie(servletRequest: HttpServletRequest): String? =
+        servletRequest.cookies?.firstOrNull { it.name == RefreshTokenCookieFactory.COOKIE_NAME }?.value
 
     companion object {
         private val log = LoggerFactory.getLogger(JwtAuthenticationFilter::class.java)
