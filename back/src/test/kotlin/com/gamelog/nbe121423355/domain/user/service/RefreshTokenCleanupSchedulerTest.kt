@@ -32,7 +32,7 @@ constructor(
 
         refreshTokenCleanupScheduler.deleteExpiredRefreshTokens()
 
-        assertThat(refreshTokenRepository.findByFamilyId("expired-family")).isEmpty()
-        assertThat(refreshTokenRepository.findByFamilyId("valid-family")).isPresent()
+        assertThat(refreshTokenRepository.findByFamilyId("expired-family")).isNull()
+        assertThat(refreshTokenRepository.findByFamilyId("valid-family")).isNotNull()
     }
 }

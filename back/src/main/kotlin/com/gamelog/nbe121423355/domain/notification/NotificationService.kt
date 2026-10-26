@@ -26,7 +26,7 @@ class NotificationService(
     @EventListener @Transactional(propagation = Propagation.MANDATORY)
     fun receive(event: NotificationRequested) {
         event.recipients.filter { it != event.actorId }.forEach { recipient ->
-            if (users.findByIdAndDeletedAtIsNull(recipient).isPresent && !notifications.existsBySourceKeyAndRecipientId(event.sourceKey, recipient)) {
+            if (users.findByIdAndDeletedAtIsNull(recipient) != null && !notifications.existsBySourceKeyAndRecipientId(event.sourceKey, recipient)) {
                 notifications.save(Notification(recipient, event.actorId, event.kind, event.targetType, event.targetId, event.reviewId, event.gameTitle, event.sourceKey))
             }
         }
@@ -56,7 +56,7 @@ class NotificationService(
         val actor = n.actorId?.let { users.findById(it).orElse(null) }
         val actorName = if (n.actorId == null) null else if (actor == null || actor.isDeleted) "탈퇴한 사용자" else actor.nickname
         val url = when (n.targetType) {
-            NotificationTarget.USER -> users.findByIdAndDeletedAtIsNull(n.targetId).orElse(null)?.let { "/profile/" + it.id }
+            NotificationTarget.USER -> users.findByIdAndDeletedAtIsNull(n.targetId)?.let { "/profile/" + it.id }
             NotificationTarget.REVIEW, NotificationTarget.REVIEW_COMMENT -> {
                 val review = n.reviewId?.let { reviews.findActiveById(it).orElse(null) }
                 val validComment = n.targetType != NotificationTarget.REVIEW_COMMENT || comments.findById(n.targetId).orElse(null)?.let { !it.isDeleted } == true

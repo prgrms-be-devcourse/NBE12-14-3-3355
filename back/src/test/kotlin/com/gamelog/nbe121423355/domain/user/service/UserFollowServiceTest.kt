@@ -7,7 +7,6 @@ import com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
-import java.util.Optional
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
@@ -53,8 +52,8 @@ class UserFollowServiceTest {
         val follower = mockUser(LOGIN_USER_ID, "로그인 사용자", null)
         val followee = mockUser(TARGET_USER_ID, "팔로우 대상", "profile.png")
         val followId = UserFollowId(LOGIN_USER_ID, TARGET_USER_ID)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(Optional.of(follower))
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(followee))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(follower)
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(followee)
         `when`(userFollowRepository.existsById(followId)).thenReturn(false)
 
         // when: 대상 사용자를 팔로우
@@ -76,8 +75,8 @@ class UserFollowServiceTest {
         val follower = mockUser(LOGIN_USER_ID, "로그인 사용자", null)
         val followee = mockUser(TARGET_USER_ID, "팔로우 대상", null)
         val followId = UserFollowId(LOGIN_USER_ID, TARGET_USER_ID)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(Optional.of(follower))
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(followee))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(follower)
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(followee)
         `when`(userFollowRepository.existsById(followId)).thenReturn(true)
 
         // when: 동일한 사용자를 다시 팔로우
@@ -94,7 +93,7 @@ class UserFollowServiceTest {
         // given: 팔로우 중인 사용자 관계를 준비
         val targetUser = mockUser(TARGET_USER_ID, "팔로우 대상", null)
         val followId = UserFollowId(LOGIN_USER_ID, TARGET_USER_ID)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollowRepository.existsById(followId)).thenReturn(true)
 
         // when: 대상 사용자를 언팔로우
@@ -112,7 +111,7 @@ class UserFollowServiceTest {
         // given: 존재하지만 팔로우하지 않은 사용자를 준비
         val targetUser = mockUser(TARGET_USER_ID, "팔로우 대상", null)
         val followId = UserFollowId(LOGIN_USER_ID, TARGET_USER_ID)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollowRepository.existsById(followId)).thenReturn(false)
 
         // when: 대상 사용자를 언팔로우
@@ -144,8 +143,8 @@ class UserFollowServiceTest {
     fun followRejectsMissingTargetUser() {
         // given: 로그인 사용자만 존재하도록 준비
         val follower = mockUser(LOGIN_USER_ID, "로그인 사용자", null)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(Optional.of(follower))
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.empty())
+        `when`(userRepository.findByIdAndDeletedAtIsNull(LOGIN_USER_ID)).thenReturn(follower)
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(null)
 
         // when: 존재하지 않는 사용자를 팔로우하는 기능을 실행
         // then: 사용자 조회 예외가 발생하고 팔로우 관계를 저장하지 않는지 확인
@@ -166,7 +165,7 @@ class UserFollowServiceTest {
         val userFollow = mock(UserFollow::class.java)
         val followedAt = LocalDateTime.of(2026, 9, 22, 10, 30)
         val requestedPage = PageRequest.of(0, 10)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollow.followee).thenReturn(displayedUser)
         `when`(userFollow.createdDate).thenReturn(followedAt)
         `when`(userFollowRepository.findAllByFollower_Id(eq(TARGET_USER_ID), any(Pageable::class.java)))
@@ -198,7 +197,7 @@ class UserFollowServiceTest {
         val displayedUser = mockUser(LIST_USER_ID, "목록 사용자", null)
         val userFollow = mock(UserFollow::class.java)
         val requestedPage = PageRequest.of(0, 10)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollow.follower).thenReturn(displayedUser)
         `when`(userFollowRepository.findAllByFollowee_Id(eq(TARGET_USER_ID), any(Pageable::class.java)))
             .thenReturn(PageImpl(listOf(userFollow), requestedPage, 1))
@@ -222,7 +221,7 @@ class UserFollowServiceTest {
         val loginUser = mockUser(LOGIN_USER_ID, "로그인 사용자", null)
         val userFollow = mock(UserFollow::class.java)
         val requestedPage = PageRequest.of(0, 10)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollow.followee).thenReturn(loginUser)
         `when`(userFollowRepository.findAllByFollower_Id(eq(TARGET_USER_ID), any(Pageable::class.java)))
             .thenReturn(PageImpl(listOf(userFollow), requestedPage, 1))
@@ -246,7 +245,7 @@ class UserFollowServiceTest {
         val displayedUser = mockUser(LIST_USER_ID, "목록 사용자", null)
         val userFollow = mock(UserFollow::class.java)
         val requestedPage = PageRequest.of(0, 10)
-        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(Optional.of(targetUser))
+        `when`(userRepository.findByIdAndDeletedAtIsNull(TARGET_USER_ID)).thenReturn(targetUser)
         `when`(userFollow.followee).thenReturn(displayedUser)
         `when`(userFollowRepository.findAllByFollower_Id(eq(TARGET_USER_ID), any(Pageable::class.java)))
             .thenReturn(PageImpl(listOf(userFollow), requestedPage, 1))
