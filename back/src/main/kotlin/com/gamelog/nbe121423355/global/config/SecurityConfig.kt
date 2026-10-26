@@ -67,12 +67,10 @@ class SecurityConfig {
                     .permitAll()
                     .requestMatchers(
                         GET,
-                        "/api/v1/library/games/profile/*",
-                        "/api/v1/library/games/profile/*/games",
+                        "/api/v1/users/*/game-profile",
+                        "/api/v1/users/*/games",
                     )
                     .permitAll()
-                    .requestMatchers(GET, "/api/v1/library/games/profile")
-                    .authenticated()
                     .requestMatchers(GET, "/api/v1/games/*/reviews/me")
                     .authenticated()
                     .requestMatchers(

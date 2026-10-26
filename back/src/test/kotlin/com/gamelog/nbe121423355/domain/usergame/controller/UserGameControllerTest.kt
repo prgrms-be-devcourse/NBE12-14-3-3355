@@ -234,7 +234,7 @@ class UserGameControllerTest {
     @Test
     @DisplayName("내 프로필은 본인 여부와 통계 및 최근 기록을 반환한다")
     fun getsOwnProfile() {
-        mvc.perform(get("$base/profile").with(auth()))
+        mvc.perform(get("/api/v1/users/me/game-profile").with(auth()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.userId").value(ownerId))
             .andExpect(jsonPath("$.data.isMe").value(true))
@@ -247,7 +247,7 @@ class UserGameControllerTest {
     @Test
     @DisplayName("비로그인 사용자도 다른 사용자의 프로필 통계를 조회할 수 있다")
     fun publicProfileAllowsAnonymousUser() {
-        mvc.perform(get("$base/profile/${other.id}"))
+        mvc.perform(get("/api/v1/users/${other.id}/game-profile"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.resultCode").value("200-1"))
             .andExpect(jsonPath("$.data.userId").value(other.id))
@@ -259,7 +259,7 @@ class UserGameControllerTest {
     @Test
     @DisplayName("본인의 공개 프로필을 조회해도 본인으로 판별한다")
     fun publicProfileIdentifiesAuthenticatedOwner() {
-        mvc.perform(get("$base/profile/$ownerId").with(auth()))
+        mvc.perform(get("/api/v1/users/$ownerId/game-profile").with(auth()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.userId").value(ownerId))
             .andExpect(jsonPath("$.data.isMe").value(true))
@@ -269,7 +269,7 @@ class UserGameControllerTest {
     @Test
     @DisplayName("비로그인 사용자도 대상 사용자의 게임 목록을 조회할 수 있다")
     fun publicGameListAllowsAnonymousUser() {
-        mvc.perform(get("$base/profile/${other.id}/games")
+        mvc.perform(get("/api/v1/users/${other.id}/games")
             .param("status", "ALL").param("sort", "RECENT_PLAYED"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.totalElements").value(1))
@@ -280,8 +280,8 @@ class UserGameControllerTest {
     @Test
     @DisplayName("없는 사용자의 공개 프로필과 목록은 404를 반환한다")
     fun rejectsMissingPublicUser() {
-        for (suffix in listOf("", "/games")) {
-            mvc.perform(get("$base/profile/${Long.MAX_VALUE}$suffix"))
+        for (suffix in listOf("/game-profile", "/games")) {
+            mvc.perform(get("/api/v1/users/${Long.MAX_VALUE}$suffix"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404-1"))
         }
@@ -303,7 +303,7 @@ class UserGameControllerTest {
         em.persist(UserGame(em.getReference(User::class.java, ownerId),
             em.getReference(Game::class.java, freshGameId)).apply { changeWishlist(true) })
         em.flush()
-        mvc.perform(put("$base/favorite-games").with(auth())
+        mvc.perform(put("/api/v1/users/me/favorite-games").with(auth())
             .contentType(MediaType.APPLICATION_JSON)
             .content(json(mapOf("gameIds" to listOf(freshGameId, gameId)))))
             .andExpect(status().isOk())
@@ -317,7 +317,7 @@ class UserGameControllerTest {
     @Test
     @DisplayName("라이브러리 밖 게임을 인생게임으로 지정하면 400을 반환한다")
     fun rejectsFavoriteOutsideLibrary() {
-        mvc.perform(put("$base/favorite-games").with(auth())
+        mvc.perform(put("/api/v1/users/me/favorite-games").with(auth())
             .contentType(MediaType.APPLICATION_JSON)
             .content(json(mapOf("gameIds" to listOf(freshGameId)))))
             .andExpect(status().isBadRequest())
@@ -336,9 +336,9 @@ class UserGameControllerTest {
             HttpMethod.PATCH to "$base/$gameId/wishlist",
             HttpMethod.PATCH to "$base/$gameId/backlog",
             HttpMethod.PATCH to "$base/$gameId/liked",
-            HttpMethod.GET to "$base/profile",
+            HttpMethod.GET to "/api/v1/users/me/game-profile",
             HttpMethod.GET to "$base/recentGames",
-            HttpMethod.PUT to "$base/favorite-games",
+            HttpMethod.PUT to "/api/v1/users/me/favorite-games",
         )
         for ((method, path) in routes) {
             mvc.perform(request(method, path))
@@ -415,6 +415,13 @@ class UserGameControllerTest {
             .content(json(recordRequest(startedAt = started, completedAt = started.minusDays(1)))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.resultCode").value("400-6"))
+    }
+
+    @Test
+    @DisplayName("공개 게임 목록에도 검색 요청 검증이 적용된다")
+    fun validatesPublicGameListParameters() {
+        mvc.perform(get("/api/v1/users/$ownerId/games").param("page", "-1"))
+            .andExpect(status().isBadRequest())
     }
 
     private fun auth() = user(SecurityUser(ownerId, emptyList()))

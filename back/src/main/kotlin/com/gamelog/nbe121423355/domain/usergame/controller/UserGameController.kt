@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/v1/library/games")
-@Tag(name = "user-game-controller", description = "내 게임 라이브러리·플레이 상태·프로필 기록 API")
+@Tag(name = "user-game-controller", description = "내 게임 라이브러리·플레이 상태 API")
 class UserGameController(
     private val userGameService: UserGameService,
 ) {
@@ -36,29 +36,6 @@ class UserGameController(
                 request = request,
             )
 
-        return RsData(
-            resultCode = "200-1",
-            msg = "라이브러리 게임 목록을 조회했습니다.",
-            data =
-                UserGameLibraryResponse(
-                    totalElements = pages.totalElements,
-                    totalPages = pages.totalPages,
-                    userGames = pages.content,
-                ),
-        )
-    }
-
-    @GetMapping("/profile/{userId}/games")
-    @Operation(summary = "사용자 프로필 게임 목록 조회", description = "특정 사용자의 공개 게임 기록을 페이지 단위로 조회합니다.")
-    fun getUserProfileGames(
-        @PathVariable userId: Long,
-        @Valid @ModelAttribute request: UserGameSearchRequest,
-    ): RsData<UserGameLibraryResponse> {
-        val pages =
-            userGameService.getPublicUserGameList(
-                userId = userId,
-                request = request,
-            )
         return RsData(
             resultCode = "200-1",
             msg = "라이브러리 게임 목록을 조회했습니다.",
@@ -231,44 +208,6 @@ class UserGameController(
         )
     }
 
-    @GetMapping("/profile")
-    @Operation(summary = "내 프로필 게임 통계 조회", security = [SecurityRequirement(name = "bearerAuth")])
-    fun profileTab(
-        @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
-    ): RsData<UserProfileResponse> {
-        val response =
-            userGameService.profileTab(
-                targetUserId = user.id,
-                currentUserId = user.id,
-            )
-
-        return RsData(
-            resultCode = "200-1",
-            msg = "프로필 정보를 조회했습니다.",
-            data = response,
-        )
-    }
-
-    @GetMapping("/profile/{userId}")
-    @Operation(summary = "사용자 프로필 게임 통계 조회", description = "특정 사용자의 공개 프로필 기록과 게임 통계를 조회합니다.")
-    fun getProfile(
-        @PathVariable userId: Long,
-        @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser?,
-    ): RsData<UserProfileResponse> {
-        val currentUserId = user?.id
-        val response =
-            userGameService.profileTab(
-                targetUserId = userId,
-                currentUserId = currentUserId,
-            )
-
-        return RsData(
-            resultCode = "200-1",
-            msg = "프로필을 조회했습니다.",
-            data = response,
-        )
-    }
-
     @GetMapping("/recentGames")
     @Operation(summary = "최근 플레이 게임 조회", security = [SecurityRequirement(name = "bearerAuth")])
     fun recentGameList(
@@ -281,25 +220,4 @@ class UserGameController(
         )
     }
 
-    @PutMapping("/favorite-games")
-    @Operation(
-        summary = "인생 게임 수정",
-        description = "프로필에 노출할 인생 게임 목록과 순서를 저장합니다.",
-        security = [SecurityRequirement(name = "bearerAuth")],
-    )
-    fun updateFavoriteGames(
-        @RequestBody request: UserFavoriteGameRequest,
-        @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
-    ): RsData<List<UserFavoriteGameResponse>> {
-        val response: List<UserFavoriteGameResponse> =
-            userGameService.updateFavoriteGames(
-                userId = user.id,
-                gameIds = request.gameIds,
-            )
-        return RsData(
-            resultCode = "200-1",
-            msg = "인생게임을 수정했습니다.",
-            data = response,
-        )
-    }
 }

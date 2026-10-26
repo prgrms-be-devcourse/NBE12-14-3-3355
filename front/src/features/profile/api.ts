@@ -12,7 +12,7 @@ async function request<T>(path: string, options: RequestInit = {}, accessToken?:
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   if (options.body) headers.set("Content-Type", "application/json");
 
-  const response = await fetch(`/api/library/games/${path}`, {
+  const response = await fetch(path, {
     ...options,
     headers,
     cache: "no-store",
@@ -27,19 +27,15 @@ export function getProfile(
   accessToken?: string,
   userId?: number,
 ) {
-  const query = userId
-    ? `/${userId}`
-    : "";
-
   return request<ProfileResponse>(
-    `profile${query}`,
+    `/api/users/${userId === undefined ? "me" : userId}/game-profile`,
     {},
     accessToken,
   );
 }
 
 export function updateFavoriteGames(gameIds: number[], accessToken: string) {
-  return request<FavoriteGame[]>("favorite-games", {
+  return request<FavoriteGame[]>("/api/users/me/favorite-games", {
     method: "PUT",
     body: JSON.stringify({ gameIds }),
   }, accessToken);
@@ -63,7 +59,7 @@ export function getMyLibraryGames(
   }
 
   return request<UserGameLibraryResponse>(
-    `?${params.toString()}`,
+    `/api/library/games?${params.toString()}`,
     {},
     accessToken,
   );
@@ -84,7 +80,7 @@ export function getLikedGames(
   });
 
   return request<UserGameLibraryResponse>(
-    `${userId === undefined ? "" : `profile/${userId}/games`}?${params.toString()}`,
+    `${userId === undefined ? "/api/library/games" : `/api/users/${userId}/games`}?${params.toString()}`,
     {},
     accessToken,
   );

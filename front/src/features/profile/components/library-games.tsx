@@ -40,7 +40,7 @@ export default function LibraryGames({ accessToken, userId }: { accessToken?: st
   const [retry, setRetry] = useState(0);
   const endpoint =
     userId !== undefined
-      ? `/api/library/games/profile/${userId}/games`
+      ? `/api/users/${userId}/games`
       : `/api/library/games`; 
 
   useEffect(() => {
