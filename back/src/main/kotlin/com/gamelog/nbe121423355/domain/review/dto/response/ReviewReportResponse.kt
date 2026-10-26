@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.review.dto.response
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport
 import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus
-import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -36,12 +35,10 @@ data class ReviewReportResponse(
                 report.review.userGame.user.id,
                 report.review.userGame.user.nickname,
                 report.reason,
-                if (report.reviewRatingSnapshot != null) report.reviewRatingSnapshot
-                else report.review.rating,
-                if (report.reviewContentSnapshot != null) report.reviewContentSnapshot
-                else report.review.content,
+                report.reviewRatingSnapshot ?: report.review.rating,
+                report.reviewContentSnapshot ?: report.review.content,
                 report.reviewSpoilerSnapshot ?: report.review.isSpoiler,
-                if (report.review.status == null) ReviewStatus.ACTIVE else report.review.status,
+                report.review.status ?: ReviewStatus.ACTIVE,
                 report.status,
                 report.createdDate,
                 report.lastModifiedDate,

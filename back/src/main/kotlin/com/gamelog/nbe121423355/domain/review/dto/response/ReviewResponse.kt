@@ -52,7 +52,7 @@ data class ReviewResponse(
                 review.userGame.isPlaying,
                 review.userGame.isBacklog,
                 review.userGame.isWishlist,
-                if (review.userGame.platform == null) null else review.userGame.platform?.name,
+                review.userGame.platform?.name,
                 review.rating,
                 review.content,
                 review.isSpoiler,
