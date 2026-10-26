@@ -1,6 +1,10 @@
 package com.gamelog.nbe121423355.domain.review.service
 
-import com.gamelog.nbe121423355.domain.notification.*
+import com.gamelog.nbe121423355.domain.notification.entity.CommentNotificationsCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
+import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.entity.*
 import com.gamelog.nbe121423355.domain.review.repository.*
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
