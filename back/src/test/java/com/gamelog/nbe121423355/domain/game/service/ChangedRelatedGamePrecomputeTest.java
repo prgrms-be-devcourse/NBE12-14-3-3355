@@ -37,6 +37,7 @@ class ChangedRelatedGamePrecomputeTest {
     @Autowired RelatedGameInputChangeRepository changes;
     @Autowired RelatedGameRefreshTargetRepository targets;
     @Autowired RelatedGamePrecomputeStore store;
+    @Autowired RelatedGameQueryRepository existingQuery;
     @Autowired RelatedGameCandidateRepository candidates;
     @Autowired EntityManager em;
     @Autowired JdbcTemplate jdbc;
@@ -108,6 +109,49 @@ class ChangedRelatedGamePrecomputeTest {
         assertThat(result.succeeded()).isEqualTo(110);
         assertThat(targets.countPending(Long.MAX_VALUE)).isZero();
         assertThat(changes.countPending()).isGreaterThanOrEqualTo(110);
+    }
+
+    @Test
+    void changedStoresSqlEquivalentTopTwentyOnlyForPendingSources() {
+        // given: 같은 장르의 READY 게임 25개 중 두 개만 갱신 대기에 등록한다.
+        long genre = genre();
+        for (int i = 0; i < 25; i++) {
+            long id = game();
+            link(id, genre);
+            var now = LocalDateTime.now();
+            store.start(id, now);
+            store.replace(id, new ArrayList<>(), now);
+        }
+        tx(() -> {
+            for (long id : games) changes.markExpanded(id, changes.findByGameId(id).getChangeVersion());
+            for (long id : games.subList(0, 2)) targets.request(id, Set.of(RelatedGameChangeReason.REVIEW), LocalDateTime.now());
+            return null;
+        });
+        long first = games.getFirst(), second = games.get(1), notPending = games.get(2);
+        var expectedFirst = existingQuery.findCandidatesForPrecompute(first, 20, true);
+        var expectedSecond = existingQuery.findCandidatesForPrecompute(second, 20, true);
+
+        // when: 전체 후보 정보를 재사용하여 변경 영향 게임만 갱신한다.
+        var result = batch.run(new RelatedGamePrecomputeTarget(RelatedGamePrecomputeTargetType.CHANGED),
+                RelatedGamePrecomputeMode.REFRESH, RelatedGamePrecomputeObserver.NONE);
+
+        // then: 두 게임의 순위·점수가 기존 SQL과 같고 나머지 게임의 저장 결과는 유지된다.
+        assertThat(result.processed()).isEqualTo(2);
+        assertThat(result.succeeded()).isEqualTo(2);
+        var actualFirst = candidates.findByIdSourceGameIdOrderByRelatedRankAsc(first);
+        var actualSecond = candidates.findByIdSourceGameIdOrderByRelatedRankAsc(second);
+        assertThat(actualFirst).hasSize(20);
+        assertThat(actualSecond).hasSize(20);
+        for (int i = 0; i < 20; i++) {
+            assertThat(actualFirst.get(i).getId().getCandidateGameId()).isEqualTo(expectedFirst.get(i).gameId());
+            assertThat(actualFirst.get(i).getRelatedScore()).isEqualByComparingTo(expectedFirst.get(i).relatedScore());
+            assertThat(actualSecond.get(i).getId().getCandidateGameId()).isEqualTo(expectedSecond.get(i).gameId());
+            assertThat(actualSecond.get(i).getRelatedScore()).isEqualByComparingTo(expectedSecond.get(i).relatedScore());
+        }
+        assertThat(candidates.findByIdSourceGameIdOrderByRelatedRankAsc(notPending)).isEmpty();
+        assertThat(targets.findByGameId(notPending)).isNull();
+        assertThat(targets.countPending(Long.MAX_VALUE)).isZero();
+        assertThat(changes.countPending()).isZero();
     }
 
     @Test
