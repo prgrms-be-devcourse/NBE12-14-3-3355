@@ -2,6 +2,7 @@ package com.gamelog.nbe121423355.domain.review.dto.response
 
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
+import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -9,6 +10,7 @@ import java.time.LocalDateTime
 @JvmRecord
 data class ReviewResponse(
     val reviewId: Long?,
+    @field:Schema(description = "이 리뷰의 현재 버전. 기존 리뷰 수정 시 요청 본문의 version, 삭제 시 쿼리 파라미터 version으로 전달합니다. 성공 응답의 새 버전을 사용하고, 409-6 충돌 시 최신 리뷰를 재조회합니다.", example = "0")
     val version: Long?,
     val userGameId: Long?,
     val gameId: Long?,

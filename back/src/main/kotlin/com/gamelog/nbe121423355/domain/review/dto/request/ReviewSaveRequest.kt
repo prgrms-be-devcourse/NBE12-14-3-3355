@@ -12,7 +12,7 @@ import java.math.BigDecimal
 data class ReviewSaveRequest(
     @field:PositiveOrZero(message = "리뷰 버전은 0 이상이어야 합니다.")
     @field:Schema(
-        description = "조회 시 받은 리뷰 버전. 새 리뷰 또는 삭제 후 재작성 시에는 생략합니다.",
+        description = "기존 활성 리뷰 수정 시 조회 응답의 version이 필수입니다. 누락·불일치 시 409-6입니다. 새 리뷰·사용자 삭제 후 재작성 시에는 생략하며, 재작성에 값을 보내면 현재 저장된 버전과 일치해야 합니다. 성공 응답의 새 버전을 다음 변경에 사용합니다.",
         example = "0",
         nullable = true,
     )
@@ -23,7 +23,7 @@ data class ReviewSaveRequest(
         value = "5.0",
         message = "별점은 5.0 이하여야 합니다.",
     )
-    @field:Schema(description = "별점. 입력하지 않을 수 있으며 0.5점 단위입니다.", example = "4.5", nullable = true)
+    @field:Schema(description = "선택적 별점. 0.5~5.0 범위의 0.5점 단위입니다. 리뷰 전용 저장·수정에서는 별점 또는 공백이 아닌 내용 중 하나 이상이 필요합니다.", example = "4.5", nullable = true)
     val rating: BigDecimal?,
     @field:Schema(
         description = "리뷰 내용. 별점만 저장하는 경우 생략할 수 있습니다.",
