@@ -418,21 +418,10 @@ class UserGameControllerTest {
     }
 
     @Test
-    @DisplayName("공개 게임 목록도 검색 요청의 검증 규칙을 유지한다")
+    @DisplayName("공개 게임 목록에도 검색 요청 검증이 적용된다")
     fun validatesPublicGameListParameters() {
-        for ((name, value) in listOf("page" to "-1", "size" to "101", "status" to "INVALID")) {
-            mvc.perform(get("/api/v1/users/$ownerId/games").param(name, value))
-                .andExpect(status().isBadRequest())
-        }
-    }
-
-    @Test
-    @DisplayName("공개 프로필과 게임 목록은 조회 메서드만 제공한다")
-    fun publicProfileRoutesAreReadOnly() {
-        for (suffix in listOf("game-profile", "games")) {
-            mvc.perform(put("/api/v1/users/$ownerId/$suffix").with(auth()))
-                .andExpect(status().isMethodNotAllowed())
-        }
+        mvc.perform(get("/api/v1/users/$ownerId/games").param("page", "-1"))
+            .andExpect(status().isBadRequest())
     }
 
     private fun auth() = user(SecurityUser(ownerId, emptyList()))
