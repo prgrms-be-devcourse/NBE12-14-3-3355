@@ -164,29 +164,27 @@ class UserGameProfileService(
                 .count { playTime -> playTime >= LONG_PLAY_HOURS }
                 .toLong()
         val longPlayRatio = calculateRatio(longPlayCount, playTimes.size)
-        // 70% 이상
-        if (longPlayRatio >= HIGH_RATIO) {
-            return TasteMetricDto(
+        return when {
+            longPlayRatio >= HIGH_RATIO -> TasteMetricDto(
                 ratio = longPlayRatio,
                 message = "장시간 플레이하는 게임이 많아요.",
                 description = createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
             )
-        }
-        // 40% 이상
-        if (longPlayRatio >= MEDIUM_RATIO) {
-            return TasteMetricDto(
+            longPlayRatio >= MEDIUM_RATIO -> TasteMetricDto(
                 ratio = longPlayRatio,
                 message = "장시간 플레이와 짧은 게임을 골고루 즐겨요.",
                 description = createPercentageDescription(longPlayRatio, "30시간 이상 플레이한 게임이"),
             )
+            else -> {
+                // 40% 미만이면 짧은 게임 비율을 보여준다.
+                val shortPlayRatio = BigDecimal.ONE.subtract(longPlayRatio)
+                TasteMetricDto(
+                    ratio = shortPlayRatio,
+                    message = "짧게 플레이하는 게임이 많아요.",
+                    description = createPercentageDescription(shortPlayRatio, "30시간 미만 플레이한 게임이"),
+                )
+            }
         }
-        // 40% 미만이면 짧은 게임 비율을 보여준다.
-        val shortPlayRatio = BigDecimal.ONE.subtract(longPlayRatio)
-        return TasteMetricDto(
-            ratio = shortPlayRatio,
-            message = "짧게 플레이하는 게임이 많아요.",
-            description = createPercentageDescription(shortPlayRatio, "30시간 미만 플레이한 게임이"),
-        )
     }
 
     private fun calculateRating(ratings: List<BigDecimal>): TasteMetricDto {
@@ -212,31 +210,24 @@ class UserGameProfileService(
         val highRatingRatio = calculateRatio(highRatingCount, ratings.size)
         val mediumRatingRatio = calculateRatio(mediumRatingCount, ratings.size)
         val lowRatingRatio = calculateRatio(lowRatingCount, ratings.size)
-        // ① 2.5 ~ 4.0 구간이 가장 크거나 동률인 경우
-        if (
-            mediumRatingRatio >= highRatingRatio &&
-            mediumRatingRatio >= lowRatingRatio
-        ) {
-            return TasteMetricDto(
+        return when {
+            // 2.5 ~ 4.0 구간이 가장 크거나 동률이면 우선한다.
+            mediumRatingRatio >= highRatingRatio && mediumRatingRatio >= lowRatingRatio -> TasteMetricDto(
                 ratio = mediumRatingRatio,
                 message = "게임을 비교적 후하게 평가하는 편이에요.",
                 description = createPercentageDescription(mediumRatingRatio, "2.5점 이상 4.0점 미만으로 평가한 게임이"),
             )
-        }
-        // ② 4.0 이상 구간이 가장 큰 경우
-        if (highRatingRatio >= lowRatingRatio) {
-            return TasteMetricDto(
+            highRatingRatio >= lowRatingRatio -> TasteMetricDto(
                 ratio = highRatingRatio,
                 message = "높은 평점을 주는 게임이 많아요.",
                 description = createPercentageDescription(highRatingRatio, "4.0점 이상 평가한 게임이"),
             )
+            else -> TasteMetricDto(
+                ratio = lowRatingRatio,
+                message = "평점을 신중하게 주는 편이에요.",
+                description = createPercentageDescription(lowRatingRatio, "2.5점 미만으로 평가한 게임이"),
+            )
         }
-        // ③ 2.5 미만 구간이 가장 큰 경우
-        return TasteMetricDto(
-            ratio = lowRatingRatio,
-            message = "평점을 신중하게 주는 편이에요.",
-            description = createPercentageDescription(lowRatingRatio, "2.5점 미만으로 평가한 게임이"),
-        )
     }
 
     private fun calculateCompletion(playedGames: List<UserGame>): TasteMetricDto {
