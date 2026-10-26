@@ -42,7 +42,7 @@ constructor(
     private val entityManager: EntityManager,
 ) {
     private fun saveUser(email: String, nickname: String): User {
-        return userRepository.save(User(nickname, email, passwordEncoder.encode("password123")))
+        return userRepository.save(User(nickname, email, checkNotNull(passwordEncoder.encode("password123"))))
     }
 
     private fun loginAndGetRefreshToken(email: String): String {

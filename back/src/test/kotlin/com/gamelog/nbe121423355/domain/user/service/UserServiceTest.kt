@@ -44,7 +44,7 @@ constructor(
     private val User.requiredId: Long get() = checkNotNull(id)
 
     private fun saveUser(email: String, nickname: String, rawPassword: String): User {
-        return userRepository.save(User(nickname, email, passwordEncoder.encode(rawPassword)))
+        return userRepository.save(User(nickname, email, checkNotNull(passwordEncoder.encode(rawPassword))))
     }
 
     // refreshToken의 로그인 세션(family) ID

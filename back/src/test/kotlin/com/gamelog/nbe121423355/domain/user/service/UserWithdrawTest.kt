@@ -76,7 +76,7 @@ constructor(
     private val Game.requiredId: Long get() = checkNotNull(id)
 
     private fun saveUser(email: String, nickname: String): User {
-        return userRepository.save(User(nickname, email, passwordEncoder.encode(PASSWORD)))
+        return userRepository.save(User(nickname, email, checkNotNull(passwordEncoder.encode(PASSWORD))))
     }
 
     private fun saveGame(igdbId: Long, title: String): Game {
