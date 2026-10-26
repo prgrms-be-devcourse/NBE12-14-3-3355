@@ -48,7 +48,7 @@ constructor(
     private val gameRepository: GameRepository,
 ) {
     private fun saveUser(email: String, nickname: String, rawPassword: String): User {
-        return userRepository.save(User(nickname, email, passwordEncoder.encode(rawPassword)))
+        return userRepository.save(User(nickname, email, checkNotNull(passwordEncoder.encode(rawPassword))))
     }
 
     private fun accessTokenFor(user: User): String {

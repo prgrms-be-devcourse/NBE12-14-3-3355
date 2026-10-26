@@ -133,10 +133,10 @@ constructor(
     fun updateProfile_concurrentDuplicateNickname() {
         // given
         val userA = userRepository.save(
-            User("userA", "userA@test.com", passwordEncoder.encode("password123")),
+            User("userA", "userA@test.com", checkNotNull(passwordEncoder.encode("password123"))),
         )
         val userB = userRepository.save(
-            User("userB", "userB@test.com", passwordEncoder.encode("password123")),
+            User("userB", "userB@test.com", checkNotNull(passwordEncoder.encode("password123"))),
         )
 
         val requestDto = UpdateProfileRequestDto("raceNickname", null, null)

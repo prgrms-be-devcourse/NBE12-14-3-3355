@@ -42,7 +42,7 @@ constructor(
 
     @BeforeEach
     fun withdraw() {
-        user = userRepository.saveAndFlush(User("탈퇴자", "withdrawn@test.com", passwordEncoder.encode(PASSWORD)))
+        user = userRepository.saveAndFlush(User("탈퇴자", "withdrawn@test.com", checkNotNull(passwordEncoder.encode(PASSWORD))))
         accessToken = jwtProvider.generateAccessToken(user.id, user.role)
 
         mockMvc.perform(

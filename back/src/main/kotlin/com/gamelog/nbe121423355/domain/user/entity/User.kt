@@ -1,6 +1,5 @@
 package com.gamelog.nbe121423355.domain.user.entity
 
-import com.gamelog.nbe121423355.global.interop.javaNonNull
 import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
 import java.time.LocalDateTime
@@ -49,32 +48,32 @@ class User : BaseEntity {
     // 회원가입 생성자
     // 회원가입 직후에는 무조건 온보딩 미완료 상태로 시작
     // 회원가입하는 사람은 user뿐
-    constructor(nickname: String?, email: String?, password: String?) {
-        this.nickname = javaNonNull(nickname, "nickname")
-        this.email = javaNonNull(email, "email")
-        this.password = javaNonNull(password, "password")
+    constructor(nickname: String, email: String, password: String) {
+        this.nickname = nickname
+        this.email = email
+        this.password = password
         this.role = "USER"
         this.onboardingCompleted = false
     }
 
-    fun updateProfile(nickname: String?, profileImageUrl: String?, bio: String?) {
-        this.nickname = javaNonNull(nickname, "nickname")
+    fun updateProfile(nickname: String, profileImageUrl: String?, bio: String?) {
+        this.nickname = nickname
         this.profileImageUrl = profileImageUrl
         this.bio = bio
     }
 
-    fun changePassword(encodedPassword: String?) {
-        this.password = javaNonNull(encodedPassword, "password")
+    fun changePassword(encodedPassword: String) {
+        this.password = encodedPassword
     }
 
     fun promoteToAdmin() {
         this.role = "ADMIN"
     }
 
-    fun withdraw(encodedRandomPassword: String?) {
+    fun withdraw(encodedRandomPassword: String) {
         this.email = "deleted_$id@deleted.local"
         this.nickname = "탈퇴한사용자_$id"
-        this.password = javaNonNull(encodedRandomPassword, "password")
+        this.password = encodedRandomPassword
         this.profileImageUrl = null
         this.bio = null
         this.deletedAt = LocalDateTime.now()

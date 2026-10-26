@@ -39,7 +39,7 @@ constructor(
     private val jwtProvider: JwtProvider,
 ) {
     private fun saveUser(email: String, nickname: String, rawPassword: String): User =
-        userRepository.save(User(nickname, email, passwordEncoder.encode(rawPassword)))
+        userRepository.save(User(nickname, email, checkNotNull(passwordEncoder.encode(rawPassword))))
 
     private fun loginAndGetRefreshTokenCookie(): Cookie {
         val loginResult =

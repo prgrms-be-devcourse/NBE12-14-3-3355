@@ -19,17 +19,6 @@ class UserTest {
     }
 
     @Test
-    @DisplayName("회원가입 생성자 - 필수값이 null이면 NullPointerException")
-    fun signupRejectsNullRequiredFields() {
-        assertThatThrownBy { User(null, "user@test.com", "encoded") }
-            .isInstanceOf(NullPointerException::class.java)
-        assertThatThrownBy { User("닉네임", null, "encoded") }
-            .isInstanceOf(NullPointerException::class.java)
-        assertThatThrownBy { User("닉네임", "user@test.com", null) }
-            .isInstanceOf(NullPointerException::class.java)
-    }
-
-    @Test
     @DisplayName("completeOnboarding - 온보딩 완료 상태로 바뀐다")
     fun completeOnboarding() {
         val user = User("닉네임", "user@test.com", "encoded")
@@ -63,16 +52,6 @@ class UserTest {
     }
 
     @Test
-    @DisplayName("updateProfile - 닉네임이 null이면 NullPointerException이고 기존 값은 유지된다")
-    fun updateProfileRejectsNullNickname() {
-        val user = activeUser()
-
-        assertThatThrownBy { user.updateProfile(null, null, null) }
-            .isInstanceOf(NullPointerException::class.java)
-        assertThat(user.nickname).isEqualTo("닉네임")
-    }
-
-    @Test
     @DisplayName("changePassword - 암호화된 새 비밀번호로 바꾼다")
     fun changePassword() {
         val user = activeUser()
@@ -80,16 +59,6 @@ class UserTest {
         user.changePassword("new-encoded")
 
         assertThat(user.password).isEqualTo("new-encoded")
-    }
-
-    @Test
-    @DisplayName("changePassword - null이면 NullPointerException")
-    fun changePasswordRejectsNull() {
-        val user = activeUser()
-
-        assertThatThrownBy { user.changePassword(null) }
-            .isInstanceOf(NullPointerException::class.java)
-        assertThat(user.password).isEqualTo("encoded")
     }
 
     @Test
