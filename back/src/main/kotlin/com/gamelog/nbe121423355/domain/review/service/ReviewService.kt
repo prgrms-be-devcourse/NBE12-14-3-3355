@@ -14,9 +14,10 @@ import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
-import java.util.Objects
+import kotlin.jvm.optionals.getOrNull
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation.MANDATORY
 import org.springframework.transaction.annotation.Transactional
@@ -33,14 +34,12 @@ constructor(
 ) {
     fun getMyDetailedReview(userId: Long, gameId: Long): DetailedReviewResponse {
         val userGame = userGameRepository.findByUser_IdAndGame_Id(userId, gameId)
-        if (userGame == null) {
-            return DetailedReviewResponse(null, null)
-        }
+            ?: return DetailedReviewResponse(null, null)
         val review =
             reviewRepository
                 .findByUserGame_Id(checkNotNull(userGame.id))
-                .map({ review: Review -> this.toReviewResponse(review) })
-                .orElse(null)
+                .getOrNull()
+                ?.let(::toReviewResponse)
         return DetailedReviewResponse(UserGameDto(userGame), review)
     }
 
@@ -51,7 +50,7 @@ constructor(
         validateOwner(userId, userGame)
         changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.REVIEW)
         // 리뷰가 있으면 수정하고 없으면 새로 작성.
-        val review = reviewRepository.findIncludingDeletedByUserGameId(userGameId).orElse(null)
+        val review = reviewRepository.findIncludingDeletedByUserGameId(userGameId).getOrNull()
         if (review != null) {
             if (review.isDeletedByUser) {
                 validateVersionWhenProvided(review, request.version)
@@ -105,7 +104,8 @@ constructor(
         val review =
             reviewRepository
                 .findActiveForUpdate(reviewId)
-                .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
+                .getOrNull()
+                ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
         validateOwner(userId, review.userGame)
         validateVersion(review, version)
         reviewCommentService.purge(reviewId)
@@ -122,24 +122,19 @@ constructor(
         reviewRepository.hideAllByUserId(userId, LocalDateTime.now())
     }
 
-    private fun getUserGame(userGameId: Long): UserGame {
-        return userGameRepository
-            .findById(userGameId)
-            .orElseThrow({ ServiceException("404-2", "게임 기록을 찾을 수 없습니다.") })
-    }
+    private fun getUserGame(userGameId: Long): UserGame =
+        userGameRepository.findByIdOrNull(userGameId)
+            ?: throw ServiceException("404-2", "게임 기록을 찾을 수 없습니다.")
 
-    private fun getReviewEntity(reviewId: Long): Review {
-        return reviewRepository
-            .findActiveById(reviewId)
-            .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
-    }
+    private fun getReviewEntity(reviewId: Long): Review =
+        reviewRepository.findActiveById(reviewId).getOrNull()
+            ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
-    fun getReviewByUserGameId(userGameId: Long): ReviewResponse? {
-        return reviewRepository
+    fun getReviewByUserGameId(userGameId: Long): ReviewResponse? =
+        reviewRepository
             .findByUserGame_Id(userGameId)
-            .map({ review: Review -> this.toReviewResponse(review) })
-            .orElse(null)
-    }
+            .getOrNull()
+            ?.let(::toReviewResponse)
 
     private fun toReviewResponse(review: Review): ReviewResponse {
         return ReviewResponse.from(review, reviewLikeRepository.countByReview_Id(checkNotNull(review.id)))
@@ -166,19 +161,19 @@ constructor(
     }
 
     private fun validateOwner(userId: Long, userGame: UserGame) {
-        if (!Objects.equals(userGame.user.id, userId)) {
+        if (userGame.user.id != userId) {
             throw ServiceException("403-1", "본인의 리뷰만 작성하거나 변경할 수 있습니다.")
         }
     }
 
     private fun validateVersion(review: Review, requestedVersion: Long?) {
-        if (requestedVersion == null || !Objects.equals(review.version, requestedVersion)) {
+        if (requestedVersion == null || review.version != requestedVersion) {
             throw staleReviewException()
         }
     }
 
     private fun validateVersionWhenProvided(review: Review, requestedVersion: Long?) {
-        if (requestedVersion != null && !Objects.equals(review.version, requestedVersion)) {
+        if (requestedVersion != null && review.version != requestedVersion) {
             throw staleReviewException()
         }
     }
