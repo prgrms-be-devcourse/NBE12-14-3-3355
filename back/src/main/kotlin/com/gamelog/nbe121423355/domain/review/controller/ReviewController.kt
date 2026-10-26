@@ -81,6 +81,11 @@ constructor(
         description = "로그인한 사용자의 게임 기록과 리뷰를 조회합니다. 저장한 기록이 없으면 userGame·review는 null입니다. 기존 리뷰를 수정·삭제할 때는 응답의 review.version을 전달합니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-8: 내 기록·리뷰 조회 성공. 기록이 없으면 userGame·review는 null이며 404가 아님", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "400-0: gameId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun getMyDetailedReview(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
         @PathVariable gameId: Long,
@@ -127,6 +132,12 @@ constructor(
         description = "로그인이 필요합니다. 리뷰 ID로 공개 중인 리뷰를 조회하며 삭제·관리자 숨김 리뷰는 404-3입니다. 수정·삭제 요청에는 응답의 version을 사용합니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-1: 공개 중인 리뷰 조회 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "400-0: reviewId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "404-3: 리뷰 없음 또는 삭제·관리자 숨김 상태", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun getReview(@PathVariable reviewId: Long): RsData<ReviewResponse> {
         val response = reviewService.getReview(reviewId)
         return RsData<ReviewResponse>("200-1", "리뷰 조회에 성공했습니다.", response)
@@ -134,6 +145,10 @@ constructor(
 
     @GetMapping("/games/{gameId}/reviews")
     @Operation(summary = "게임 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-2: 공개 리뷰 페이지 조회 성공. 일치하는 리뷰가 없으면 빈 목록이며 404가 아님", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "400-0: gameId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun getGameReviews(
         @PathVariable gameId: Long,
         @PageableDefault(
@@ -149,6 +164,10 @@ constructor(
 
     @GetMapping("/users/{userId}/reviews")
     @Operation(summary = "사용자 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 특정 사용자의 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다.")
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-3: 사용자 공개 리뷰 페이지 조회 성공. 일치하는 리뷰가 없으면 빈 목록이며 404가 아님", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "400-0: userId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun getUserReviews(
         @PathVariable userId: Long,
         @PageableDefault(

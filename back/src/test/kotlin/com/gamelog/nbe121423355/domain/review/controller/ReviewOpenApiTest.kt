@@ -67,6 +67,49 @@ class ReviewOpenApiTest {
             .contains("409-6", "재조회")
     }
 
+    @Test
+    @DisplayName("신고 문서는 201·관리자 권한·일괄 처리 규칙과 오류 응답을 명시한다")
+    fun documentsReportContracts() {
+        val paths = document().path("paths")
+        val create = paths.path("/api/v1/reviews/{reviewId}/reports").path("post")
+        assertThat(create.path("responses").has("201")).isTrue()
+        assertThat(create.path("description").asString()).contains("400-3", "409-1", "1~255")
+        val list = paths.path("/api/v1/admin/review-reports").path("get")
+        assertThat(list.path("description").asString()).contains("ADMIN", "신고 대상 리뷰 수", "sort")
+        val filter = list.path("parameters").single { it.path("name").asString() == "status" }
+        assertThat(filter.path("description").asString()).contains("PENDING", "APPROVED", "REJECTED")
+        val update = paths.path("/api/v1/admin/review-reports/{reportId}/status").path("put")
+        assertThat(update.path("description").asString()).contains("HIDDEN_BY_ADMIN", "일괄", "400-5", "409-4")
+        assertThat(update.path("responses").path("404").path("description").asString()).contains("404-5")
+        for (operation in listOf(create, list, update)) {
+            assertThat(operation.path("security").first().has("bearerAuth")).isTrue()
+            assertThat(operation.path("responses").has("400")).isTrue()
+            assertThat(operation.path("responses").has("401")).isTrue()
+        }
+        for (operation in listOf(list, update)) {
+            assertThat(operation.path("responses").path("403").path("description").asString()).contains("ADMIN")
+        }
+        assertThat(update.path("responses").path("409").path("description").asString()).contains("409-4")
+    }
+
+    @Test
+    @DisplayName("리뷰 조회 문서는 로그인 조건과 빈 결과 200·단건 없음 404를 구분한다")
+    fun documentsReviewReadContracts() {
+        val paths = document().path("paths")
+        val mine = paths.path("/api/v1/games/{gameId}/reviews/me").path("get")
+        assertThat(mine.path("responses").path("200").path("description").asString()).contains("null", "404가 아님")
+        assertThat(mine.path("responses").has("401")).isTrue()
+        val single = paths.path("/api/v1/reviews/{reviewId}").path("get")
+        assertThat(single.path("responses").has("401")).isTrue()
+        assertThat(single.path("responses").path("404").path("description").asString()).contains("404-3")
+        for (path in listOf("/api/v1/games/{gameId}/reviews", "/api/v1/users/{userId}/reviews")) {
+            val operation = paths.path(path).path("get")
+            assertThat(operation.path("description").asString()).contains("비로그인")
+            assertThat(operation.path("responses").path("200").path("description").asString()).contains("빈 목록")
+            assertThat(operation.path("security").isMissingNode || operation.path("security").isEmpty).isTrue()
+        }
+    }
+
     private fun document(): JsonNode {
         val response = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk).andReturn().response
         return mapper.readTree(response.contentAsString)
