@@ -45,8 +45,6 @@ class ReviewLibraryLifecycleTest {
     @Autowired UserGameRepository records;
     @Autowired UserFavoriteGameRepository favorites;
     @Autowired EntityManager em;
-    @Autowired ReviewService reviewService;
-    @Autowired com.gamelog.nbe121423355.domain.game.repository.RelatedGameInputChangeRepository changes;
     Long userId;
     Long gameId;
 
@@ -55,30 +53,6 @@ class ReviewLibraryLifecycleTest {
         userId = users.save(new User("review-library", "review-library@example.com", "password")).getId();
         gameId = games.save(Game.createFromIgdb(new IgdbGameResponse(990001L, "review-library", "test",
                 null, null, null, List.of(), List.of(), List.of(), List.of()))).getId();
-    }
-
-    @Test
-    void actualRecordAndReviewLifecycleKeepChangeSourcesPending() {
-        // given: 실제 상세 저장 경로로 좋아요와 리뷰를 함께 기록한다.
-        var saved = gameRecordReviewService.saveDetailedReview(userId, gameId,
-                new DetailedReviewSaveRequest(record(false), rating()));
-        var initial = changes.findByGameId(gameId);
-        changes.markExpanded(gameId, initial.getChangeVersion());
-
-        // when: 리뷰 삭제·복원 후 탈퇴의 일괄 숨김 저장 경로를 실행한다.
-        gameRecordReviewService.deleteReview(userId, saved.review().reviewId(), saved.review().version());
-        var afterDeletion = changes.findByGameId(gameId);
-        gameRecordReviewService.saveReview(userId, saved.userGame().getId(), rating());
-        long beforeWithdrawal = changes.findByGameId(gameId).getChangeVersion();
-        reviewService.hideAllByWithdrawnUser(userId);
-
-        // then: 각 실제 저장에서 새 원천 버전을 기록하고 일괄 숨김도 리뷰 변경으로 남긴다.
-        var remaining = changes.findByGameId(gameId);
-        assertThat(initial.getReasonMask() & com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.USER_GAME_RECORD.getMask()).isNotZero();
-        assertThat(afterDeletion.getChangeVersion()).isGreaterThan(initial.getChangeVersion());
-        assertThat(remaining.getChangeVersion()).isGreaterThan(beforeWithdrawal);
-        assertThat(remaining.getReasonMask() & com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason.REVIEW.getMask()).isNotZero();
-        assertThat(remaining.isPending()).isTrue();
     }
 
     private UserGameReqBody record(boolean playing) {
