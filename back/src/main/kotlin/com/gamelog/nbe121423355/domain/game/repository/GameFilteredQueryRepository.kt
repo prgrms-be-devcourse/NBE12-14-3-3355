@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.game.repository
 
 import com.gamelog.nbe121423355.domain.game.dto.GameSort
 import com.gamelog.nbe121423355.domain.game.entity.Game
-import com.gamelog.nbe121423355.domain.game.service.GamePublicationPolicy
 import jakarta.persistence.EntityManager
 import jakarta.persistence.Query
 import java.time.LocalDate
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Repository
 class GameFilteredQueryRepository
 constructor(
     private val entityManager: EntityManager,
-    private val publicationPolicy: GamePublicationPolicy,
 ) {
     @SuppressWarnings("unchecked")
     fun findPage(
@@ -39,12 +37,6 @@ constructor(
 
             """
             )
-        if (publicationPolicy.isReadyOnly) {
-            where.append(
-                " AND EXISTS (SELECT 1 FROM related_game_calculations calculation " +
-                    "WHERE calculation.game_id = g.id AND calculation.last_success_at IS NOT NULL)"
-            )
-        }
         if (keyword != null) {
             where.append(" AND LOWER(g.title) LIKE LOWER(:keyword) ESCAPE \'!\'\n")
             parameters.put("keyword", keyword)

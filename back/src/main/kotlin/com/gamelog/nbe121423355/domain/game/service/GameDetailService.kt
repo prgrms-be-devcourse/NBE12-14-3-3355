@@ -15,7 +15,6 @@ import java.math.BigDecimal
 @Transactional(readOnly = true)
 class GameDetailService(
     private val gameRepository: GameRepository,
-    private val publicationPolicy: GamePublicationPolicy,
     private val gameGenreRepository: GameGenreRepository,
     private val gamePlatformRepository: GamePlatformRepository,
     private val gameSeriesGameRepository: GameSeriesGameRepository,
@@ -29,7 +28,6 @@ class GameDetailService(
 
     // 게임 기본 정보와 연결 정보, 상태·평점·리뷰·좋아요 통계를 조회해 상세 응답으로 반환
     fun getGameDetail(gameId: Long): GameDetailResponse {
-        requirePublished(gameId)
         // GameLog DB ID로 게임 기본 정보 조회
         val game = gameRepository.findByIdOrNull(gameId)
             ?: throw ServiceException("404-1", "존재하지 않는 게임입니다.")
@@ -75,7 +73,6 @@ class GameDetailService(
 
     // 기준 게임의 존재 여부를 확인한 뒤 연관 추천 게임 상위 5개를 반환
     fun getRelatedGames(gameId: Long): List<RelatedGameResponse> {
-        requirePublished(gameId)
         if (!gameRepository.existsById(gameId)) {
             throw ServiceException("404-1", "존재하지 않는 게임입니다.")
         }
@@ -85,15 +82,6 @@ class GameDetailService(
         }
 
         return attachGenres(games)
-    }
-
-    private fun requirePublished(gameId: Long) {
-        if (
-            publicationPolicy.isReadyOnly &&
-            !relatedGameCalculationRepository.existsByGameIdAndLastSuccessAtIsNotNull(gameId)
-        ) {
-            throw ServiceException("404-1", "존재하지 않는 게임입니다.")
-        }
     }
 
     private fun findRelatedGames(gameId: Long): List<RelatedGameResponse> {
