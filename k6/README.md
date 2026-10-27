@@ -1,5 +1,68 @@
 # 검색 부하 테스트
 
+## 단계별 요청량 시험 (목록 검색 + 자동완성)
+
+Python 3.10 이상과 k6가 필요합니다. 실행 중인 백엔드와 Prometheus가 정상 상태여야 합니다.
+IntelliJ Program arguments에 아래 시험용 설정을 적용해 백엔드를 실행합니다.
+
+```text
+--spring.jpa.show-sql=false --spring.jpa.hibernate.ddl-auto=none --spring.sql.init.mode=never
+```
+
+데이터 수집/번역도 끄고, 별도 빌드나 다른 부하 발생 작업과 동시에 실행하지 않습니다.
+로컬 실행 예:
+
+```powershell
+python -B k6/run-search-suite.py --preflight-only
+python -B k6/run-search-suite.py
+# 한 조건만 다시 측정
+python -B k6/run-search-suite.py --cases list-broad-a
+# 실행기 중단 후, 완료한 단계는 보존하고 재개 (원래 인자가 기본값인 경우)
+python -B k6/run-search-suite.py --resume k6/results/arrival-<UTC>
+# 저장된 지표만으로 결과 문서 생성
+python -B k6/summarize-search-suite.py k6/results/arrival-<UTC> --output docs/search-load-test-results.md
+# 안전 판정 로직 회귀 테스트 (서버에 요청하지 않음)
+python -B -m unittest discover -s k6 -p test_search_guard.py
+```
+
+기본 15개 조건을 순차 실행합니다. 조건별 단일 요청 검증, 1 RPS 30초 예열 후
+1/5/10/20 RPS 각각 2분을 측정하고 실행 사이 30초 쉽니다. 최대 100 VU이며,
+기준을 처음 넘긴 단계와 직전 단계를 한 번씩 재측정합니다. 기본 시험에 약 3시간,
+기준 초과 시 재측정 시간이 추가됩니다. Ctrl+C는 실행 중인 k6 자식 프로세스도 종료합니다.
+
+목록은 Baldur, 검색어 없음, a, 결과 없음, a의 page=100, 장르, 플랫폼,
+검색어+두 필터, LATEST/TITLE/RATING/LIBRARY/PLAY_TIME 정렬입니다.
+페이지 크기는 20이고 자동완성은 a/al을 별도 측정합니다. 필터는 filters API의
+RPG/PC 값을 사용하며 없으면 각 목록의 첫 값을 사용하고 manifest에 기록합니다.
+
+임시 기준은 p95 < 500ms, HTTP 실패율 < 1%, 응답 검사 전부 통과, 미전송 0건입니다.
+성능 기준 초과와 안전 중단을 구분합니다. 최근 30초 창을 5초 간격으로 검사하고,
+p95 >= 3초 또는 HTTP 실패율 >= 10%가 30초 지속되면 해당 실행을 중단합니다.
+완전한 30초 창 이후 지속 시간을 세므로 가장 빠른 지속 초과 중단은 약 60초입니다.
+미전송 요청, 앱 scrape 실패, 30초간 완료 요청 없음도 중단 조건입니다.
+중단된 실행은 완료 결과로 판정하지 않고 다음 고부하 단계로 진행하지 않습니다.
+
+결과는 `k6/results/arrival-<UTC>/manifest.json` 및 실행별 폴더에 저장됩니다.
+`summary.json`은 정상 종료 시 k6 요약, `points.jsonl`은 원본 지표,
+`result.json`은 판정·최근 30초 이력·서버 지표입니다. 강제 중단 시 요약이 없을 수 있으며
+기록된 원본에서 구한 값은 완료 요청만의 관측값이므로 정상 시험과 비교하면 안 됩니다.
+`completed_rps_wall_clock`은 프로세스 시작/종료와 관측 시간을 포함합니다.
+정확한 k6 실행 평균은 정상 종료 `summary.json`의 http_reqs rate를 확인합니다.
+
+Grafana: http://localhost:3001/d/gamelog-search-arrival
+
+suite/case/phase로 선택합니다. 누적 p95는 최근 30초 안전 판정 p95와 다르고,
+최근 20초 처리량은 전체 실행 평균과 다릅니다. JVM 지표는 같은 시간 구간의
+백엔드 전체 값입니다. DB 풀 대기만으로 DB 내부 병목을 확정할 수 없습니다.
+실행기 단축 검증 시에만 `--duration`, `--warmup`, `--recovery`, `--no-repeat`를 사용하며
+단축 시험은 기준선 측정 결과로 보고하지 않습니다.
+재개할 때는 기존 실행과 동일한 조건 및 인자를 사용해야 합니다. 완료한 단계는 재사용하고,
+진행 중이던 조건은 새로 예열합니다. 요약이 없는 불완전한 실행 폴더는 보존하되 결과에서 제외합니다.
+
+설계: [게임 검색 부하 테스트 계획](../docs/search-load-test-plan.md).
+부하 모델과 지표 의미는 [k6 공식 지표 문서](https://grafana.com/docs/k6/latest/using-k6/metrics/reference/)와
+[Prometheus remote write 문서](https://grafana.com/docs/k6/latest/results-output/real-time/prometheus-remote-write/)를 기준으로 합니다.
+
 ## 로컬 단일 요청 지연 비교 (PowerShell)
 
 `measure-search.ps1`은 자동완성 `a`/`al`, 검색어 없는 목록 page=0/100(size=15)을

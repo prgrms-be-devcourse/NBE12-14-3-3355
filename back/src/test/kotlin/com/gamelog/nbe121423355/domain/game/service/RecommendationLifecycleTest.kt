@@ -17,14 +17,12 @@ import com.gamelog.nbe121423355.domain.game.sync.IgdbSyncCatalog
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
-import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -84,7 +82,7 @@ class RecommendationLifecycleTest {
     }
 
     @Test
-    fun failedNewGameStaysHiddenUntilManualRetrySucceeds() {
+    fun failedNewGameRemainsSearchableWhileManualRetryPreparesRecommendations() {
         // given: 기존 후보를 저장하고 신규 게임의 첫 계산이 실패하도록 준비한다.
         val candidateId = requireNotNull(tx.execute { id(readyGame(100L, "기존 후보")) })
         doThrow(IllegalStateException("계산 오류"))
@@ -94,13 +92,13 @@ class RecommendationLifecycleTest {
         val failed = calculations.findById(sourceId).orElseThrow()
         assertThat(failed.lastAttemptStatus).isEqualTo(RelatedGameCalculationStatus.FAILED)
         assertThat(failed.lastSuccessAt).isNull()
-        assertHidden(sourceId, "신규 게임")
+        assertSearchable(sourceId, "신규 게임")
         doCallRealMethod().`when`(query).findCandidatesForPrecompute(anyLong(), eq(20), eq(true))
 
         // when: 실패한 신규 게임을 수동으로 재계산한다.
         val retry = batch.run(false, listOf(sourceId), RelatedGamePrecomputeMode.REFRESH)
 
-        // then: 재시도 성공 후 준비 완료가 되어 상세 추천과 자동완성에 공개한다.
+        // then: 재시도 성공 후 저장된 추천을 사용하고 검색 노출도 유지한다.
         assertThat(retry.succeeded).isEqualTo(1)
         assertThat(retry.failedIds).isEmpty()
         assertThat(calculations.findById(sourceId).orElseThrow().isReady).isTrue()
@@ -153,7 +151,7 @@ class RecommendationLifecycleTest {
             val state = calculations.findById(id).orElseThrow()
             assertThat(state.lastAttemptStatus).isEqualTo(RelatedGameCalculationStatus.PENDING)
             assertThat(state.lastSuccessAt).isNull()
-            assertHidden(id, "대기 게임")
+            assertSearchable(id, "대기 게임")
             checkOwnership()
             id
         })
@@ -220,10 +218,10 @@ class RecommendationLifecycleTest {
         assertThat(result[1].recommendationScore).isEqualByComparingTo("67")
     }
 
-    private fun assertHidden(id: Long, title: String) {
-        assertThatThrownBy { details.getGameDetail(id) }.isInstanceOf(ServiceException::class.java)
-        assertThatThrownBy { details.getRelatedGames(id) }.isInstanceOf(ServiceException::class.java)
-        assertThat(catalog.getSuggestions(title)).isEmpty()
+    private fun assertSearchable(id: Long, title: String) {
+        assertThat(details.getGameDetail(id).id).isEqualTo(id)
+        assertThat(details.getRelatedGames(id)).hasSize(1)
+        assertThat(catalog.getSuggestions(title).map { it.id }).containsExactly(id)
     }
 
     private fun readyGame(igdbId: Long, title: String): Game {

@@ -17,13 +17,11 @@ import com.gamelog.nbe121423355.domain.game.repository.RelatedGameCandidateRepos
 import com.gamelog.nbe121423355.domain.game.repository.RelatedGameQueryRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
-import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -98,10 +96,10 @@ class GamePublicationTest {
     }
 
     @Test
-    fun filtersBeforePaginationCountAndSuggestionLimit() {
+    fun catalogIncludesUnreadyGamesInPaginationCountAndSuggestions() {
         // given: 미준비 게임 여덟 개와 정상 성공·갱신 실패 후 준비된 게임 두 개를 저장한다.
         val genre = genre()
-        repeat(8) { game(100L + it, "Game hidden $it", genre) }
+        val unready = (0 until 8).map { game(100L + it, "Game pending $it", genre) }
         val first = game(200L, "Game ready 1", genre)
         val second = game(201L, "Game ready 2", genre)
         ready(first, failedRefresh = false)
@@ -110,38 +108,42 @@ class GamePublicationTest {
 
         // when: 기본 목록·필터 목록·자동완성을 조회한다.
         val page = games.getGamesPage(GameSearchRequest(0, 1, null, null, null, null))
-        val filtered = games.getGamesPage(GameSearchRequest(
-            page = 0, size = 1, sort = GameSort.TITLE, keyword = "Game",
-            genreIds = mutableListOf(requireNotNull(genre.id)), platformIds = null,
-        ))
+        val filteredPages = (listOf(null) + GameSort.entries).map { sort ->
+            games.getGamesPage(GameSearchRequest(
+                page = 0, size = 1, sort = sort, keyword = "Game",
+                genreIds = mutableListOf(requireNotNull(genre.id)), platformIds = null,
+            ))
+        }
         val suggestions = games.getSuggestions("Game")
 
-        // then: 페이지 총수와 제한을 적용하기 전에 미준비 게임을 제외한다.
-        assertThat(page.totalElements).isEqualTo(2)
-        assertThat(page.content.map { it.id }).containsExactly(first.id)
-        assertThat(filtered.totalElements).isEqualTo(2)
-        assertThat(filtered.content.map { it.id }).containsExactly(first.id)
-        assertThat(suggestions.map { it.id }).containsExactly(first.id, second.id)
+        // then: 추천 공개 설정이 켜져 있어도 검색은 계산 상태와 무관하게 페이지·총수·후보를 반환한다.
+        assertThat(page.totalElements).isEqualTo(10)
+        assertThat(page.content.map { it.id }).containsExactly(unready.first().id)
+        for (filtered in filteredPages) {
+            assertThat(filtered.totalElements).isEqualTo(10)
+            assertThat(filtered.content.map { it.id }).containsExactly(unready.first().id)
+        }
+        assertThat(suggestions.map { it.id }).containsExactlyElementsOf(unready.take(6).map { it.id })
     }
 
     @Test
-    fun hidesUnreadyDetailButPublishesSuccessfulEmptyAndFailedRefresh() {
+    fun opensUnreadyDetailsAndFallsBackToRealtimeRecommendations() {
         // given: 미준비 게임과 성공한 빈 결과 이후 갱신에 실패한 게임을 저장한다.
         val genre = genre()
-        val hidden = game(300L, "hidden", genre)
+        val unready = game(300L, "unready", genre)
         val published = game(301L, "published", genre)
         ready(published, failedRefresh = true)
         em.flush()
 
         // when: 두 게임의 상세·연관 추천을 조회한다.
-        val detailFailure = catchThrowable { details.getGameDetail(id(hidden)) }
-        val relatedFailure = catchThrowable { details.getRelatedGames(id(hidden)) }
+        val unreadyDetail = details.getGameDetail(id(unready))
+        val fallback = details.getRelatedGames(id(unready))
         val detail = details.getGameDetail(id(published))
         val relatedGames = details.getRelatedGames(id(published))
 
-        // then: 미준비 게임은 차단하고 이전 성공 게임은 빈 추천과 함께 공개한다.
-        assertThat(detailFailure).isInstanceOf(ServiceException::class.java)
-        assertThat(relatedFailure).isInstanceOf(ServiceException::class.java)
+        // then: 미준비 게임도 열 수 있고, 계산 전에는 기존 실시간 추천 경로를 사용한다.
+        assertThat(unreadyDetail.id).isEqualTo(unready.id)
+        assertThat(fallback.map { it.id }).containsExactly(published.id)
         assertThat(detail.id).isEqualTo(published.id)
         assertThat(relatedGames).isEmpty()
     }
