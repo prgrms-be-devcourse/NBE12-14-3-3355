@@ -13,6 +13,17 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface ReviewRepository : JpaRepository<Review, Long> {
+    // 신고 ID가 달라도 같은 리뷰의 일괄 처리는 직렬화한다. 엔티티를 미리 로드하지 않는다.
+    @Query(
+        value = """
+            SELECT r.id FROM reviews r
+            WHERE r.id = (SELECT report.review_id FROM review_reports report WHERE report.id = :reportId)
+            FOR UPDATE
+        """,
+        nativeQuery = true,
+    )
+    fun lockReviewIdByReportId(@Param("reportId") reportId: Long): Long?
+
     @org.springframework.data.jpa.repository.Lock(
         jakarta.persistence.LockModeType.PESSIMISTIC_WRITE
     )

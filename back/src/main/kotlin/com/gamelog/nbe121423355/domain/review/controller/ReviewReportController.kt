@@ -109,6 +109,7 @@ class ReviewReportController constructor(private val reviewReportService: Review
             승인하면 리뷰를 HIDDEN_BY_ADMIN으로 숨겨 공개 조회에서 제외하고 라이브러리 포함 여부를 다시 계산합니다.
             반려하면 신고 상태만 변경하며 리뷰의 기존 공개·숨김 상태는 변경하지 않습니다.
             이미 처리된 신고는 그대로 두고 대기 신고만 변경합니다. 같은 리뷰에 대기 신고가 전혀 없으면 409-4입니다.
+            같은 리뷰의 동시 처리 요청은 순서대로 처리하며, 잠금을 얻은 뒤 이미 처리되어 대기 신고가 없으면 409-4를 반환합니다.
             응답은 처리한 대기 신고 중 하나이며, 경로의 reportId와 반드시 같지는 않습니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],

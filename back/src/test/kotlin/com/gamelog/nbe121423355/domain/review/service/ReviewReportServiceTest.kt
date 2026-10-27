@@ -146,8 +146,8 @@ class ReviewReportServiceTest {
         lenient().`when`(anotherReporter.id).thenReturn(3L)
         lenient().`when`(anotherReporter.nickname).thenReturn("다른신고자")
         val anotherReport = ReviewReport(review, anotherReporter, "같은 리뷰의 다른 신고")
-        `when`(reviewReportRepository.findById(20L)).thenReturn(Optional.of(report))
-        `when`(reviewReportRepository.findByReview_IdAndStatus(10L, ReportStatus.PENDING))
+        `when`(reviewRepository.lockReviewIdByReportId(20L)).thenReturn(10L)
+        `when`(reviewReportRepository.findPendingByReviewIdForUpdate(10L))
             .thenReturn(listOf(report, anotherReport))
 
         val response = reviewReportService.updateStatus(20L, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
@@ -162,8 +162,8 @@ class ReviewReportServiceTest {
     @Test
     fun rejectReportKeepsReviewActive() {
         val report = ReviewReport(review, reporter, "문제 없음")
-        `when`(reviewReportRepository.findById(20L)).thenReturn(Optional.of(report))
-        `when`(reviewReportRepository.findByReview_IdAndStatus(10L, ReportStatus.PENDING)).thenReturn(listOf(report))
+        `when`(reviewRepository.lockReviewIdByReportId(20L)).thenReturn(10L)
+        `when`(reviewReportRepository.findPendingByReviewIdForUpdate(10L)).thenReturn(listOf(report))
 
         val response = reviewReportService.updateStatus(20L, ReviewReportStatusUpdateRequest(ReportStatus.REJECTED))
 
@@ -174,9 +174,8 @@ class ReviewReportServiceTest {
     @DisplayName("이미 처리된 신고는 다시 처리할 수 없다")
     @Test
     fun rejectReprocessingReport() {
-        val report = ReviewReport(review, reporter, "신고 사유")
-        report.changeStatus(ReportStatus.REJECTED)
-        `when`(reviewReportRepository.findById(20L)).thenReturn(Optional.of(report))
+        `when`(reviewRepository.lockReviewIdByReportId(20L)).thenReturn(10L)
+        `when`(reviewReportRepository.findPendingByReviewIdForUpdate(10L)).thenReturn(emptyList())
 
         assertThatThrownBy {
             reviewReportService.updateStatus(20L, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
