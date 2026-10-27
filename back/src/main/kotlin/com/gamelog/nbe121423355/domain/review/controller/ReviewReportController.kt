@@ -75,7 +75,8 @@ class ReviewReportController constructor(private val reviewReportService: Review
             로그인한 ADMIN만 조회할 수 있습니다. status를 생략하면 전체 상태를 조회합니다.
             신고를 대상 리뷰 단위로 묶으므로 totalElements·size는 개별 신고 건수가 아닌 신고 대상 리뷰 수 기준입니다.
             status를 지정하면 해당 상태의 신고만 묶어 반환합니다. 각 그룹의 reportCount·pendingReportCount도 반환된 신고 기준입니다.
-            그룹은 가장 최근 신고 시각의 내림차순입니다. page는 0부터 시작하고 기본 size는 20입니다.
+            그룹은 가장 최근 신고 시각의 내림차순이며, 시각이 같으면 리뷰 ID 내림차순입니다. 그룹 안의 신고는 신고 시각·신고 ID 내림차순입니다.
+            page는 0부터 시작하고 기본 size는 20입니다.
             정렬은 서비스에서 고정하므로 sort 요청값으로 변경되지 않습니다. 일치하는 신고가 없으면 빈 목록을 반환합니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],

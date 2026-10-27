@@ -41,7 +41,7 @@ interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
             FROM ReviewReport report
             WHERE (:status IS NULL OR report.status = :status)
             GROUP BY report.review.id
-            ORDER BY MAX(report.createdDate) DESC
+            ORDER BY MAX(report.createdDate) DESC, report.review.id DESC
 
             """,
         countQuery =
@@ -64,7 +64,7 @@ interface ReviewReportRepository : JpaRepository<ReviewReport, Long> {
             FROM ReviewReport report
             WHERE report.review.id IN :reviewIds
               AND (:status IS NULL OR report.status = :status)
-            ORDER BY report.createdDate DESC
+            ORDER BY report.createdDate DESC, report.id DESC
 
             """
     )
