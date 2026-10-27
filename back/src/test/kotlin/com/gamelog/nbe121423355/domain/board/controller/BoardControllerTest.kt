@@ -157,6 +157,28 @@ class BoardControllerTest {
     }
 
     @Test
+    @DisplayName("검색어의 %, _, ! 는 와일드카드가 아닌 글자 그대로 찾는다")
+    fun searchesLikeWildcardsLiterally() {
+        val percent = createPost(writer, title = "확률 100% 보장")
+        createPost(writer, title = "확률 1000 보장")
+        val underscore = createPost(writer, title = "닉네임 a_b")
+        createPost(writer, title = "닉네임 acb")
+        val bang = createPost(writer, title = "대박!")
+
+        mvc.perform(get(POSTS).param("q", "100%").auth(reader))
+            .andExpect(jsonPath("$.data.posts", hasSize<Any>(1)))
+            .andExpect(jsonPath("$.data.posts[0].id").value(percent))
+        mvc.perform(get(POSTS).param("q", "a_b").auth(reader))
+            .andExpect(jsonPath("$.data.posts", hasSize<Any>(1)))
+            .andExpect(jsonPath("$.data.posts[0].id").value(underscore))
+        mvc.perform(get(POSTS).param("q", "박!").auth(reader))
+            .andExpect(jsonPath("$.data.posts", hasSize<Any>(1)))
+            .andExpect(jsonPath("$.data.posts[0].id").value(bang))
+        mvc.perform(get(POSTS).param("q", "%").auth(reader))
+            .andExpect(jsonPath("$.data.posts", hasSize<Any>(1)))
+    }
+
+    @Test
     @DisplayName("원댓글은 3개, 답글은 5개씩 오래된 순으로 조회하고 답글에는 답글을 달 수 없다")
     fun pagesCommentsAndRepliesOneLevel() {
         val postId = createPost(writer)
