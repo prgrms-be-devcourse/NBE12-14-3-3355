@@ -31,8 +31,8 @@ interface BoardPostRepository : JpaRepository<BoardPost, Long> {
         LEFT JOIN FETCH p.game
         WHERE $VISIBLE
           AND (:afterId IS NULL OR p.id < :afterId)
-          AND (:keyword IS NULL OR p.title LIKE CONCAT('%', :keyword, '%')
-               OR p.content LIKE CONCAT('%', :keyword, '%'))
+          AND (:keyword IS NULL OR p.title LIKE CONCAT('%', :keyword, '%') ESCAPE '!'
+               OR p.content LIKE CONCAT('%', :keyword, '%') ESCAPE '!')
         ORDER BY p.id DESC
         """
     )

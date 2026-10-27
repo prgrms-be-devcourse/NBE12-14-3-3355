@@ -72,13 +72,16 @@ class BoardReportService(
         if (status == ReportStatus.PENDING) {
             throw ServiceException("400-43", "신고 처리 결과는 승인 또는 반려여야 합니다.")
         }
+        // 신고 접수와 같은 게시글 잠금을 먼저 잡아야, 처리 도중 들어온 신고가 대기로 남지 않는다
+        val comment = if (report.targetType == BoardReportTarget.COMMENT) comments.findByIdOrNull(report.targetId) else null
+        val post = posts.findByIdForUpdate(comment?.post?.id ?: report.targetId)
         val pending =
             reports.findByTargetTypeAndTargetIdAndStatus(report.targetType, report.targetId, ReportStatus.PENDING)
         if (pending.isEmpty()) throw ServiceException("409-41", "이미 처리된 신고입니다.")
         if (status == ReportStatus.APPROVED) {
             when (report.targetType) {
-                BoardReportTarget.POST -> posts.findByIdForUpdate(report.targetId)?.hideByAdmin()
-                BoardReportTarget.COMMENT -> comments.findByIdOrNull(report.targetId)?.hideByAdmin()
+                BoardReportTarget.POST -> post?.hideByAdmin()
+                BoardReportTarget.COMMENT -> comment?.hideByAdmin()
             }
         }
         pending.forEach { it.changeStatus(status) }

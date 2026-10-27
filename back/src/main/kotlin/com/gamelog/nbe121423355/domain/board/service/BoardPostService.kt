@@ -41,7 +41,7 @@ class BoardPostService(
         if (trimmed != null && trimmed.length > KEYWORD_MAX) {
             throw ServiceException("400-40", "검색어는 50자 이하로 입력해 주세요.")
         }
-        val rows = posts.list(trimmed, after, PageRequest.of(0, PAGE_SIZE + 1))
+        val rows = posts.list(trimmed?.let(::escapeLike), after, PageRequest.of(0, PAGE_SIZE + 1))
         val visible = rows.take(PAGE_SIZE)
         return BoardPostPageResponse(
             posts = responses(visible, viewerId),
@@ -155,3 +155,7 @@ class BoardPostService(
         private const val KEYWORD_MAX = 50
     }
 }
+
+// LIKE의 %, _ 를 글자 그대로 찾도록 쿼리의 ESCAPE '!'에 맞춰 이스케이프한다
+private fun escapeLike(keyword: String): String =
+    keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_")
