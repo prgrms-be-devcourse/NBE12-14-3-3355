@@ -266,7 +266,7 @@ constructor(
                 .content("""{"currentPassword": "password123", "newPassword": "newPassword123"}"""),
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.resultCode").value("200-14"))
+            .andExpect(jsonPath("$.resultCode").value("200-21"))
             .andReturn()
 
         val newCookie = result.response.getCookie("refreshToken")
@@ -277,6 +277,21 @@ constructor(
             .andExpect(status().isOk)
         mockMvc.perform(post("/api/v1/users/refresh").cookie(oldCookie))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    @DisplayName("비밀번호 변경 실패 - 현재 비밀번호가 틀리면 400-3")
+    fun changePassword_fail_wrongCurrentPassword() {
+        val user = saveUser("test@test.com", "nickname", "password123")
+
+        mockMvc.perform(
+            patch("/api/v1/users/me/password")
+                .header("Authorization", "Bearer ${accessTokenFor(user)}")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"currentPassword": "wrongPassword123", "newPassword": "newPassword123"}"""),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-3"))
     }
 
     @Test
@@ -524,6 +539,7 @@ constructor(
 
         mockMvc.perform(get("/api/v1/users/check-email").param("email", "test@test.com"))
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-11"))
             .andExpect(jsonPath("$.data").value(true))
     }
 
@@ -532,6 +548,7 @@ constructor(
     fun checkEmailDuplicate_false() {
         mockMvc.perform(get("/api/v1/users/check-email").param("email", "unknown@test.com"))
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-11"))
             .andExpect(jsonPath("$.data").value(false))
     }
 
@@ -542,6 +559,7 @@ constructor(
 
         mockMvc.perform(get("/api/v1/users/check-nickname").param("nickname", "nickname"))
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-12"))
             .andExpect(jsonPath("$.data").value(true))
     }
 
@@ -550,6 +568,7 @@ constructor(
     fun checkNicknameDuplicate_false() {
         mockMvc.perform(get("/api/v1/users/check-nickname").param("nickname", "unknown"))
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-12"))
             .andExpect(jsonPath("$.data").value(false))
     }
 

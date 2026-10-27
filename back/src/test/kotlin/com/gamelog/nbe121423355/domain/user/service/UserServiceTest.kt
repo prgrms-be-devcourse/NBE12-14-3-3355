@@ -255,6 +255,22 @@ constructor(
     }
 
     @Test
+    @DisplayName("비밀번호 변경 실패 - 현재 비밀번호가 틀리면 400-3, 비밀번호와 기존 세션은 그대로 유지")
+    fun changePassword_fail_wrongCurrentPassword() {
+        val user = saveUser("test@test.com", "nickname", "password123")
+        val current = userService.login(LoginRequestDto("test@test.com", "password123"))
+
+        assertThatThrownBy {
+            userService.changePassword(user.requiredId, ChangePasswordRequestDto("wrongPassword123", "newPassword123"))
+        }
+            .isInstanceOf(ServiceException::class.java)
+            .satisfies({ e -> assertThat((e as ServiceException).resultCode).isEqualTo("400-3") })
+
+        assertDoesNotThrow { userService.login(LoginRequestDto("test@test.com", "password123")) }
+        assertThat(refreshTokenRepository.findByFamilyId(familyIdOf(current.refreshToken))).isNotNull()
+    }
+
+    @Test
     @DisplayName("비밀번호 변경 - 다른 유저의 RefreshToken은 삭제되지 않음")
     fun changePassword_keepsOtherUsersRefreshTokens() {
         val user = saveUser("test@test.com", "nickname", "password123")

@@ -56,7 +56,7 @@ class NotificationController(private val service: NotificationService) {
     ])
     fun read(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
-        @PathVariable id: Long,
+        @Parameter(description = "읽음 처리할 알림 ID", example = "123") @PathVariable id: Long,
     ): RsData<NotificationResponse> =
         RsData("200-1", "알림을 읽었습니다.", service.read(user.id, id))
 

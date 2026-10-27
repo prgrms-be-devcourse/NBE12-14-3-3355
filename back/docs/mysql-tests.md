@@ -9,10 +9,10 @@
 
 - Java 25와 실행 중인 Docker 엔진이 필요하다.
 - 최초 실행 시 컨테이너 이미지 다운로드가 필요할 수 있다.
-- `@ServiceConnection`이 `test` 프로파일의 H2 접속 정보를 테스트 컨테이너 정보로 대체한다.
+- `@ServiceConnection`이 테스트 컨테이너의 접속 정보를 데이터소스로 등록한다. `test` 프로파일에는 별도 DB 접속 정보가 없다.
 - 컨테이너 수명은 Spring 테스트 컨텍스트와 일치한다. 테스트 메서드마다 새 컨테이너를 만들지는 않는다.
 - DB를 변경하는 대상 테스트는 `@Transactional` 롤백으로 데이터를 정리한다.
-- 다른 담당 영역에는 H2 테스트가 남아 있으므로 공통 H2 설정과 의존성은 유지한다.
+- H2 설정과 의존성은 제거했다. DB를 사용하는 테스트는 `@MySqlIntegrationTest` 또는 `@Import(MySqlTestConfiguration::class)`를 적용해야 한다.
 
 ## 대상
 

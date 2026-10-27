@@ -1,17 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 두 JS 테스트의 공통 실행 진입점. 새 터미널에서도 P95/P99를 함께 전송한다.
+# 추천 테스트의 공통 실행 진입점. 새 터미널에서도 P95/P99를 함께 전송한다.
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 case "${1:-}" in
   personalized) script="$script_dir/personalized-recommendations.js" ;;
   related) script="$script_dir/related-recommendations.js" ;;
+  personalized-fixed) script="$script_dir/personalized-fixed-10vu.js" ;;
+  related-fixed) script="$script_dir/related-fixed-10vu.js" ;;
+  personalized-fixed-100) script="$script_dir/personalized-fixed-100vu.js" ;;
+  related-fixed-100) script="$script_dir/related-fixed-100vu.js" ;;
   *)
-    echo '사용법: bash k6/recommendations/run.sh personalized|related [k6 실행 옵션]' >&2
+    echo '사용법: bash k6/recommendations/run.sh personalized|related|personalized-fixed|related-fixed|personalized-fixed-100|related-fixed-100 [k6 실행 옵션]' >&2
     exit 2
     ;;
 esac
 shift
+
+# VU별로 동일한 실행 식별자를 사용한다. 고정 VU 스크립트에서 지표 태그로 전송한다.
+export RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$$}"
 
 # 결과 파일 등 상대 경로도 추천 폴더 안에서 관리한다.
 cd -- "$script_dir"

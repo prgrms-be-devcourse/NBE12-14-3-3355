@@ -18,6 +18,7 @@ import com.gamelog.nbe121423355.domain.usergame.support.recordRequest
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -170,5 +171,67 @@ class UserGameReviewStatisticsTest {
         assertThat(profile.stats.playedGameCount).isZero()
         assertThat(profile.stats.averageRating).isEqualByComparingTo(BigDecimal.ZERO)
         assertThat(profile.scatterData).isEmpty()
+    }
+
+    @Test
+    @DisplayName("최근 게임은 본인 라이브러리의 날짜 있는 게임만 최신순으로 5개 조회한다")
+    fun recentGamesApplyFiltersOrderAndLimitInMySql() {
+        val owner = users.findById(userId).orElseThrow()
+        val other = users.save(User("recent-other", "recent-other@example.com", "password"))
+        val base = LocalDateTime.of(2026, 1, 1, 12, 0)
+        val eligible = listOf(3L, 1L, 7L, 2L, 6L, 4L, 5L).associateWith { day ->
+            persistRecentRecord(owner, base.plusDays(day))
+        }
+        persistRecentRecord(other, base.plusDays(30))
+        persistRecentRecord(owner, null)
+        val removed = persistRecentRecord(owner, base.plusDays(31))
+        em.flush()
+        em.createQuery("update UserGame ug set ug.inLibrary = false where ug.id = :id")
+            .setParameter("id", removed.id).executeUpdate()
+        val expected = listOf(7L, 6L, 5L, 4L, 3L).map { eligible.getValue(it).game.id }
+        em.clear()
+
+        assertThat(library.getRecentPlayedGames(userId).map { it.gameId })
+            .containsExactlyElementsOf(expected)
+    }
+
+    @Test
+    @DisplayName("최근 리뷰는 본인의 활성·유효한 리뷰만 수정일 역순으로 3개 조회한다")
+    fun recentReviewsApplyFiltersOrderAndLimitInMySql() {
+        val owner = users.findById(userId).orElseThrow()
+        val other = users.save(User("review-other", "review-other@example.com", "password"))
+        val base = LocalDateTime.of(2026, 1, 1, 12, 0)
+        fun saveReview(author: User, day: Long, rating: BigDecimal?, content: String?): Review {
+            val record = persistRecentRecord(author, null)
+            val saved = reviews.save(Review(record, rating, content, false))
+            em.flush()
+            // Auditing 시각 대신 서로 다른 수정일을 지정해 생성 순서와 무관한 정렬을 검증한다.
+            em.createQuery("update Review r set r.lastModifiedDate = :date where r.id = :id")
+                .setParameter("date", base.plusDays(day)).setParameter("id", saved.id).executeUpdate()
+            return saved
+        }
+        val eligible = listOf(3L, 1L, 5L, 2L, 4L).associateWith { day ->
+            if (day % 2 == 0L) saveReview(owner, day, null, "본문 리뷰")
+            else saveReview(owner, day, BigDecimal("4.0"), null)
+        }
+        saveReview(other, 30, BigDecimal("5.0"), null)
+        saveReview(owner, 31, BigDecimal("5.0"), null).hideByAdmin()
+        saveReview(owner, 32, BigDecimal("5.0"), null).deleteByUser()
+        val empty = saveReview(owner, 33, BigDecimal("5.0"), null)
+        em.flush()
+        // 기존 데이터에 남을 수 있는 빈 리뷰도 조회 조건에서 제외한다.
+        em.createQuery("update Review r set r.rating = null, r.content = '   ' where r.id = :id")
+            .setParameter("id", empty.id).executeUpdate()
+        val expected = listOf(5L, 4L, 3L).map { eligible.getValue(it).id }
+        em.clear()
+
+        assertThat(profileService.getRecentReviews(userId).map { it.reviewId })
+            .containsExactlyElementsOf(expected)
+    }
+
+    private fun persistRecentRecord(author: User, lastPlayedAt: LocalDateTime?): UserGame {
+        val game = games.save(Game.createFromIgdb(IgdbGameResponse(nextGameId++, "recent-$nextGameId", "test",
+            null, null, null, mutableListOf(), mutableListOf(), mutableListOf(), mutableListOf())))
+        return records.save(UserGame(user = author, game = game, wishlist = true, lastPlayedAt = lastPlayedAt))
     }
 }

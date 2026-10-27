@@ -8,7 +8,7 @@ import org.testcontainers.mysql.MySQLContainer;
 @TestConfiguration(proxyBeanMethods = false)
 public class MySqlTestConfiguration {
     // Spring 컨텍스트와 수명을 맞춰 캐시된 컨텍스트가 종료된 컨테이너를 재사용하지 않게 한다.
-    // ServiceConnection이 test 프로파일의 H2 접속 정보를 이 컨테이너의 정보로 대체한다.
+    // ServiceConnection이 이 컨테이너의 접속 정보를 데이터소스로 등록한다.
     @Bean
     @ServiceConnection
     MySQLContainer mysqlContainer() {
