@@ -3,13 +3,18 @@
 .heading > span { color: #a3e635; font-size: 12px; font-weight: 700; letter-spacing: .15em; }
 .heading h1 { font-size: 36px; margin: 10px 0; }
 .heading p, .sectionHeading p { color: #969caa; line-height: 1.6; }
-.tabs { display: flex; gap: 28px; border-bottom: 1px solid #30343e; margin-bottom: 28px; }
-.tabs a { padding: 14px 4px; color: #969caa; text-decoration: none; border-bottom: 3px solid transparent; }
-.tabs a[aria-current] { color: #bef264; border-color: #bef264; font-weight: 700; }
+.boards { display: flex; gap: 28px; border-bottom: 1px solid #30343e; margin-bottom: 24px; }
+.boards a { padding: 14px 4px; color: #969caa; text-decoration: none; border-bottom: 3px solid transparent; }
+.boards a[aria-current] { color: #bef264; border-color: #bef264; font-weight: 700; }
+/* 상위 탭과 겹쳐 보이지 않도록 하위 탭(팔로잉·인기)은 전역 .chips 색의 작은 칩으로 둔다 */
+.tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+.tabs a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 12px; text-decoration: none; }
+.tabs a:hover { color: #c9e3a4; }
+.tabs a[aria-current] { border-color: #3a482f; background: #27321f; color: #c9e3a4; font-weight: 700; }
 .sectionHeading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 24px; }
 .sectionHeading h2 { font-size: 20px; margin: 0; }
 .sectionHeading p { font-size: 13px; margin: 6px 0 0; }
-.page button { cursor: pointer; border: 1px solid #39404c; background: #20242d; color: #e5e7eb; border-radius: 8px; padding: 9px 13px; font: inherit; font-size: 13px; }
+.page button:where(:not(:global(.apply-button), :global(.outline-button))) { cursor: pointer; border: 1px solid #39404c; background: #20242d; color: #e5e7eb; border-radius: 8px; padding: 9px 13px; font: inherit; font-size: 13px; }
 .page button:disabled { opacity: .5; cursor: wait; }
 .page button:focus-visible, .page a:focus-visible { outline: 2px solid #bef264; outline-offset: 4px; }
 .sectionHeading > button { flex-shrink: 0; }
