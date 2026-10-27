@@ -47,7 +47,6 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-mysql")
     testCompileOnly("org.projectlombok:lombok")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testRuntimeOnly("com.h2database:h2")
     testAnnotationProcessor("org.projectlombok:lombok")
 }
 

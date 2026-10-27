@@ -7,15 +7,21 @@ import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springdoc.core.annotations.ParameterObject
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/v1/library/games")
 @Tag(name = "user-game-controller", description = "내 게임 라이브러리·플레이 상태 API")
+@ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))])
 class UserGameController(
     private val userGameService: UserGameService,
 ) {
@@ -23,11 +29,12 @@ class UserGameController(
     @GetMapping("")
     @Operation(
         summary = "내 게임 목록 조회",
-        description = "상태, 플랫폼, 장르, 검색어와 정렬 조건으로 내 게임 목록을 조회합니다.",
+        description = "상태·플랫폼·장르·제목·정렬 조건으로 본인의 게임 목록을 조회합니다. page는 0부터, size 기본값은 60(1~100)입니다. ID 목록은 genreIds=5,12 또는 동일 이름의 반복 파라미터로 전달할 수 있습니다. 일치하는 기록이 없으면 200과 빈 목록입니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponse(responseCode = "200", description = "200-1: 내 게임 목록", useReturnTypeSchema = true)
     fun getUserGameList(
-        @Valid @ModelAttribute request: UserGameSearchRequest,
+        @ParameterObject @Valid @ModelAttribute request: UserGameSearchRequest,
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser,
     ): RsData<UserGameLibraryResponse> {
         val pages =
@@ -50,7 +57,13 @@ class UserGameController(
 
     // 등록 및 수정
     @PostMapping("/{gameId}")
-    @Operation(summary = "게임 기록 등록 또는 수정", security = [SecurityRequirement(name = "bearerAuth")])
+    @Operation(summary = "게임 기록 등록 또는 수정", description = "게임 ID로 내 기록을 등록하거나 기존 기록을 수정합니다. 신규 생성은 HTTP 201·201-1, 기존 기록 수정은 HTTP 200·200-1입니다. 부분 상태 변경에는 전용 상태 API를 사용합니다. 이 요청은 리뷰 본문을 수정하지 않습니다.", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "201", description = "201-1: 내 게임 기록 신규 생성", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "200", description = "200-1: 기존 내 기록 수정", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "요청 시간·날짜·플랫폼 등 검증 실패. resultCode와 msg를 확인하세요.", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "대상 게임 또는 사용자 없음", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun addGameToLibrary(
         @PathVariable gameId: Long,
         @Valid @RequestBody reqBody: UserGameReqBody,
@@ -75,7 +88,12 @@ class UserGameController(
 
     // 수정만
     @PatchMapping("/{gameId}")
-    @Operation(summary = "게임 기록 수정", security = [SecurityRequirement(name = "bearerAuth")])
+    @Operation(summary = "게임 기록 수정", description = "기존 내 게임 기록을 요청 내용으로 수정합니다. PATCH 이름이지만 요청 DTO의 필수 필드는 전부 전송해야 합니다. 리뷰 변경은 리뷰 전용 API를 사용합니다.", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-1: 기록 수정 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "400", description = "요청 필드·시간·날짜 검증 실패", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "내 게임 기록 또는 대상 게임 없음", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun updatePlayRecord(
         @PathVariable gameId: Long,
         @Valid @RequestBody reqBody: UserGameReqBody,
@@ -101,6 +119,7 @@ class UserGameController(
         description = "PLAYED, COMPLETED, RETIRED, SHELVED, DROPPED 중 하나를 저장하며, 값을 생략하면 상태를 해제합니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponse(responseCode = "200", description = "200-1: 플레이 완료 상태 변경 성공", useReturnTypeSchema = true)
     fun changePlayStatus(
         @PathVariable gameId: Long,
         @RequestParam(required = false) status: PlayStatus?,
@@ -121,7 +140,8 @@ class UserGameController(
     }
 
     @PatchMapping("/{gameId}/playing")
-    @Operation(summary = "플레이 중 상태 변경", security = [SecurityRequirement(name = "bearerAuth")])
+    @Operation(summary = "플레이 중 상태 변경", description = "쿼리 파라미터 playing=true 또는 false를 전달합니다. 리뷰 본문은 전송하지 않습니다.", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponse(responseCode = "200", description = "200-1: 플레이 중 상태 변경 성공", useReturnTypeSchema = true)
     fun changePlaying(
         @PathVariable gameId: Long,
         @RequestParam playing: Boolean,
@@ -142,7 +162,8 @@ class UserGameController(
     }
 
     @PatchMapping("/{gameId}/wishlist")
-    @Operation(summary = "위시리스트 상태 변경", security = [SecurityRequirement(name = "bearerAuth")])
+    @Operation(summary = "위시리스트 상태 변경", description = "쿼리 파라미터 wishlist=true 또는 false를 전달합니다. 리뷰 본문은 전송하지 않습니다.", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponse(responseCode = "200", description = "200-1: 위시리스트 상태 변경 성공", useReturnTypeSchema = true)
     fun changeWishlist(
         @PathVariable gameId: Long,
         @RequestParam wishlist: Boolean,
@@ -163,7 +184,8 @@ class UserGameController(
     }
 
     @PatchMapping("/{gameId}/backlog")
-    @Operation(summary = "플레이 예정 상태 변경", security = [SecurityRequirement(name = "bearerAuth")])
+    @Operation(summary = "플레이 예정 상태 변경", description = "쿼리 파라미터 backlog=true 또는 false를 전달합니다. 리뷰 본문은 전송하지 않습니다.", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponse(responseCode = "200", description = "200-1: 플레이 예정 상태 변경 성공", useReturnTypeSchema = true)
     fun changeBacklog(
         @PathVariable gameId: Long,
         @RequestParam backlog: Boolean,
@@ -186,9 +208,10 @@ class UserGameController(
     @PatchMapping("/{gameId}/liked")
     @Operation(
         summary = "좋아하는 게임 상태 변경",
-        description = "프로필 Likes 탭에 표시할 게임의 하트 상태를 변경합니다.",
+        description = "쿼리 파라미터 liked=true 또는 false로 프로필 Likes 탭의 하트 상태를 변경합니다. 좋아요만으로 라이브러리에 포함되지는 않습니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponse(responseCode = "200", description = "200-1: 좋아하는 게임 상태 변경 성공", useReturnTypeSchema = true)
     fun changeLiked(
         @PathVariable gameId: Long,
         @RequestParam liked: Boolean,
@@ -210,6 +233,7 @@ class UserGameController(
 
     @GetMapping("/recentGames")
     @Operation(summary = "최근 플레이 게임 조회", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponse(responseCode = "200", description = "200-1: 최근 활동 게임 목록", useReturnTypeSchema = true)
     fun recentGameList(
         @Parameter(hidden = true) @AuthenticationPrincipal user: SecurityUser
     ): RsData<List<UserGameListResponse>> {

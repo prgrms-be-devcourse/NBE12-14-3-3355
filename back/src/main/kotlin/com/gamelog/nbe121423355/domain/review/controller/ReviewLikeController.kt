@@ -5,6 +5,10 @@ import com.gamelog.nbe121423355.domain.review.service.ReviewLikeService
 import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -23,6 +27,12 @@ import org.springframework.web.bind.annotation.RestController
 class ReviewLikeController constructor(private val reviewLikeService: ReviewLikeService) {
     @PostMapping
     @Operation(summary = "리뷰 좋아요 등록", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "201", description = "201-2: 좋아요 등록 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "404-3: 공개 리뷰 없음 / 404-4: 사용자 없음", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "409", description = "409-2: 이미 좋아요를 누른 리뷰", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun addLike(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
         @PathVariable reviewId: Long,
@@ -33,6 +43,11 @@ class ReviewLikeController constructor(private val reviewLikeService: ReviewLike
 
     @DeleteMapping
     @Operation(summary = "리뷰 좋아요 취소", security = [SecurityRequirement(name = "bearerAuth")])
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "200-9: 좋아요 취소 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "404-3: 공개 리뷰 없음 / 404-6: 내 좋아요 기록 없음", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun removeLike(
         @Parameter(hidden = true) @AuthenticationPrincipal securityUser: SecurityUser,
         @PathVariable reviewId: Long,

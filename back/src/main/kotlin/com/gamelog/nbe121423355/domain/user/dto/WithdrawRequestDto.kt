@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank
 
 // 회원탈퇴 요청 dto
 @Schema(description = "회원탈퇴 요청")
-@JvmRecord
 data class WithdrawRequestDto(
     @field:MaxByteLength(value = 72, message = "비밀번호는 72바이트(영문 기준 72자) 이하여야 합니다.")
     @field:NotBlank

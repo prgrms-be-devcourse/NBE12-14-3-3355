@@ -39,7 +39,6 @@ class UserService(
 ) {
     // 로그인 결과를 Controller에 전달하기 위한 내부 운반용 record
     // refreshTokenExpiryDate: 쿠키 maxAge 계산용 (세션의 절대 만료 시각)
-    @JvmRecord
     data class LoginResult(
         val user: UserDto,
         val accessToken: String,
@@ -48,7 +47,6 @@ class UserService(
     )
 
     // 새로 만든 세션의 refreshToken과 만료 시각 (비밀번호 변경 시 Controller가 쿠키로 내려줌)
-    @JvmRecord
     data class IssuedSession(val refreshToken: String, val expiryDate: LocalDateTime)
 
     // 회원가입 메소드
@@ -105,9 +103,7 @@ class UserService(
     // 토큰 갱신 메소드 (재발급 로직은 TokenReissueService에서 필터와 공유)
     // 교체된 refreshToken도 쿠키로 내려줘야 하므로 결과 전체를 Controller에 전달
     // 주의: @Transactional을 붙이면 재사용 감지 시 세션 삭제가 바깥 트랜잭션 롤백으로 취소됨
-    fun refresh(refreshToken: String?): ReissueResult {
-        return tokenReissueService.reissue(refreshToken)
-    }
+    fun refresh(refreshToken: String?): ReissueResult = tokenReissueService.reissue(refreshToken)
 
     // 내정보 가져오기 - 온보딩 확인 여부
     fun getMe(userId: Long): UserDto {
@@ -137,13 +133,10 @@ class UserService(
         return UserDto(user)
     }
 
-    fun checkEmailDuplicate(email: String?): Boolean {
-        return userRepository.existsByEmail(email)
-    }
+    fun checkEmailDuplicate(email: String?): Boolean = userRepository.existsByEmail(email)
 
-    fun checkNicknameDuplicate(nickname: String?): Boolean {
-        return userRepository.existsByNickname(nickname)
-    }
+    fun checkNicknameDuplicate(nickname: String?): Boolean =
+        userRepository.existsByNickname(nickname)
 
     @Transactional
     fun updateProfile(userId: Long, updateProfileRequestDto: UpdateProfileRequestDto): UserDto {

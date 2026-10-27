@@ -52,24 +52,18 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
     }
 
     // 새 로그인 세션의 만료 시각 (지금 + refreshToken 유효기간)
-    fun newRefreshTokenExpiration(): Date {
-        return Date(System.currentTimeMillis() + jwtProperties.refreshTokenValidity)
-    }
+    fun newRefreshTokenExpiration(): Date =
+        Date(System.currentTimeMillis() + jwtProperties.refreshTokenValidity)
 
     // refreshToken의 세션 식별자 (fid가 없는 기존 토큰은 null)
-    fun getFamilyId(claims: Claims): String? {
-        return claims.get(FAMILY_ID, String::class.java)
-    }
+    fun getFamilyId(claims: Claims): String? = claims.get(FAMILY_ID, String::class.java)
 
     // 클레임에서 userId 추출
-    fun getUserId(token: String?): Long {
-        return parseClaims(token).userId
-    }
+    fun getUserId(token: String?): Long = parseClaims(token).userId
 
     // 토큰의 클레임 전체 파싱 (서명 검증 포함)
-    fun parseClaims(token: String?): Claims {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).payload
-    }
+    fun parseClaims(token: String?): Claims =
+        Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).payload
 
     // 서명/만료 검증
     fun validateToken(token: String?): Boolean {
@@ -102,13 +96,11 @@ class JwtProvider(private val jwtProperties: JwtProperties) {
     }
 
     // 토큰 종류 판별 (token_type 클레임이 없는 기존 토큰은 false)
-    fun isAccessToken(claims: Claims): Boolean {
-        return claims.get(TOKEN_TYPE, String::class.java) == ACCESS
-    }
+    fun isAccessToken(claims: Claims): Boolean =
+        claims.get(TOKEN_TYPE, String::class.java) == ACCESS
 
-    fun isRefreshToken(claims: Claims): Boolean {
-        return claims.get(TOKEN_TYPE, String::class.java) == REFRESH
-    }
+    fun isRefreshToken(claims: Claims): Boolean =
+        claims.get(TOKEN_TYPE, String::class.java) == REFRESH
 
     companion object {
         // 토큰 종류 구분용 클레임

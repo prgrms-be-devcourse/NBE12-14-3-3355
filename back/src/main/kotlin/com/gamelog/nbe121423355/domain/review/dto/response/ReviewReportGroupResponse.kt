@@ -50,14 +50,10 @@ data class ReviewReportGroupResponse(
                 representative.review.userGame.game.coverImageUrl,
                 representative.review.userGame.user.id,
                 representative.review.userGame.user.nickname,
-                if (representative.reviewRatingSnapshot != null) representative.reviewRatingSnapshot
-                else representative.review.rating,
-                if (representative.reviewContentSnapshot != null)
-                    representative.reviewContentSnapshot
-                else representative.review.content,
+                representative.reviewRatingSnapshot ?: representative.review.rating,
+                representative.reviewContentSnapshot ?: representative.review.content,
                 representative.reviewSpoilerSnapshot ?: representative.review.isSpoiler,
-                if (representative.review.status == null) ReviewStatus.ACTIVE
-                else representative.review.status,
+                representative.review.status ?: ReviewStatus.ACTIVE,
                 groupStatus,
                 sorted.size,
                 sorted.count { it.status == ReportStatus.PENDING },

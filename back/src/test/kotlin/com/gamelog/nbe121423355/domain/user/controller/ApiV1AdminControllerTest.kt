@@ -65,7 +65,7 @@ constructor(
                 .header("Authorization", "Bearer ${tokenFor(admin)}"),
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.resultCode").value("200-13"))
+            .andExpect(jsonPath("$.resultCode").value("200-20"))
             .andExpect(jsonPath("$.data.id").value(target.id!!))
             .andExpect(jsonPath("$.data.role").value("ADMIN"))
 
