@@ -1,0 +1,36 @@
+/* SNS형 댓글: 프로필 사진 + 말풍선 + 작은 메타 줄. 커뮤니티 페이지 공통 버튼 스타일보다 앞서도록 .thread 아래로 범위를 묶는다 */
+.thread { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; }
+section.thread button { padding: 0; border: 0; border-radius: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; }
+section.thread button:hover:not(:disabled) { color: var(--lime); }
+section.thread button:disabled { opacity: .5; cursor: default; }
+
+.row { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 6px 0; }
+.avatar { display: grid; place-items: center; width: 32px; height: 32px; overflow: hidden; border-radius: 50%; background: #39463b; color: var(--lime); font-size: 12px; font-weight: 700; text-decoration: none; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.bubble { display: inline-block; max-width: 100%; padding: 8px 12px; border-radius: 16px; background: #252c2a; }
+.bubble a { color: var(--text); font-weight: 700; text-decoration: none; }
+.bubble a:hover { color: var(--lime); }
+.text { margin: 2px 0 0; color: #dfe6dc; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.removed { padding: 8px 0; color: var(--muted); font-style: italic; }
+.thread .spoiler { display: block; margin-top: 4px; color: var(--lime); font-weight: 400; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 4px 0 0 12px; color: var(--muted); font-size: 11px; }
+.thread .meta button { font-size: 11px; }
+.replies { margin-top: 4px; }
+.thread .toggle { display: inline-flex; align-items: center; gap: 8px; margin: 6px 0 2px 12px; }
+.thread .toggle::before { content: ""; width: 24px; border-top: 1px solid #4b5550; }
+.thread .more { margin: 6px 0 0 42px; }
+
+.editor { margin-top: 10px; }
+/* 입력칸·스포방지·게시를 한 상자에 담는다 */
+.inputBox { display: flex; align-items: flex-end; gap: 8px; padding: 5px 5px 5px 14px; border: 1px solid var(--line); border-radius: 20px; background: #202525; }
+.inputBox:focus-within { border-color: var(--lime); }
+.inputBox textarea { flex: 1; min-width: 0; min-height: 28px; max-height: 160px; padding: 5px 0; border: 0; background: none; color: var(--text); font: inherit; line-height: 1.5; resize: none; field-sizing: content; }
+.inputBox textarea:focus { outline: none; }
+.thread .spoilerToggle { flex-shrink: 0; padding: 7px 10px; border: 1px solid var(--line); border-radius: 14px; font-size: 11px; }
+.thread .spoilerToggle[aria-pressed=true] { border-color: #3a482f; background: #27321f; color: #c9e3a4; }
+.editorOptions { display: flex; align-items: center; gap: 12px; margin-top: 6px; padding-left: 14px; color: var(--muted); font-size: 11px; }
+.editorOptions small { margin-left: auto; }
+.thread .post { flex-shrink: 0; padding: 8px 16px; border-radius: 16px; background: var(--lime); color: #192012; font-weight: 700; }
+.thread .post:hover:not(:disabled) { background: #d4f59e; color: #192012; }
+.thread .post:disabled { background: #3a4436; color: #8a938b; opacity: 1; }
+.error { color: #fca5a5; font-size: 12px; }

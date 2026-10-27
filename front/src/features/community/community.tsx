@@ -13,11 +13,13 @@ import ReviewComments from "@/features/reviews/components/review-comments";
 import CommentReturn from "@/features/reviews/components/comment-return";
 import { communityReturnPath } from "@/features/auth/login-destination";
 import { getPlayLabel } from "@/features/reviews/play-label";
+import FreeBoard from "@/features/board/components/free-board";
 
 export default function Community() {
   const auth = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const board = params.get("board") === "free";
   const tab: FeedTab = params.get("tab") === "popular" ? "popular" : "following";
   const returnTo = communityReturnPath(`/community?${params}`) ?? "/community";
   const loginPath = `/login?next=${encodeURIComponent(returnTo)}`;
@@ -33,15 +35,21 @@ export default function Community() {
   return <main className={styles.page}>
     <header className={styles.heading}>
       <span>PLAY. SHARE. CONNECT.</span>
-      <h1>피드</h1>
+      <h1>커뮤니티</h1>
       <p>함께하는 게이머들의 이야기에서 다음 게임을 발견하세요.</p>
     </header>
-    <nav className={styles.tabs} aria-label="피드 리뷰">
-      <Link href="/community" aria-current={tab === "following" ? "page" : undefined}>팔로잉</Link>
-      <Link href="/community?tab=popular" aria-current={tab === "popular" ? "page" : undefined}>인기</Link>
+    <nav className={styles.boards} aria-label="커뮤니티 메뉴">
+      <Link href="/community" aria-current={board ? undefined : "page"}>리뷰 피드</Link>
+      <Link href="/community?board=free" aria-current={board ? "page" : undefined}>자유게시판</Link>
     </nav>
-    <CommentReturn />
-    <FeedList key={`${auth.user?.id}:${tab}`} tab={tab} loginPath={loginPath} />
+    {board ? <FreeBoard key={auth.user?.id} loginPath={loginPath} /> : <>
+      <nav className={styles.tabs} aria-label="피드 리뷰">
+        <Link href="/community" aria-current={tab === "following" ? "page" : undefined}>팔로잉</Link>
+        <Link href="/community?tab=popular" aria-current={tab === "popular" ? "page" : undefined}>인기</Link>
+      </nav>
+      <CommentReturn />
+      <FeedList key={`${auth.user?.id}:${tab}`} tab={tab} loginPath={loginPath} />
+    </>}
   </main>;
 }
 

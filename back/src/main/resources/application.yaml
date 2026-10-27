@@ -74,7 +74,7 @@ spring:
       mode: always   # data.sql 항상 실행 (중복 방지 필요하면 always -> never로 바꾸고 수동 실행)
 
 ---
-# ===== 테스트 (H2 인메모리) =====
+# ===== 테스트 (Testcontainers MySQL) =====
 igdb:
   client-id: test-client-id
   client-secret: test-client-secret
@@ -90,11 +90,6 @@ spring:
   config:
     activate:
       on-profile: test
-  datasource:
-    url: jdbc:h2:mem:testdb;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
   jpa:
     hibernate:
       ddl-auto: create-drop
@@ -116,7 +111,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate   # 운영에서는 절대 update/create 쓰지 말 것
+      ddl-auto: update   # 운영에서는 절대 update/create 쓰지 말 것
     show-sql: false
   sql:
     init:

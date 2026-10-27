@@ -1,0 +1,125 @@
+package com.gamelog.nbe121423355.domain.game.repository
+
+import com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedRecommendationCandidateProjection
+import com.gamelog.nbe121423355.domain.game.service.GamePublicationPolicy
+import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.ACTIVE
+import jakarta.persistence.EntityManager
+import org.springframework.stereotype.Repository
+
+// 맞춤 추천 후보의 게임 정보와 장르, GameLog 사용자 평균 평점을 일괄 조회
+@Repository
+class PersonalizedRecommendationCandidateQueryRepository(
+    private val entityManager: EntityManager,
+    private val publicationPolicy: GamePublicationPolicy,
+) {
+    // 추천 후보 ID 목록에 해당하는 게임 정보, 장르, 사용자 평균 평점을 한 번에 반환
+    fun findAllByGameIds(
+        gameIds: List<Long>
+    ): List<PersonalizedRecommendationCandidateProjection> {
+        if (gameIds.isEmpty()) {
+            return emptyList()
+        }
+        return entityManager
+            .createQuery(
+                CANDIDATES_BY_GAME_IDS_JPQL,
+                PersonalizedRecommendationCandidateProjection::class.java,
+            )
+            .setParameter("gameIds", gameIds)
+            .setParameter("activeReviewStatus", ACTIVE)
+            .setParameter("readyOnly", publicationPolicy.isReadyOnly)
+            .resultList
+    }
+
+    // 선호 게임 없이 장르만 선택한 사용자의 추천 후보 ID를 최대 5개 반환
+    fun findTopFiveIdsByPreferredGenres(
+        preferredGenreIds: List<Long>,
+        excludedGameIds: List<Long>,
+    ): List<Long> {
+        if (preferredGenreIds.isEmpty()) {
+            return emptyList()
+        }
+        // 빈 IN 목록을 피하기 위한 존재하지 않는 게임 ID
+        return entityManager
+            .createQuery(GENRE_ONLY_CANDIDATE_IDS_JPQL, Long::class.java)
+            .setParameter("preferredGenreIds", preferredGenreIds)
+            .setParameter(
+                "excludedGameIds",
+                if (excludedGameIds.isEmpty()) listOf(-1L) else excludedGameIds,
+            )
+            .setParameter("activeReviewStatus", ACTIVE)
+            .setParameter("readyOnly", publicationPolicy.isReadyOnly)
+            .setMaxResults(5)
+            .resultList
+    }
+
+    companion object {
+        // 후보 게임의 기본 정보와 전체 장르, 활성 리뷰의 평균 평점을 일괄 조회
+        private const val CANDIDATES_BY_GAME_IDS_JPQL =
+            """
+        SELECT new com.gamelog.nbe121423355.domain.game.repository.projection.PersonalizedRecommendationCandidateProjection(
+            game.id,
+            game.title,
+            game.coverImageUrl,
+            game.igdbRating,
+            AVG(review.rating),
+            game.releaseDate,
+            gameGenre.genre.id,
+            gameGenre.genre.name
+        )
+        FROM Game game
+        LEFT JOIN GameGenre gameGenre
+          ON gameGenre.game = game
+        LEFT JOIN Review review
+          ON review.userGame.game = game
+         AND (review.status IS NULL OR review.status = :activeReviewStatus)
+        WHERE game.id IN :gameIds
+        AND (:readyOnly = false OR EXISTS (
+            SELECT 1 FROM RelatedGameCalculation calculation
+            WHERE calculation.gameId = game.id AND calculation.lastSuccessAt IS NOT NULL))
+        GROUP BY
+            game.id,
+            game.title,
+            game.coverImageUrl,
+            game.igdbRating,
+            game.releaseDate,
+            gameGenre.genre.id,
+            gameGenre.genre.name
+        ORDER BY game.id, gameGenre.genre.id
+
+        """
+
+        // 선호 장르 일치 개수와 IGDB 평점을 기준으로 장르 전용 후보를 정렬
+        private const val GENRE_ONLY_CANDIDATE_IDS_JPQL =
+            """
+        SELECT game.id
+        FROM Game game
+        JOIN GameGenre gameGenre
+          ON gameGenre.game = game
+        LEFT JOIN Review review
+          ON review.userGame.game = game
+         AND (review.status IS NULL OR review.status = :activeReviewStatus)
+        WHERE gameGenre.genre.id IN :preferredGenreIds
+          AND game.id NOT IN :excludedGameIds
+          AND game.igdbRating >= 70.0
+          AND (:readyOnly = false OR EXISTS (
+            SELECT 1 FROM RelatedGameCalculation calculation
+            WHERE calculation.gameId = game.id AND calculation.lastSuccessAt IS NOT NULL))
+        GROUP BY
+            game.id,
+            game.igdbRating,
+            game.releaseDate
+        ORDER BY
+            (
+                CASE
+                    WHEN COUNT(DISTINCT gameGenre.genre.id) >= 3 THEN 30
+                    ELSE COUNT(DISTINCT gameGenre.genre.id) * 10
+                END
+                + game.igdbRating * 0.5
+            ) DESC,
+            COALESCE(AVG(review.rating), 0.0) DESC,
+            game.releaseDate DESC,
+            game.id ASC
+
+        """
+    }
+}

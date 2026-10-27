@@ -1,0 +1,111 @@
+package com.gamelog.nbe121423355.domain.user.entity
+
+import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
+import jakarta.persistence.*
+import java.time.LocalDateTime
+
+@Entity
+@Table(name = "users")
+class User : BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    var id: Long? = null
+        protected set
+
+    @Column(unique = true, nullable = false)
+    lateinit var email: String
+        protected set
+
+    @Column(nullable = false)
+    lateinit var password: String
+        protected set
+
+    @Column(unique = true)
+    lateinit var nickname: String
+        protected set
+
+    var profileImageUrl: String? = null
+        protected set
+
+    var bio: String? = null
+        protected set
+
+    @Column(nullable = false)
+    var onboardingCompleted: Boolean = false
+        protected set
+
+    lateinit var role: String
+        protected set
+
+    // 회원탈퇴 시각 (null이면 활성 회원)
+    var deletedAt: LocalDateTime? = null
+        protected set
+
+    fun completeOnboarding() {
+        this.onboardingCompleted = true
+    }
+
+    // 회원가입 생성자
+    // 회원가입 직후에는 무조건 온보딩 미완료 상태로 시작
+    // 회원가입하는 사람은 user뿐
+    constructor(nickname: String, email: String, password: String) {
+        this.nickname = nickname
+        this.email = email
+        this.password = password
+        this.role = "USER"
+        this.onboardingCompleted = false
+    }
+
+    fun updateProfile(nickname: String, profileImageUrl: String?, bio: String?) {
+        this.nickname = nickname
+        this.profileImageUrl = profileImageUrl
+        this.bio = bio
+    }
+
+    fun changePassword(encodedPassword: String) {
+        this.password = encodedPassword
+    }
+
+    fun promoteToAdmin() {
+        this.role = "ADMIN"
+    }
+
+    fun withdraw(encodedRandomPassword: String) {
+        this.email = "deleted_$id@deleted.local"
+        this.nickname = "탈퇴한사용자_$id"
+        this.password = encodedRandomPassword
+        this.profileImageUrl = null
+        this.bio = null
+        this.deletedAt = LocalDateTime.now()
+    }
+
+    val isDeleted: Boolean
+        get() = deletedAt != null
+
+    constructor(
+        id: Long?,
+        email: String,
+        password: String,
+        nickname: String,
+        profileImageUrl: String?,
+        bio: String?,
+        onboardingCompleted: Boolean,
+        role: String,
+        deletedAt: LocalDateTime?,
+    ) {
+        this.id = id
+        this.email = email
+        this.password = password
+        this.nickname = nickname
+        this.profileImageUrl = profileImageUrl
+        this.bio = bio
+        this.onboardingCompleted = onboardingCompleted
+        this.role = role
+        this.deletedAt = deletedAt
+    }
+
+    constructor()
+
+    val isOnboardingCompleted: Boolean
+        get() = onboardingCompleted
+}

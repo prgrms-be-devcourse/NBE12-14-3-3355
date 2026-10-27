@@ -5,7 +5,7 @@
   </h1>
   <br>
   <h3>플레이를 기록하고, 다음에 빠져들 게임을 발견하세요</h3>
-  <p>게임 탐색부터 플레이 기록, 리뷰, 취향 기반 추천까지 연결하는 게임 기록 플랫폼</p>
+  <p>게임 탐색부터 플레이 기록, 리뷰, 취향 기반 추천과 커뮤니티까지 연결하는 게임 기록 플랫폼</p>
 </div>
 
 ---
@@ -18,10 +18,12 @@
 
 처음 방문한 사용자는 온보딩에서 선호 장르와 게임을 선택해 추천을 받습니다. 플레이 기록이 쌓이면 실제 기록을 우선 활용해 개인화된 게임을 추천합니다.
 
-> 프로그래머스 백엔드 데브코스 팀 프로젝트 · `NBE12-14-2-3355`
+> 프로그래머스 백엔드 데브코스 3차 팀 프로젝트 · GameLog 고도화 및 Kotlin 전환
+> 2차 프로젝트의 서비스를 이어서 개선하며, 저장소·패키지 이름은 기존 `NBE12-14-2-3355`를 유지합니다.
 
-- **서비스:** https://nbe-12-14-2-3355.vercel.app/
-- **기간:** 2026.09.01 ~ 2026.09.30
+- **서비스:** [GameLog](https://nbe-12-14-2-3355.vercel.app/)
+- **3차 개발 기간:** 2026.10.02 ~ 진행 중 (2026.10.27 기준)
+- **2차 개발 기간:** 2026.09.01 ~ 2026.09.30
 - **인원:** 5명 (팀 삼삼오오)
 
 | 팀원 | 담당 도메인 | 주요 작업 |
@@ -33,6 +35,19 @@
 | 이제혁 | 리뷰 | 리뷰 CRUD·작성 UI, 리뷰 좋아요, Swagger API 문서화 |
 
 ---
+
+## 🚀 3차 프로젝트 개선 사항
+
+2026.10.02~2026.10.27의 현재 브랜치 커밋과 구현을 기준으로 정리했습니다. 해당 기간에 조회되는 첫 커밋은 10월 16일입니다.
+
+| 영역 | 주요 변경 | 관련 기록 |
+|---|---|---|
+| Kotlin 전환 | 백엔드 운영 코드 전체 전환, null 타입·컬렉션·복합키와 도메인 테스트 정리 | `3dd6334`, `f6a7be6`, `1b4f215` · [전환 기록](migration/README.md) |
+| 검색 성능 | 페이지 우선 조회, 필터·정렬 쿼리와 인덱스 개선, k6 단계별·동시 사용자 시험 | `c175967`, `4771998`, `a7ec8ed`, `4d7a853` · [시험 안내](k6/README.md) |
+| 추천 운영 | 연관 후보 사전 계산, 관리자 비동기 갱신·실패 이력, 변경 영향 게임 부분 갱신과 장르 조합별 계산 재사용 | `690dd52`, `71f5e3c`, `15f77ef`, `8c43737` |
+| 커뮤니티·알림 | 커뮤니티 리뷰·댓글·답글, 자유게시판, 활동 알림과 읽음·보관 정책 | `08cf6e3`, `d91df62`, `a206c9d` |
+| 인증·기록 정합성 | Refresh Token Rotation·재사용 감지, 회원 탈퇴, 기록·리뷰 통합 트랜잭션과 버전 충돌 처리 | `46ca736`, `34c57d5`, `88486d1`, `47997bf` |
+| 테스트·API 구조 | H2 제거 및 MySQL Testcontainers 통일, API·E2E·동시성 검증, 프로필 서비스·컨트롤러 분리, Swagger 명세 보완 | `b24dfbd`, `78c9750`, `e550104`, `410fd3d` |
 
 ## ✨ 주요 기능 (Key Features)
 
@@ -54,15 +69,39 @@ IGDB에서 수집한 게임 정보를 바탕으로 제목 검색, 검색어 추�
 
 ### 5. 프로필 · 취향 통계
 
-닉네임과 프로필 이미지를 수정하고, 좋아하는 대표 게임을 설정할 수 있습니다. 프로필에서는 라이브러리와 최근 기록, 장르 분포 등 자신의 게임 활동을 확인합니다.
+닉네임과 프로필 이미지를 수정하고, 좋아하는 대표 게임을 설정할 수 있습니다. 프로필에서는 라이브러리와 최근 기록, 평점·플레이 시간 산점도, 장르 분포와 게임 취향 통계를 확인합니다. 인생 게임은 내 라이브러리에 포함된 게임 중 최대 5개를 선택하며, 공개 프로필 조회와 내 프로필 조회 API를 분리했습니다.
 
 ### 6. 회원가입 · 로그인 · 온보딩
 
-이메일 기반 회원가입·로그인과 이메일·닉네임 중복 확인을 지원합니다. 가입 후 선호 장르와 게임을 선택하거나 온보딩을 건너뛸 수 있습니다. 인증은 JWT Access Token과 Refresh Token을 사용합니다.
+이메일 기반 회원가입·로그인과 이메일·닉네임 중복 확인을 지원합니다. 가입 후 선호 장르와 게임을 선택하거나 온보딩을 건너뛸 수 있습니다. 인증은 JWT Access Token과 Refresh Token을 사용하며, Refresh Token 교체와 재사용 감지를 지원합니다. 설정 화면에서 회원 탈퇴할 수 있고, 탈퇴한 사용자의 남은 Access Token으로 내 정보에 접근하는 것도 차단합니다.
+
+### 7. 커뮤니티 · 자유게시판
+
+커뮤니티에서 리뷰를 탐색하고 댓글·답글과 댓글 좋아요로 소통합니다. 자유게시판에서는 글 작성·수정·삭제, 좋아요, 댓글·답글과 신고를 지원하며, 관리자는 게시글·댓글 신고를 처리합니다.
+
+### 8. 사용자 활동 알림
+
+팔로우, 리뷰 좋아요·댓글·답글·댓글 좋아요, 리뷰 숨김 처리와 자유게시판 댓글·답글 알림을 제공합니다. 커서 기반 목록 조회, 미확인 개수, 개별·전체 읽음 처리를 지원하며 일반 알림은 읽음 처리 후 7일 또는 미확인 상태로 생성 후 30일, 리뷰 숨김 안내는 읽음 여부와 관계없이 생성 후 90일이 지나면 정리합니다.
 
 ---
 
 ## 🔍 기술 하이라이트 (Tech Highlights)
+
+### Kotlin 전환과 MySQL 기반 검증
+
+백엔드 운영 코드를 Java에서 **Kotlin 2.4.20**으로 전환했습니다. nullable 타입, Kotlin 표준 컬렉션 함수, 확장 함수와 복합키를 정리하고, 프로필 조회 책임을 `UserGameProfileService`와 `UserGameProfileController`로 분리했습니다. 테스트도 도메인별로 Kotlin으로 전환했으며 일부 Java 테스트는 유지합니다.
+
+H2 의존성과 설정을 제거하고 DB 통합 테스트를 **Testcontainers MySQL 8.4**로 통일했습니다. 서비스·저장소·API·E2E 테스트와 동시성·롤백 검증을 통해 전환 후 동작을 확인합니다. [MySQL 테스트 안내](back/docs/mysql-tests.md)에서 실행 조건을 확인할 수 있습니다.
+
+### 연관 추천 사전 계산과 변경 영향 기반 갱신
+
+기준 게임별 연관 후보를 최대 20개 저장해 상세 연관 추천과 맞춤 추천에서 재사용할 수 있습니다. 관리자 API는 비동기 실행 접수, 진행·실패 이력 조회와 재실행을 지원합니다. 추천 입력 변경의 영향 게임을 추적해 부분 갱신하며, 같은 장르 조합의 계산을 재사용합니다.
+
+사전 계산 사용 여부는 `RECOMMENDATION_RELATED_PRECOMPUTED_ENABLED`와 `RECOMMENDATION_PERSONALIZED_PRECOMPUTED_ENABLED`로 각각 제어하며 기본값은 `false`입니다. 기능 활성화 전 후보 데이터 준비가 필요합니다.
+
+### 기록·리뷰 저장과 동시 수정 정합성
+
+게임 기록과 리뷰 저장을 하나의 트랜잭션으로 묶고, 리뷰의 `@Version`과 요청 버전을 검증해 오래된 화면의 수정·삭제가 최신 기록을 덮어쓰지 않도록 처리합니다. 신고 접수·관리자 처리의 동시성 제어와 탈퇴 시 리뷰 버전 갱신도 보강했습니다.
 
 ### 기록 기반 추천과 온보딩 추천의 연결
 
@@ -88,7 +127,7 @@ IGDB에서 받은 게임·장르·플랫폼·시리즈 정보를 관계형 데�
 
 ### 실행 환경 분리와 자동 빌드
 
-프론트엔드는 **Vercel**, 백엔드와 MySQL은 **Railway**에 배포합니다. 로컬은 Docker MySQL, 테스트는 H2 인메모리 DB를 사용합니다. GitHub Actions는 push와 pull request 이벤트마다 Java 25 환경에서 백엔드 빌드와 테스트를 실행합니다.
+프론트엔드는 **Vercel**, 백엔드와 MySQL은 **Railway**에 배포합니다. 로컬은 Docker MySQL, 테스트는 Testcontainers MySQL 8.4를 사용합니다. GitHub Actions는 push와 pull request 이벤트마다 Java 25 환경에서 백엔드 빌드와 테스트를 실행합니다.
 
 ---
 
@@ -96,7 +135,8 @@ IGDB에서 받은 게임·장르·플랫폼·시리즈 정보를 관계형 데�
 
 ### Backend
 
-![Java](https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin_2.4.20-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
+![JDK](https://img.shields.io/badge/JDK_25-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot_4.1.1-6DB33F?style=flat-square&logo=springboot&logoColor=white)
 ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat-square&logo=springsecurity&logoColor=white)
 ![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=flat-square&logo=spring&logoColor=white)
@@ -122,11 +162,13 @@ Next.js App Router와 React Context를 사용하며, 화면 스타일은 CSS Mod
 ![JUnit](https://img.shields.io/badge/JUnit-25A162?style=flat-square&logo=junit5&logoColor=white)
 ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat-square&logo=cloudinary&logoColor=white)
 
-- **H2**: 테스트용 인메모리 데이터베이스
+- **Testcontainers**: 테스트용 MySQL 컨테이너
 - **IGDB**: 게임 메타데이터 수집
 - **DeepL**: 게임 설명 한국어 번역
 - **Gradle**: 백엔드 빌드 및 테스트
 - **ESLint**: 프론트엔드 정적 검사
+- **k6 · Actuator · Prometheus · Grafana**: 부하 테스트 및 서버 지표 관찰
+- **Sentry**: 서버 오류 수집 (`SENTRY_DSN` 설정 시 활성화)
 
 ---
 
@@ -136,6 +178,8 @@ Next.js App Router와 React Context를 사용하며, 화면 스타일은 CSS Mod
 
 브라우저의 서비스 요청은 **Vercel의 Next.js API 프록시**를 거쳐 **Railway의 Spring Boot API**에 전달됩니다. 백엔드는 Railway MySQL에 데이터를 저장하고 Cloudinary로 이미지를 업로드합니다.
 
+위 구성도는 기존 배포 구조를 나타내며, 3차의 Kotlin 전환·추천 사전 계산·커뮤니티·알림 상세 구성은 본문을 참고하세요.
+
 이미지 하단은 로컬 데이터 준비 과정입니다. IGDB 수집과 DeepL 번역은 `local` 프로파일에서 각각의 실행 옵션을 활성화했을 때 시작 시 수행합니다.
 
 ---
@@ -143,6 +187,8 @@ Next.js App Router와 React Context를 사용하며, 화면 스타일은 CSS Mod
 ## 🗂 데이터베이스 구조 (ERD)
 
 [![GameLog ERD](docs/images/gamelog-erd.png)](docs/images/gamelog-erd.png)
+
+3차에 추가한 알림, 리뷰 댓글, 자유게시판 및 추천 갱신 이력·변경 추적의 상세 스키마는 [docs/sql](docs/sql)을 함께 확인하세요.
 
 
 ---
@@ -167,7 +213,7 @@ docker compose up -d mysql
 docker compose ps
 ```
 
-MySQL이 `healthy` 상태가 된 후 백엔드를 실행합니다. 로컬 기본 접속은 `localhost:3306`, 데이터베이스는 `gamelog`이며 계정 설정은 [docker-compose.yml](docker-compose.yml)에서 확인할 수 있습니다. 데이터는 `mysql-data` 볼륨에 보관됩니다.
+MySQL이 `healthy` 상태가 된 후 백엔드를 실행합니다. 로컬 기본 접속은 `localhost:3306`, 데이터베이스는 `gamelog`이며 계정 설정은 [docker-compose.yml](docker-compose.yml)에서 확인할 수 있습니다. 현재 `local` 프로파일의 기본 DB 이름은 `gamelog_retry`이므로, Compose가 생성하는 `gamelog`에 연결하려면 아래 실행 예처럼 데이터소스 URL을 지정하세요. 데이터는 `mysql-data` 볼륨에 보관됩니다.
 
 ### 3. 백엔드 환경변수 설정 및 실행
 
@@ -181,10 +227,10 @@ $env:CLOUDINARY_API_KEY = "your-cloudinary-api-key"
 $env:CLOUDINARY_API_SECRET = "your-cloudinary-api-secret"
 
 cd back
-./gradlew.bat bootRun
+./gradlew.bat bootRun --args="--spring.datasource.url=jdbc:mysql://localhost:3306/gamelog?serverTimezone=UTC&characterEncoding=UTF-8"
 ```
 
-기본 프로파일은 `local`입니다. 로컬 DB 계정을 변경했다면 `DB_USERNAME`, `DB_PASSWORD`도 설정하세요. 백엔드는 기본적으로 `.env` 파일을 자동으로 읽지 않으므로 셸 또는 IDE의 실행 환경변수로 주입합니다.
+기본 프로파일은 `local`입니다. 아래 수집·번역 실행도 Compose의 `gamelog`를 사용한다면 같은 `--spring.datasource.url` 인자를 함께 지정하세요. 로컬 DB 계정을 변경했다면 `DB_USERNAME`, `DB_PASSWORD`도 설정하세요. 백엔드는 기본적으로 `.env` 파일을 자동으로 읽지 않으므로 셸 또는 IDE의 실행 환경변수로 주입합니다.
 
 **처음 게임 데이터를 수집할 때**는 일반 실행 대신 다음 명령을 사용합니다.
 
@@ -232,7 +278,9 @@ npm run dev
 
 ### 5. 테스트 및 빌드
 
-백엔드는 `back` 디렉터리에서 실행합니다. `test` 프로파일은 H2와 테스트용 외부 서비스 설정을 사용합니다.
+백엔드는 `back` 디렉터리에서 실행합니다. DB를 사용하는 테스트는 `@MySqlIntegrationTest`로 Testcontainers의 MySQL 8.4에 연결합니다. 테스트 실행에는 Docker가 필요합니다.
+
+게임 수집·검색 테스트의 보완 내용, Mockito 사용 경계 및 실행 결과는 [게임 수집·검색 테스트 보완 기록](docs/game-data-search-testing.md)을 참고하세요.
 
 도메인별 서비스·컨트롤러 테스트와 동시성 테스트(같은 이메일·닉네임 동시 가입, 같은 게임 동시 등록 시 한 건만 저장)를 포함하며, push와 PR마다 GitHub Actions에서 실행됩니다.
 
@@ -276,7 +324,7 @@ npm run build
 
 k6로 부하를 주고, Actuator가 공개한 서버 지표와 k6 결과를 Prometheus로 모아 Grafana에서 확인했습니다. 로컬 모니터링 환경은 `docker compose -f compose.monitoring.yml up -d`로 실행합니다(Prometheus `:9090`, Grafana `:3001`).
 
-**추천 쿼리 개선 전후** (로컬 환경, 가상 사용자 최대 10명, 에러율 0%)
+**기존 추천 쿼리 개선 전후 기록** (로컬 환경, 가상 사용자 최대 10명, 에러율 0%)
 
 | 지표 | 맞춤 추천 | 게임 상세 연관 추천 |
 |---|---|---|
@@ -289,13 +337,19 @@ k6로 부하를 주고, Actuator가 공개한 서버 지표와 k6 결과를 Prom
 | 맞춤 추천 | ![맞춤 추천 개선 전 Grafana](docs/images/grafana-recommend-before.png) | ![맞춤 추천 개선 후 Grafana](docs/images/grafana-recommend-after.png) |
 | 게임 상세 연관 추천 | ![연관 추천 개선 전 Grafana](docs/images/grafana-related-before.png) | ![연관 추천 개선 후 Grafana](docs/images/grafana-related-after.png) |
 
-기준 게임 여러 개의 연관 게임을 쿼리 한 번으로 일괄 조회하고, `JOIN_FIXED_ORDER` 힌트로 IGDB 평점 필터를 먼저 적용했습니다. 로컬 PC에서 측정한 값이라 개선 전후 비교용입니다.
+기준 게임 여러 개의 연관 게임을 쿼리 한 번으로 일괄 조회하고, `JOIN_FIXED_ORDER` 힌트로 IGDB 평점 필터를 먼저 적용했습니다. 로컬 PC에서 측정한 값이라 개선 전후 비교용입니다. 이 수치는 아래 3차 사전 계산·고정 VU 시험의 최신 결과를 의미하지 않습니다.
+
+**3차 검색·추천 검증**
+
+- 검색은 1/5/10/20 RPS 단계별 시험과 동시 사용자 시험을 제공합니다. [검색 시험 안내](k6/README.md), [계획](docs/search-load-test-plan.md), [측정 결과](docs/search-load-test-results.md)를 참고하세요. 결과 문서는 추천 계산 완료 조건 제거 전 측정으로, 변경 후 부하 성능은 재측정하지 않았습니다.
+- 10월 27일 로컬 MySQL 284,294게임의 평점·ID 정렬 인덱스 실험에서 `a`, page=0 목록 SQL 중앙값은 139ms → 0.178ms였습니다. COUNT는 93.5ms → 94.7ms로 남았으며 HTTP·동시 부하 결과와는 다릅니다. [측정 조건과 한계](docs/search-score-index-results.md)를 함께 확인하세요.
+- 추천은 맞춤·연관 API를 분리하고 고정 10·100 VU 시나리오를 추가했습니다. 실행·인증·지표 설정은 [추천 k6 안내](k6/recommendations/README.md)를 참고하세요.
 
 ### 운영 프로파일
 
 `prod`는 Railway MySQL 환경변수(`MYSQLHOST`, `MYSQLPORT`, `MYSQLDATABASE`, `MYSQLUSER`, `MYSQLPASSWORD`)를 사용합니다. `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`와 외부 API 환경변수도 설정해야 합니다.
 
-운영 DB는 `ddl-auto: validate`와 SQL 초기화 비활성화 설정을 사용하므로 실행 전에 스키마를 준비해야 합니다. 운영 Refresh Token 쿠키에는 `Secure`와 `SameSite=Lax`가 적용됩니다.
+운영 DB는 `ddl-auto: validate`와 SQL 초기화 비활성화 설정을 사용하므로 실행 전에 스키마를 준비해야 합니다. 3차의 리뷰 버전, 알림·댓글·자유게시판, 추천 실행 이력·변경 추적 및 검색 인덱스는 [docs/sql](docs/sql)과 [monitoring](monitoring)의 SQL을 확인해 기존 스키마와 적용 이력에 맞춰 준비합니다. 운영 Refresh Token 쿠키에는 `Secure`와 `SameSite=Lax`가 적용됩니다.
 
 ---
 
@@ -304,14 +358,19 @@ k6로 부하를 주고, Actuator가 공개한 서버 지표와 k6 결과를 Prom
 ```text
 NBE12-14-2-3355/
 ├── .github/workflows/          # 백엔드 CI
-├── docs/                      # 시스템 구성도, ERD 및 모니터링 이미지
+├── docs/                      # 시스템 구성도, ERD, SQL 및 성능 측정 기록
+├── migration/                 # 3차 Kotlin 전환 계획·기준선·검증 기록
+├── k6/                        # 검색·추천 부하 테스트 실행기
+├── monitoring/                # Prometheus·Grafana 설정과 검색 인덱스 SQL
 ├── back/
-│   ├── src/main/java/com/gamelog/nbe121423355/
+│   ├── src/main/kotlin/com/gamelog/nbe121423355/
 │   │   ├── domain/
 │   │   │   ├── game/          # 게임 탐색, 수집, 번역, 추천
 │   │   │   ├── user/          # 인증, 프로필, 온보딩 취향
 │   │   │   ├── usergame/      # 라이브러리, 플레이 기록, 통계
-│   │   │   └── review/        # 리뷰, 평점, 좋아요, 신고
+│   │   │   ├── review/        # 리뷰, 평점, 좋아요, 신고, 댓글·답글
+│   │   │   ├── board/         # 커뮤니티 자유게시판, 댓글, 신고
+│   │   │   └── notification/  # 활동 알림, 읽음·보관 정책
 │   │   └── global/            # 보안, 공통 응답, 예외 처리, 업로드
 │   ├── src/main/resources/    # 프로파일별 애플리케이션 설정
 │   ├── src/test/              # 서비스·컨트롤러·저장소 등 테스트

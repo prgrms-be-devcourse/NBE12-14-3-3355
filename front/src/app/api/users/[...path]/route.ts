@@ -7,6 +7,8 @@ const allowedPath = /^(signup|login|logout|refresh|me(?:\/onboarding(?:\/skip)?|
 const followListPath = /^[1-9]\d*\/(following|followers)$/;
 const followActionPath = /^me\/following\/[1-9]\d*$/;
 const publicUserPath = /^[1-9]\d*$/;
+const gameProfilePath = /^(me|[1-9]\d*)\/game-profile$/;
+const userGamesPath = /^[1-9]\d*\/games$/;
 
 async function proxy(request: NextRequest, context: RouteContext) {
   const { path } = await context.params;
@@ -14,16 +16,20 @@ async function proxy(request: NextRequest, context: RouteContext) {
   const isFollowList = endpoint === "search" || followListPath.test(endpoint);
   const isFollowAction = followActionPath.test(endpoint);
   const isPublicUser = publicUserPath.test(endpoint);
-  if (!allowedPath.test(endpoint) && !isFollowList && !isFollowAction && !isPublicUser) {
+  const isGameProfile = gameProfilePath.test(endpoint);
+  const isUserGames = userGamesPath.test(endpoint);
+  const isFavoriteGames = endpoint === "me/favorite-games";
+  if (!allowedPath.test(endpoint) && !isFollowList && !isFollowAction && !isPublicUser && !isGameProfile && !isUserGames && !isFavoriteGames) {
     return Response.json({ data: null, msg: "요청한 경로를 찾을 수 없습니다.", resultCode: "404-0" }, { status: 404 });
   }
 
-  if ((isPublicUser && request.method !== "GET") ||
+  if (((isPublicUser || isGameProfile || isUserGames) && request.method !== "GET") ||
     (isFollowList && request.method !== "GET") ||
+    (isFavoriteGames && request.method !== "PUT") ||
       (isFollowAction && !["PUT", "DELETE"].includes(request.method))) {
     return Response.json({ data: null, msg: "허용되지 않은 요청 방식입니다.", resultCode: "405-0" }, {
       status: 405,
-      headers: { Allow: isFollowList || isPublicUser ? "GET" : "PUT, DELETE" },
+      headers: { Allow: isFavoriteGames ? "PUT" : isFollowList || isPublicUser || isGameProfile || isUserGames ? "GET" : "PUT, DELETE" },
     });
   }
 

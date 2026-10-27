@@ -1,0 +1,24 @@
+.notification-root { position: relative; }
+.notification-bell { position: relative; display: flex; align-items: center; padding: 8px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.notification-badge { position: absolute; top: -2px; right: -6px; border-radius: 12px; padding: 1px 5px; background: #b83232; color: white; font-size: 11px; line-height: 16px; }
+.notification-panel { position: absolute; right: 0; top: calc(100% + 12px); width: min(360px, calc(100vw - 32px)); max-height: 70vh; overflow-y: auto; padding: 16px; border: 1px solid #57644e; border-radius: 12px; background: #182017; color: #f3f5ef; z-index: 100; box-shadow: 0 12px 32px #0005; }
+.notification-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.notification-heading h2 { flex: 1; font-size: 18px; }
+.notification-panel button { cursor: pointer; }
+.notification-panel button:disabled { cursor: wait; opacity: .6; }
+.notification-panel ul { list-style: none; padding: 0; margin: 0; }
+.notification-item { display: flex; flex-direction: column; width: 100%; gap: 6px; padding: 12px; text-align: left; background: transparent; color: inherit; border: 0; border-bottom: 1px solid #ffffff20; border-radius: 6px; }
+.notification-item.unread { background: #ffffff0c; border-left: 3px solid #a9ca8c; }
+.notification-item small, .notification-item time { font-size: 12px; color: #c4cdbd; }
+.notification-item:hover, .notification-item:focus-visible { background: #ffffff18; }
+.notification-detail { padding: 12px; margin-bottom: 12px; border: 1px solid #91ad76; border-radius: 6px; }
+.notification-panel > p { padding: 12px 0; }
+.notification-panel { white-space: normal; background: var(--panel); color: var(--text); border-color: var(--line); }
+.notification-item { overflow-wrap: anywhere; }
+.notification-item.unread { border-left-color: var(--lime); }
+@media (max-width: 640px) {
+  .notification-panel { position: fixed; right: 16px; top: 76px; width: calc(100vw - 32px); }
+}
+
+.notification-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 13px; color: var(--text); }
+.notification-filter input { accent-color: var(--lime); }

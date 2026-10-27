@@ -1,0 +1,173 @@
+{
+  "recorded_at": "2026-10-22T12:20:55.081719+09:00",
+  "base_url": "http://localhost:8080",
+  "runtime_build_and_flags": "User confirmed latest Java code and all three recommendation flags true",
+  "purpose": "read-only Java runtime API observations; compare only after reproducing the same data and configuration",
+  "responses": [
+    {
+      "path": "/actuator/health",
+      "http_status": 200,
+      "response_keys": [
+        "groups",
+        "status"
+      ],
+      "resultCode": null,
+      "response_sha256": "f5d81755935209a3ae596d4553d269cbbe8d08a27dd95b05fe0b7c544eb7ed71"
+    },
+    {
+      "path": "/api/v1/games/page?page=0&size=5",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "response_sha256": "075fd6f36646d8f5bffcfb2b5fce769391619a4ceb3cec0ddbe11fad4f9114d7",
+      "data_keys": [
+        "content",
+        "empty",
+        "first",
+        "last",
+        "number",
+        "numberOfElements",
+        "pageable",
+        "size",
+        "sort",
+        "totalElements",
+        "totalPages"
+      ],
+      "game_ids": [
+        47808,
+        198812,
+        226137,
+        232879,
+        237711
+      ],
+      "total_elements": 287478
+    },
+    {
+      "path": "/api/v1/games/page?page=0&size=5&keyword=Elden",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "response_sha256": "1ef6fa634b362d697178526dd2fac27ee7391e27bcac7ab5504144aa035579de",
+      "data_keys": [
+        "content",
+        "empty",
+        "first",
+        "last",
+        "number",
+        "numberOfElements",
+        "pageable",
+        "size",
+        "sort",
+        "totalElements",
+        "totalPages"
+      ],
+      "game_ids": [
+        201812,
+        85739,
+        168251,
+        228562,
+        70907
+      ],
+      "total_elements": 29
+    },
+    {
+      "path": "/api/v1/games/suggestions?keyword=Elden",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "response_sha256": "edc7607b571cff8038913c991f047aba38b647a43c2847a06a913a48d4608c32",
+      "count": 6,
+      "game_ids": [
+        200535,
+        205720,
+        85739,
+        147039,
+        228562,
+        262511
+      ],
+      "item_keys": [
+        "coverImageUrl",
+        "id",
+        "igdbRating",
+        "releaseDate",
+        "title"
+      ]
+    },
+    {
+      "path": "/api/v1/games/47808",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "response_sha256": "28b1c6614640355af9764e8951f02ce8096bb0dfd3b2c524277ea7ce4f0e0ec0",
+      "data_keys": [
+        "coverImageUrl",
+        "description",
+        "developer",
+        "genres",
+        "id",
+        "igdbId",
+        "igdbRating",
+        "platforms",
+        "releaseDate",
+        "series",
+        "statistics",
+        "title"
+      ],
+      "game_id": 47808
+    },
+    {
+      "path": "/api/v1/games/47808/related",
+      "http_status": 200,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "200-1",
+      "response_sha256": "2643e3667f9aef68bf3141c03bb55f117ae2a00a6ebe25a36a8f5588cf1d015d",
+      "count": 5,
+      "game_ids": [
+        196353,
+        179011,
+        201812,
+        1614,
+        9961
+      ],
+      "item_keys": [
+        "coverImageUrl",
+        "genres",
+        "id",
+        "igdbRating",
+        "recommendationScore",
+        "title"
+      ]
+    },
+    {
+      "path": "/api/v1/games/9223372036854775807",
+      "http_status": 404,
+      "response_keys": [
+        "data",
+        "msg",
+        "resultCode"
+      ],
+      "resultCode": "404-1",
+      "response_sha256": "ec374356489557bcf9748b090b60315ddc4d569bf4f701b773e85f4994862ce9"
+    }
+  ]
+}

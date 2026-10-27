@@ -1,5 +1,6 @@
 HELP.md
 .gradle
+.kotlin/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -50,3 +51,10 @@ out/
 
 # Local database recovery snapshots
 /.local-backups/
+
+# Local usergame development documents
+/back/docs/usergame*
+/docs/**/usergame*
+
+# Local notification design document
+/docs/notifications-design.md
