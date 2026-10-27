@@ -10,6 +10,9 @@ import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -142,6 +145,43 @@ constructor(
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.resultCode").value("400-6"))
+    }
+
+    @ParameterizedTest(name = "page={0}, size={1} -> {2}")
+    @CsvSource("-1, 10, 400-7", "0, 0, 400-8", "0, 51, 400-8")
+    @DisplayName("페이지 번호가 음수이거나 크기가 1~50을 벗어나면 400")
+    fun getFollowingRejectsInvalidPageRequest(page: Int, size: Int, resultCode: String) {
+        // given: 조회 대상 사용자를 준비
+        val profileUser = saveUser("profile@test.com", "프로필 사용자")
+
+        // when: 범위를 벗어난 페이지 값으로 Following 목록을 조회
+        // then: 잘못된 요청 응답과 해당 결과 코드가 반환되는지 확인
+        mockMvc.perform(
+            get("/api/v1/users/{userId}/following", profileUser.id)
+                .param("page", page.toString())
+                .param("size", size.toString()),
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value(resultCode))
+    }
+
+    @ParameterizedTest(name = "size={0}")
+    @ValueSource(ints = [1, 50])
+    @DisplayName("페이지 크기 경계값(1, 50)은 허용한다")
+    fun getFollowingAcceptsBoundaryPageSize(size: Int) {
+        // given: 조회 대상 사용자를 준비
+        val profileUser = saveUser("profile@test.com", "프로필 사용자")
+
+        // when: 경계값 크기로 Following 목록을 조회
+        // then: 정상 응답이 반환되는지 확인
+        mockMvc.perform(
+            get("/api/v1/users/{userId}/following", profileUser.id)
+                .param("page", "0")
+                .param("size", size.toString()),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultCode").value("200-16"))
+            .andExpect(jsonPath("$.data.size").value(size))
     }
 
     private fun saveUser(email: String, nickname: String): User {

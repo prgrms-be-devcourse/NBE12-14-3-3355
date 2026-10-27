@@ -218,7 +218,7 @@ class ApiV1UserController(
         val responseCookie =
             refreshTokenCookieFactory.create(session.refreshToken, session.expiryDate)
         httpServletResponse.addResponseCookie(responseCookie)
-        return RsData("200-14", "비밀번호 변경 성공")
+        return RsData("200-21", "비밀번호 변경 성공")
     }
 
     @DeleteMapping("/me")
