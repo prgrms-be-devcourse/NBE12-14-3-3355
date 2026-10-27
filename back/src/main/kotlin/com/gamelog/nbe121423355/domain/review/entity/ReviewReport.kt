@@ -70,6 +70,10 @@ class ReviewReport : BaseEntity {
         this.status = javaNonNull(status, "status는 필수입니다.")
     }
 
+    // 과거 신고는 스냅샷 전체가 null이다. 캡처된 별점·본문의 null은 당시 값으로 보존한다.
+    fun hasReviewSnapshot(): Boolean =
+        reviewRatingSnapshot != null || reviewContentSnapshot != null || reviewSpoilerSnapshot != null
+
     protected constructor()
 
     companion object {

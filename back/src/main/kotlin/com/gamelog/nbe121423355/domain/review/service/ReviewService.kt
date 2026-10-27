@@ -77,11 +77,13 @@ constructor(
     }
 
     fun getGameReviews(gameId: Long, pageable: Pageable): ReviewPageResponse {
+        validateReviewSort(pageable)
         val reviews: Page<Review> = reviewRepository.findByUserGame_Game_Id(gameId, pageable)
         return toReviewPageResponse(reviews, reviewLikeRepository.countVisibleLikesByGameId(gameId))
     }
 
     fun getUserReviews(userId: Long, pageable: Pageable): ReviewPageResponse {
+        validateReviewSort(pageable)
         val reviews: Page<Review> = reviewRepository.findByUserGame_User_Id(userId, pageable)
         return toReviewPageResponse(reviews, reviewLikeRepository.countVisibleLikesByUserId(userId))
     }
@@ -154,6 +156,15 @@ constructor(
         return ReviewPageResponse.from(reviews, likeCounts, totalLikes)
     }
 
+    private fun validateReviewSort(pageable: Pageable) {
+        if (pageable.sort.any { it.property !in ALLOWED_REVIEW_SORT_FIELDS }) {
+            throw ServiceException(
+                "400-0",
+                "지원하지 않는 리뷰 정렬 필드입니다. ${ALLOWED_REVIEW_SORT_FIELDS.joinToString(", ")} 중 선택해 주세요.",
+            )
+        }
+    }
+
     private fun validateReviewContent(request: ReviewSaveRequest) {
         if (!request.hasReviewContent()) {
             throw ServiceException("400-4", "별점 또는 리뷰 내용 중 하나는 입력해야 합니다.")
@@ -183,5 +194,9 @@ constructor(
             "409-6",
             "다른 곳에서 리뷰가 변경되었습니다. 최신 내용을 다시 불러온 후 시도해 주세요.",
         )
+    }
+
+    companion object {
+        private val ALLOWED_REVIEW_SORT_FIELDS = setOf("id", "createdDate", "lastModifiedDate", "rating")
     }
 }

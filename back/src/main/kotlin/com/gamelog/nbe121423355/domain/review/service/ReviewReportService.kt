@@ -45,7 +45,7 @@ constructor(
         reviewId: Long,
         request: ReviewReportCreateRequest,
     ): ReviewReportResponse {
-        val review = getReview(reviewId)
+        val review = getReviewForReport(reviewId)
         val reporter = getUser(reporterId)
         // 본인이 작성한 리뷰는 신고할 수 없음.
         val reviewWriterId = review.userGame.user.id
@@ -85,43 +85,46 @@ constructor(
         reportId: Long,
         request: ReviewReportStatusUpdateRequest,
     ): ReviewReportResponse {
-        val report =
-            reviewReportRepository.findByIdOrNull(reportId)
+        // 리뷰 → 대기 신고 순서로 잠근다. 다른 신고 ID로 요청해도 동일한 리뷰 잠금을 기다린다.
+        val reviewId =
+            reviewRepository.lockReviewIdByReportId(reportId)
                 ?: throw ServiceException("404-5", "리뷰 신고를 찾을 수 없습니다.")
         if (request.status == ReportStatus.PENDING) {
             throw ServiceException("400-5", "신고 처리 결과는 승인 또는 반려여야 합니다.")
         }
         val pendingReports: List<ReviewReport> =
-            reviewReportRepository.findByReview_IdAndStatus(checkNotNull(report.review.id), ReportStatus.PENDING)
+            reviewReportRepository.findPendingByReviewIdForUpdate(reviewId)
         if (pendingReports.isEmpty()) {
             throw ServiceException("409-4", "이미 처리된 리뷰 신고입니다.")
         }
+        val review = pendingReports.first().review
         if (request.status == ReportStatus.APPROVED) {
-            val wasActive = report.review.isActive
-            report.review.hideByAdmin()
+            val wasActive = review.isActive
+            review.hideByAdmin()
             if (wasActive) {
                 events.publishEvent(
                     NotificationRequested(
-                        recipients = setOf(requireNotNull(report.review.userGame.user.id)),
+                        recipients = setOf(requireNotNull(review.userGame.user.id)),
                         actorId = null,
                         kind = NotificationKind.REVIEW_HIDDEN,
                         targetType = NotificationTarget.REVIEW,
-                        targetId = requireNotNull(report.review.id),
-                        sourceKey = "review-hidden:${report.review.id}:${report.review.version}",
-                        reviewId = report.review.id,
-                        gameTitle = report.review.userGame.game.title,
+                        targetId = requireNotNull(review.id),
+                        sourceKey = "review-hidden:${review.id}:${review.version}",
+                        reviewId = review.id,
+                        gameTitle = review.userGame.game.title,
                     )
                 )
             }
-            changeRecorder.record(requireNotNull(report.review.userGame.game.id), RelatedGameChangeReason.REVIEW)
-            userGameService.synchronizeLibraryState(report.review.userGame)
+            changeRecorder.record(requireNotNull(review.userGame.game.id), RelatedGameChangeReason.REVIEW)
+            userGameService.synchronizeLibraryState(review.userGame)
         }
         pendingReports.forEach { pendingReport -> pendingReport.changeStatus(request.status) }
         return ReviewReportResponse.from(pendingReports.first())
     }
 
-    private fun getReview(reviewId: Long): Review =
-        reviewRepository.findActiveById(reviewId).getOrNull()
+    // 관리자 처리와 같은 리뷰 행을 먼저 잠그고 현재 공개 상태를 확인한다.
+    private fun getReviewForReport(reviewId: Long): Review =
+        reviewRepository.findActiveForUpdate(reviewId).getOrNull()
             ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
     private fun getUser(userId: Long): User =

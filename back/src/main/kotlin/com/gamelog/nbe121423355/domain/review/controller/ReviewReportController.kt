@@ -45,6 +45,7 @@ class ReviewReportController constructor(private val reviewReportService: Review
             로그인한 사용자가 공개 중인 다른 사용자의 리뷰를 신고합니다. 사유는 공백이 아닌 1~255자입니다.
             본인의 리뷰는 신고할 수 없으며(400-3), 같은 사용자의 동일 리뷰 중복 신고는 409-1입니다.
             존재하지 않거나 삭제·관리자 숨김 상태인 리뷰는 신고할 수 없습니다(404-3).
+            관리자 처리와 겹치면 같은 리뷰의 잠금을 기다린 뒤 공개 상태를 확인합니다. 먼저 숨김 처리되었다면 404-3입니다.
             신고는 PENDING으로 접수되고 당시 별점·내용·스포일러 여부를 보존합니다. 이후 리뷰가 수정되어도 신고 당시 값이 우선 표시됩니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],
@@ -75,7 +76,8 @@ class ReviewReportController constructor(private val reviewReportService: Review
             로그인한 ADMIN만 조회할 수 있습니다. status를 생략하면 전체 상태를 조회합니다.
             신고를 대상 리뷰 단위로 묶으므로 totalElements·size는 개별 신고 건수가 아닌 신고 대상 리뷰 수 기준입니다.
             status를 지정하면 해당 상태의 신고만 묶어 반환합니다. 각 그룹의 reportCount·pendingReportCount도 반환된 신고 기준입니다.
-            그룹은 가장 최근 신고 시각의 내림차순입니다. page는 0부터 시작하고 기본 size는 20입니다.
+            그룹은 가장 최근 신고 시각의 내림차순이며, 시각이 같으면 리뷰 ID 내림차순입니다. 그룹 안의 신고는 신고 시각·신고 ID 내림차순입니다.
+            page는 0부터 시작하고 기본 size는 20입니다.
             정렬은 서비스에서 고정하므로 sort 요청값으로 변경되지 않습니다. 일치하는 신고가 없으면 빈 목록을 반환합니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],
@@ -109,6 +111,7 @@ class ReviewReportController constructor(private val reviewReportService: Review
             승인하면 리뷰를 HIDDEN_BY_ADMIN으로 숨겨 공개 조회에서 제외하고 라이브러리 포함 여부를 다시 계산합니다.
             반려하면 신고 상태만 변경하며 리뷰의 기존 공개·숨김 상태는 변경하지 않습니다.
             이미 처리된 신고는 그대로 두고 대기 신고만 변경합니다. 같은 리뷰에 대기 신고가 전혀 없으면 409-4입니다.
+            같은 리뷰의 동시 처리 요청은 순서대로 처리하며, 잠금을 얻은 뒤 이미 처리되어 대기 신고가 없으면 409-4를 반환합니다.
             응답은 처리한 대기 신고 중 하나이며, 경로의 reportId와 반드시 같지는 않습니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],

@@ -13,6 +13,17 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface ReviewRepository : JpaRepository<Review, Long> {
+    // 신고 ID가 달라도 같은 리뷰의 일괄 처리는 직렬화한다. 엔티티를 미리 로드하지 않는다.
+    @Query(
+        value = """
+            SELECT r.id FROM reviews r
+            WHERE r.id = (SELECT report.review_id FROM review_reports report WHERE report.id = :reportId)
+            FOR UPDATE
+        """,
+        nativeQuery = true,
+    )
+    fun lockReviewIdByReportId(@Param("reportId") reportId: Long): Long?
+
     @org.springframework.data.jpa.repository.Lock(
         jakarta.persistence.LockModeType.PESSIMISTIC_WRITE
     )
@@ -177,12 +188,14 @@ interface ReviewRepository : JpaRepository<Review, Long> {
     ): MutableList<Review>
 
     // 회원탈퇴: 활성 리뷰만 숨김 (UPDATE에는 JOIN을 못 써서 user_game은 서브쿼리)
+    // 벌크 UPDATE는 @Version을 자동 갱신하지 않으므로 이전 버전의 진행 중인 수정도 막는다.
     @Modifying(flushAutomatically = true)
     @Query(
         """
             UPDATE Review r
             SET r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.DELETED_BY_USER,
-                r.deletedAt = :now
+                r.deletedAt = :now,
+                r.version = r.version + 1
             WHERE r.userGame.id IN (SELECT ug.id FROM UserGame ug WHERE ug.user.id = :userId)
               AND
               """ +

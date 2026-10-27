@@ -120,6 +120,44 @@ class ReviewReportControllerTest {
             .andExpect(jsonPath("$.data.reports[0].reviewSpoiler").value(true))
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    @DisplayName("신고 당시 없던 별점·본문은 DB 재조회 후 관리자 목록·처리 응답에서도 null로 보존한다")
+    fun preservesNullSnapshotInAdminResponses(ratingOnly: Boolean) {
+        reports.deleteById(reportId)
+        val review = reviews.findById(reviewId).orElseThrow()
+        review.edit(if (ratingOnly) BigDecimal("4.0") else null,
+            if (ratingOnly) null else "신고 당시 본문", false)
+        flushAndClear()
+
+        val created = mvc.perform(post(createUrl).authorized(reporter).json(ReviewReportCreateRequest("신고")))
+            .andExpect(status().isCreated).andReturn().response
+        reportId = mapper.readTree(created.contentAsString).path("data").path("reportId").asLong()
+        flushAndClear()
+
+        reviews.findById(reviewId).orElseThrow().edit(BigDecimal("4.5"), "신고 후 추가한 본문", true)
+        flushAndClear()
+
+        val listed = mvc.perform(get(listUrl).authorized(admin))
+            .andExpect(status().isOk).andReturn().response
+        val handled = mvc.perform(put(statusUrl).authorized(admin)
+            .json(ReviewReportStatusUpdateRequest(ReportStatus.REJECTED)))
+            .andExpect(status().isOk).andReturn().response
+        val group = mapper.readTree(listed.contentAsString).path("data").path("reports").first()
+        val single = mapper.readTree(handled.contentAsString).path("data")
+
+        for (snapshot in listOf(group, single)) {
+            if (ratingOnly) {
+                assertThat(snapshot.path("reviewRating").decimalValue()).isEqualByComparingTo("4.0")
+                assertThat(snapshot.path("reviewContent").isNull).isTrue()
+            } else {
+                assertThat(snapshot.path("reviewRating").isNull).isTrue()
+                assertThat(snapshot.path("reviewContent").asString()).isEqualTo("신고 당시 본문")
+            }
+            assertThat(snapshot.path("reviewSpoiler").asBoolean()).isFalse()
+        }
+    }
+
     @Test
     @DisplayName("관리자 목록은 같은 리뷰의 신고를 하나로 묶고 리뷰 기준 페이징을 반환한다")
     fun listsGroupedReportsWithPagination() {

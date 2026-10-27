@@ -15,6 +15,7 @@ import com.gamelog.nbe121423355.global.security.jwt.JwtProvider
 import com.gamelog.nbe121423355.support.MySqlIntegrationTest
 import jakarta.persistence.EntityManager
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.BeforeEach
@@ -309,6 +310,73 @@ class ReviewControllerTest {
         mvc.perform(get("/api/v1/reviews/${Long.MAX_VALUE}").authorized())
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.resultCode").value("404-3"))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["game", "user"])
+    @DisplayName("존재하지 않는 리뷰 정렬 필드는 500 대신 400을 반환한다")
+    fun rejectsUnknownReviewSort(target: String) {
+        val url = if (target == "game") "/api/v1/games/$gameId/reviews" else "/api/v1/users/$ownerId/reviews"
+        mvc.perform(get(url).param("sort", "missingField,desc"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.resultCode").value("400-0"))
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["userGame.missingField", "userGame.user.password"])
+    @DisplayName("허용하지 않은 연관 객체의 리뷰 정렬 경로도 400으로 거절한다")
+    fun rejectsUnsupportedNestedSort(property: String) {
+        for (url in listOf("/api/v1/games/$gameId/reviews", "/api/v1/users/$ownerId/reviews")) {
+            mvc.perform(get(url).param("sort", "$property,desc"))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.resultCode").value("400-0"))
+        }
+    }
+
+    @Test
+    @DisplayName("복합 정렬에 잘못된 필드가 하나라도 있으면 요청 전체를 400으로 거절한다")
+    fun rejectsUnknownFieldInMultipleSorts() {
+        for (url in listOf("/api/v1/games/$gameId/reviews", "/api/v1/users/$ownerId/reviews")) {
+            mvc.perform(get(url).param("sort", "createdDate,desc", "missingField,asc"))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.resultCode").value("400-0"))
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["id", "createdDate", "lastModifiedDate", "rating"])
+    @DisplayName("허용된 리뷰 정렬은 게임·사용자 목록 모두 오름차순·내림차순과 페이징을 유지한다")
+    fun preservesSupportedSortOrdering(property: String) {
+        for (target in listOf("game", "user")) {
+            val secondId = prepareReviewSortFixtures(target)
+            val url = if (target == "game") "/api/v1/games/$gameId/reviews" else "/api/v1/users/$ownerId/reviews"
+            for (direction in listOf("asc", "desc")) {
+                val expected = if (direction == "asc") listOf(reviewId, secondId) else listOf(secondId, reviewId)
+                mvc.perform(get(url).param("sort", "$property,$direction").param("size", "2"))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$.data.reviews[0].reviewId").value(expected.first()))
+                    .andExpect(jsonPath("$.data.reviews[1].reviewId").value(expected.last()))
+                    .andExpect(jsonPath("$.data.totalElements").value(2))
+                    .andExpect(jsonPath("$.data.page").value(0))
+                    .andExpect(jsonPath("$.data.size").value(2))
+            }
+        }
+    }
+
+    private fun prepareReviewSortFixtures(target: String): Long {
+        val secondRecord = if (target == "game") UserGame(other, game).also(em::persist)
+            else records.findById(emptyRecordId).orElseThrow()
+        val secondReview = Review(secondRecord, BigDecimal("5.0"), "정렬 비교 리뷰", false)
+        em.persist(secondReview)
+        em.flush()
+        val secondId = requireNotNull(secondReview.id)
+        val firstDate = LocalDateTime.of(2026, 10, 20, 10, 0)
+        for ((id, date) in listOf(reviewId to firstDate, secondId to firstDate.plusDays(1))) {
+            em.createNativeQuery("UPDATE reviews SET created_date = :date, last_modified_date = :date WHERE id = :id")
+                .setParameter("date", date).setParameter("id", id).executeUpdate()
+        }
+        em.clear()
+        return secondId
     }
 
     private fun requestFor(action: String): MockHttpServletRequestBuilder = when (action) {

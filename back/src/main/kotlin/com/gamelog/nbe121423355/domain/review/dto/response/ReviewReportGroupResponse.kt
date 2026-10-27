@@ -31,10 +31,13 @@ data class ReviewReportGroupResponse(
         fun from(source: List<ReviewReport>): ReviewReportGroupResponse {
             require(source.isNotEmpty()) { "신고 묶음은 비어 있을 수 없습니다." }
 
-            val sorted = source.sortedWith(compareBy(nullsLast(reverseOrder())) { it.createdDate })
+            val sorted = source.sortedWith(
+                compareByDescending<ReviewReport> { it.createdDate }.thenByDescending { it.id },
+            )
 
             val representative =
                 sorted.firstOrNull { it.status == ReportStatus.PENDING } ?: sorted.first()
+            val hasSnapshot = representative.hasReviewSnapshot()
 
             val groupStatus =
                 if (sorted.any { it.status == ReportStatus.PENDING })
@@ -50,15 +53,15 @@ data class ReviewReportGroupResponse(
                 representative.review.userGame.game.coverImageUrl,
                 representative.review.userGame.user.id,
                 representative.review.userGame.user.nickname,
-                representative.reviewRatingSnapshot ?: representative.review.rating,
-                representative.reviewContentSnapshot ?: representative.review.content,
+                if (hasSnapshot) representative.reviewRatingSnapshot else representative.review.rating,
+                if (hasSnapshot) representative.reviewContentSnapshot else representative.review.content,
                 representative.reviewSpoilerSnapshot ?: representative.review.isSpoiler,
                 representative.review.status ?: ReviewStatus.ACTIVE,
                 groupStatus,
                 sorted.size,
                 sorted.count { it.status == ReportStatus.PENDING },
                 representative.id,
-                representative.createdDate,
+                sorted.first().createdDate,
                 sorted.map { ReviewReportItemResponse.from(it) },
             )
         }

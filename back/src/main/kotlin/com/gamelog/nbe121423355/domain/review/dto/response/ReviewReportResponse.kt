@@ -27,6 +27,7 @@ data class ReviewReportResponse(
     companion object {
         @JvmStatic
         fun from(report: ReviewReport): ReviewReportResponse {
+            val hasSnapshot = report.hasReviewSnapshot()
             return ReviewReportResponse(
                 report.id,
                 report.review.id,
@@ -35,8 +36,8 @@ data class ReviewReportResponse(
                 report.review.userGame.user.id,
                 report.review.userGame.user.nickname,
                 report.reason,
-                report.reviewRatingSnapshot ?: report.review.rating,
-                report.reviewContentSnapshot ?: report.review.content,
+                if (hasSnapshot) report.reviewRatingSnapshot else report.review.rating,
+                if (hasSnapshot) report.reviewContentSnapshot else report.review.content,
                 report.reviewSpoilerSnapshot ?: report.review.isSpoiler,
                 report.review.status ?: ReviewStatus.ACTIVE,
                 report.status,
