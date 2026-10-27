@@ -1,0 +1,43 @@
+/* 카드는 community.module.css, 댓글은 review-comments.module.css, 버튼·팝업·검색창은 전역 클래스를 쓰고 여기에는 게시판에만 있는 것만 둔다 */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.toolbar .search { width: 420px; max-width: 100%; }
+.toolbar .search button { padding: 5px 6px; border: 0; border-radius: 0; background: none; color: var(--text); font-size: 12px; }
+.toolbar .search button:hover { color: var(--lime); }
+
+.highlighted { border-color: #6b8a3a; box-shadow: 0 0 0 1px #6b8a3a55; }
+/* 제목은 크고 밝게, 본문은 한 단계 작고 차분한 색으로 위계를 준다 */
+.title { margin: 2px 0 12px; color: var(--text); font-size: 21px; font-weight: 700; line-height: 1.4; letter-spacing: -.3px; overflow-wrap: anywhere; }
+.body { min-height: 0; }
+.body .text { color: #b9c2b6; font-size: 14px; }
+.toolbar > :global(.apply-button) { padding: 9px 14px; }
+.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; line-clamp: 6; overflow: hidden; }
+.gameInfo { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.gameInfo small { color: var(--muted); font-size: 12px; }
+.spacer { flex: 1; }
+.headerRight { display: flex; align-items: center; gap: 4px; flex-shrink: 0; color: #95a092; font-size: 12px; }
+.menu { position: relative; }
+.menuButton.menuButton { padding: 2px 8px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 18px; line-height: 1; }
+.menuButton.menuButton:hover:not(:disabled), .menuButton.menuButton[aria-expanded=true] { background: #2a302e; color: var(--text); }
+.menuList { position: absolute; top: calc(100% + 4px); right: 0; z-index: 20; display: flex; flex-direction: column; min-width: 110px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #202525; box-shadow: 0 12px 28px #0008; }
+.menuList.menuList button { padding: 8px 12px; border: 0; border-radius: 5px; background: none; color: var(--text); font-size: 13px; text-align: left; }
+.menuList.menuList button:hover { background: #2a302e; }
+.menuList.menuList .danger { color: #fca5a5; }
+.viewComments.viewComments { display: block; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 13px; cursor: pointer; }
+.viewComments.viewComments:hover { color: var(--lime); }
+
+/* 전역 .detail 팝업은 이미지·본문 2열 그리드라서 글쓰기 폼은 한 열로 되돌린다 */
+.composer[open] { display: block; max-width: 640px; }
+.composer form { display: flex; flex-direction: column; gap: 12px; }
+.composer h2 { margin: 4px 0 4px; font-size: 22px; }
+.composer input[aria-label="제목"], .composer textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; background: #202525; color: var(--text); font: inherit; }
+.composer input[aria-label="제목"]:focus, .composer textarea:focus { outline: none; border-color: var(--lime); }
+.composer textarea { resize: vertical; min-height: 200px; line-height: 1.6; }
+.composer input[type="checkbox"] { accent-color: var(--lime); }
+.composerFooter { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+.error { color: #fca5a5; font-size: 13px; }
+
+@media (max-width: 600px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar .search { width: 100%; }
+}
