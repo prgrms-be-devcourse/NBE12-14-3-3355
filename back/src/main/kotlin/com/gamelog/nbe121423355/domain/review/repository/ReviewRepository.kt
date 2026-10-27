@@ -188,12 +188,14 @@ interface ReviewRepository : JpaRepository<Review, Long> {
     ): MutableList<Review>
 
     // 회원탈퇴: 활성 리뷰만 숨김 (UPDATE에는 JOIN을 못 써서 user_game은 서브쿼리)
+    // 벌크 UPDATE는 @Version을 자동 갱신하지 않으므로 이전 버전의 진행 중인 수정도 막는다.
     @Modifying(flushAutomatically = true)
     @Query(
         """
             UPDATE Review r
             SET r.status = com.gamelog.nbe121423355.domain.review.entity.ReviewStatus.DELETED_BY_USER,
-                r.deletedAt = :now
+                r.deletedAt = :now,
+                r.version = r.version + 1
             WHERE r.userGame.id IN (SELECT ug.id FROM UserGame ug WHERE ug.user.id = :userId)
               AND
               """ +
