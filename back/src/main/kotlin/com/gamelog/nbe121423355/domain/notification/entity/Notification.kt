@@ -76,3 +76,5 @@ data class NotificationRequested(
 data class NotificationCancelled(val sourceKey: String)
 
 data class CommentNotificationsCancelled(val commentId: Long)
+
+data class BoardPostNotificationsCancelled(val postId: Long)

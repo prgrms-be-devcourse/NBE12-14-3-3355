@@ -7,4 +7,6 @@ enum class NotificationKind {
     REVIEW_COMMENT,
     REVIEW_REPLY,
     REVIEW_COMMENT_LIKE,
+    BOARD_COMMENT,
+    BOARD_REPLY,
 }
