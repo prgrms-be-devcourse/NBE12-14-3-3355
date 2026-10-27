@@ -27,6 +27,7 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -102,6 +103,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("본인 좋아요는 알림을 만들지 않고 취소 후 다시 좋아요하면 새 미읽음 알림을 만든다")
     fun likesExcludeSelfCancelAndRecreateUnread() {
         reviewLikes.addLike(authorId, reviewId)
 
@@ -121,6 +123,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("중복 팔로우는 알림을 중복 생성하지 않고 언팔로우 후 재팔로우하면 다시 알린다")
     fun followIsIdempotentAndCancelRemovesNotice() {
         follows.follow(readerId, authorId)
         follows.follow(readerId, authorId)
@@ -137,6 +140,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("답글은 리뷰·원댓글 작성자에게 중복 없이 알리고 삭제 시 관련 댓글·좋아요 알림을 취소한다")
     fun repliesReachBothAuthorsOnceAndDeletionCancelsCommentAndLikeNotices() {
         val root = comments.create(reviewId, readerId, body("원댓글"))
         notifications.readAll(authorId)
@@ -170,6 +174,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("신고 승인으로 리뷰가 숨겨질 때만 비공개 정보를 제외한 알림을 생성한다")
     fun hiddenNoticeContainsNoReportTextAndIsCreatedOnlyOnActualTransition() {
         val first = reports.createReport(readerId, reviewId, ReviewReportCreateRequest("신고자 비공개 내용"))
         reports.createReport(thirdId, reviewId, ReviewReportCreateRequest("다른 비공개 내용"))
@@ -193,6 +198,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("알림 API는 인증과 소유권을 확인하고 목록 조회만으로 읽음 처리하지 않는다")
     fun apiScopesOwnershipAndOpeningListDoesNotRead() {
         follows.follow(readerId, authorId)
         val id = notifications.list(authorId, null).items.first().id
@@ -219,6 +225,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("작성자가 탈퇴하고 대상 리뷰가 삭제되면 대체 이름을 표시하고 링크를 제공하지 않는다")
     fun deletedTargetsAndWithdrawnActorsAreSafe() {
         reviewLikes.addLike(readerId, reviewId)
         reader.withdraw("random")
@@ -232,6 +239,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("알림 23개를 커서로 20개·3개씩 중복 없이 조회하고 전체 읽음 처리한다")
     fun cursorPaginationAndReadAllKeepTheirBoundaries() {
         repeat(23) { index ->
             events.publishEvent(
@@ -265,6 +273,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("원본 동작의 트랜잭션이 롤백되면 함께 생성된 알림도 롤백된다")
     fun rollbackRemovesNotificationWithSourceAction() {
         val template = TransactionTemplate(transactions).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
@@ -286,6 +295,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("미읽음 필터는 페이지네이션에 반영되고 전체 읽음 처리는 다른 사용자에게 영향을 주지 않는다")
     fun unreadFilterUsesServerPaginationAndKeepsOwnership() {
         repeat(25) { index ->
             repository.save(
@@ -321,6 +331,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("일반 알림은 읽은 지 7일·미읽음 30일, 숨김 알림은 생성 후 90일 경계부터 삭제한다")
     fun retentionUsesReadTimeAndIndependentHiddenDeadlineAtInclusiveBoundaries() {
         val now = LocalDateTime.of(2026, 10, 24, 12, 0)
         val expiredRead = agedNotification(NotificationKind.REVIEW_LIKE, now.minusDays(40), now.minusDays(7), "expire:read")
@@ -342,6 +353,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("전체 읽음 시점부터 7일이 지나면 만료 알림을 최대 1000개씩 나누어 삭제한다")
     fun retentionDeletesInBoundedBatchesAndReadAllStartsSevenDayWindow() {
         val now = LocalDateTime.now()
         val batch = List(1005) { index ->
@@ -371,6 +383,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("알림 행위자와 대상 사용자가 없으면 대체 이름을 표시하고 프로필 링크를 제공하지 않는다")
     fun missingActorAndProfileTargetRemainUnavailable() {
         repository.save(
             Notification(
@@ -395,6 +408,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("댓글이 삭제되어 알림만 남으면 기존 알림을 유지하고 링크를 제공하지 않는다")
     fun commentLinkBecomesUnavailableWhenCommentIsDeletedButNoticeRemains() {
         val comment = comments.create(reviewId, readerId, body("알림 링크 댓글"))
         val commentId = checkNotNull(comment.id)
@@ -419,6 +433,7 @@ class NotificationIntegrationTest {
     }
 
     @Test
+    @DisplayName("이미 읽은 알림을 다시 읽어도 최초 읽음 시각을 유지한다")
     fun readingAgainPreservesOriginalReadTime() {
         val originalReadAt = LocalDateTime.of(2026, 10, 20, 12, 0)
         val id = agedNotification(

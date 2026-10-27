@@ -5,21 +5,6 @@ import java.time.LocalDateTime
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
 
-enum class NotificationKind {
-    REVIEW_LIKE,
-    FOLLOW,
-    REVIEW_HIDDEN,
-    REVIEW_COMMENT,
-    REVIEW_REPLY,
-    REVIEW_COMMENT_LIKE,
-}
-
-enum class NotificationTarget {
-    REVIEW,
-    USER,
-    REVIEW_COMMENT,
-}
-
 // IDs intentionally have no foreign keys: notices survive target deletion and withdrawal.
 @Entity
 @Table(
