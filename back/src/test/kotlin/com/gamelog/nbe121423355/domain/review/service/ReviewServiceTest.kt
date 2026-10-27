@@ -19,6 +19,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyLong
@@ -29,9 +31,11 @@ import org.mockito.Mockito.lenient
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.test.util.ReflectionTestUtils
 
 @ExtendWith(MockitoExtension::class)
@@ -427,6 +431,22 @@ class ReviewServiceTest {
         val responseReview = requireNotNull(response.review)
         assertThat(responseReview.reviewId).isEqualTo(10L)
         assertThat(responseReview.content).isEqualTo("내 상세 리뷰")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["game", "user"])
+    @DisplayName("잘못된 정렬 필드는 리뷰·좋아요 조회 전에 거절한다")
+    fun rejectsUnsupportedSortBeforeQuery(target: String) {
+        val pageable = PageRequest.of(0, 20, Sort.by("missingField"))
+
+        assertThatThrownBy {
+            if (target == "game") reviewService.getGameReviews(GAME_ID, pageable)
+            else reviewService.getUserReviews(USER_ID, pageable)
+        }.isInstanceOfSatisfying(ServiceException::class.java) {
+            assertThat(it.resultCode).isEqualTo("400-0")
+        }
+
+        verifyNoInteractions(reviewRepository, reviewLikeRepository)
     }
 
     private fun prepareOwnedUserGame() {

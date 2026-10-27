@@ -144,10 +144,10 @@ constructor(
     }
 
     @GetMapping("/games/{gameId}/reviews")
-    @Operation(summary = "게임 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다.")
+    @Operation(summary = "게임 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다. sort는 id, createdDate, lastModifiedDate, rating의 asc·desc를 지원하며 기본은 createdDate,desc입니다. 다른 필드·연관 경로는 400-0입니다.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "200-2: 공개 리뷰 페이지 조회 성공. 일치하는 리뷰가 없으면 빈 목록이며 404가 아님", useReturnTypeSchema = true),
-        ApiResponse(responseCode = "400", description = "400-0: gameId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "400", description = "400-0: gameId가 숫자 형식이 아니거나 지원하지 않는 정렬 필드", content = [Content(schema = Schema(implementation = RsData::class))]),
     ])
     fun getGameReviews(
         @PathVariable gameId: Long,
@@ -163,10 +163,10 @@ constructor(
     }
 
     @GetMapping("/users/{userId}/reviews")
-    @Operation(summary = "사용자 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 특정 사용자의 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다.")
+    @Operation(summary = "사용자 리뷰 목록 조회", description = "비로그인 조회가 가능합니다. 특정 사용자의 삭제·관리자 숨김 리뷰를 제외한 공개 리뷰를 페이지 단위로 조회합니다. sort는 id, createdDate, lastModifiedDate, rating의 asc·desc를 지원하며 기본은 createdDate,desc입니다. 다른 필드·연관 경로는 400-0입니다.")
     @ApiResponses(value = [
         ApiResponse(responseCode = "200", description = "200-3: 사용자 공개 리뷰 페이지 조회 성공. 일치하는 리뷰가 없으면 빈 목록이며 404가 아님", useReturnTypeSchema = true),
-        ApiResponse(responseCode = "400", description = "400-0: userId가 숫자 형식이 아님", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "400", description = "400-0: userId가 숫자 형식이 아니거나 지원하지 않는 정렬 필드", content = [Content(schema = Schema(implementation = RsData::class))]),
     ])
     fun getUserReviews(
         @PathVariable userId: Long,
