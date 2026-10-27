@@ -2,7 +2,7 @@ import { acceptRefreshedToken } from "@/features/auth/api";
 
 export type Notification = {
   id: number;
-  kind: "REVIEW_LIKE" | "FOLLOW" | "REVIEW_HIDDEN" | "REVIEW_COMMENT" | "REVIEW_REPLY" | "REVIEW_COMMENT_LIKE";
+  kind: "REVIEW_LIKE" | "FOLLOW" | "REVIEW_HIDDEN" | "REVIEW_COMMENT" | "REVIEW_REPLY" | "REVIEW_COMMENT_LIKE" | "BOARD_COMMENT" | "BOARD_REPLY";
   actorName: string | null;
   gameTitle: string | null;
   createdAt: string;
@@ -29,6 +29,8 @@ export function notificationMessage(n: Notification): string {
     case "REVIEW_REPLY": return `${name}님이 회원님의 리뷰 또는 댓글에 답글을 남겼습니다.`;
     case "REVIEW_COMMENT_LIKE": return `${name}님이 회원님의 댓글을 좋아합니다.`;
     case "REVIEW_HIDDEN": return "작성하신 리뷰가 신고 검토 후 숨김 처리되었습니다.";
+    case "BOARD_COMMENT": return `${name}님이 회원님의 자유게시판 글에 댓글을 남겼습니다.`;
+    case "BOARD_REPLY": return `${name}님이 회원님의 자유게시판 글 또는 댓글에 답글을 남겼습니다.`;
   }
 }
 

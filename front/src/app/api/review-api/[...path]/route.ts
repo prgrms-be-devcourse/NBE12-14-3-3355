@@ -3,7 +3,7 @@ import { relayAuthHeaders } from "@/lib/proxy";
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
-const allowedPath = /^(notifications(?:\/(?:unread-count|read-all|\d+\/read))?|community\/reviews\/(?:following|popular)|games\/\d+\/reviews(?:\/me)?|users\/\d+\/reviews|reviews\/(?:popular|\d+(?:\/comments(?:\/count|\/\d+(?:\/likes)?)?|\/likes(?:\/count)?|\/reports)?)|admin\/review-reports(?:\/\d+\/status)?)$/;
+const allowedPath = /^(notifications(?:\/(?:unread-count|read-all|\d+\/read))?|community\/reviews\/(?:following|popular)|games\/\d+\/reviews(?:\/me)?|users\/\d+\/reviews|reviews\/(?:popular|\d+(?:\/comments(?:\/count|\/\d+(?:\/likes)?)?|\/likes(?:\/count)?|\/reports)?)|community\/posts(?:\/\d+(?:\/likes|\/reports|\/comments(?:\/\d+(?:\/reports)?)?)?)?|admin\/(?:review|board)-reports(?:\/\d+\/status)?)$/;
 
 async function proxy(request: NextRequest, context: RouteContext) {
   const { path } = await context.params;

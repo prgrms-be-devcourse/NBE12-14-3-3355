@@ -11,10 +11,23 @@ export function communityReturnPath(value: string | null): string | null {
   const url = new URL(safe, "https://gamelog.local");
   if (url.pathname !== "/community") return null;
   const query = new URLSearchParams();
+  if (url.searchParams.get("board") === "free") {
+    query.set("board", "free");
+    const keyword = url.searchParams.get("q")?.trim();
+    if (keyword) query.set("q", keyword.slice(0, 50));
+    const post = url.searchParams.get("post");
+    if (post && /^[1-9]\d*$/.test(post)) query.set("post", post);
+    return `/community?${query}`;
+  }
   if (url.searchParams.get("tab") === "popular") query.set("tab", "popular");
   const review = url.searchParams.get("commentReview");
   if (review && /^[1-9]\d*$/.test(review)) query.set("commentReview", review);
   return `/community${query.size ? `?${query}` : ""}`;
+}
+
+function boardReturnPath(value: string | null): string | null {
+  const community = communityReturnPath(value);
+  return community?.startsWith("/community?board=free") ? community : null;
 }
 
 export function reviewReturnPath(value: string | null): string | null {
@@ -27,7 +40,7 @@ export function reviewReturnPath(value: string | null): string | null {
 }
 
 export function loginDestination(user: UserDto, next: string | null, afterSubmit = true): string {
-  if (user.role === "ADMIN") return "/admin/reports";
+  if (user.role === "ADMIN") return boardReturnPath(next) ?? "/admin/reports";
   const community = reviewReturnPath(next);
   if (community) {
     return needsOnboarding(user)

@@ -4,4 +4,5 @@ enum class NotificationTarget {
     REVIEW,
     USER,
     REVIEW_COMMENT,
+    BOARD_POST,
 }

@@ -1,8 +1,10 @@
 package com.gamelog.nbe121423355.domain.notification.service
 
+import com.gamelog.nbe121423355.domain.board.repository.BoardPostRepository
 import com.gamelog.nbe121423355.domain.notification.dto.NotificationPageResponse
 import com.gamelog.nbe121423355.domain.notification.dto.NotificationResponse
 import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
+import com.gamelog.nbe121423355.domain.notification.entity.BoardPostNotificationsCancelled
 import com.gamelog.nbe121423355.domain.notification.entity.CommentNotificationsCancelled
 import com.gamelog.nbe121423355.domain.notification.entity.Notification
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
@@ -28,6 +30,7 @@ class NotificationService(
     private val users: UserRepository,
     private val reviews: ReviewRepository,
     private val comments: ReviewCommentRepository,
+    private val boardPosts: BoardPostRepository,
 ) {
     // Synchronous listeners participate in the source transaction; never persist after commit.
     @EventListener
@@ -64,6 +67,12 @@ class NotificationService(
     @Transactional(propagation = Propagation.MANDATORY)
     fun cancelComment(event: CommentNotificationsCancelled) {
         notifications.deleteByTargetTypeAndTargetId(NotificationTarget.REVIEW_COMMENT, event.commentId)
+    }
+
+    @EventListener
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun cancelBoardPost(event: BoardPostNotificationsCancelled) {
+        notifications.deleteByTargetTypeAndTargetId(NotificationTarget.BOARD_POST, event.postId)
     }
 
     fun unread(userId: Long): Long = notifications.countByRecipientIdAndReadAtIsNull(userId)
@@ -119,6 +128,9 @@ class NotificationService(
                     "/games/${review.userGame.game.id}?commentReview=${review.id}$commentParameter"
                 }
             }
+            NotificationTarget.BOARD_POST ->
+                boardPosts.findVisibleById(notification.targetId)
+                    ?.let { "/community?board=free&post=${it.id}" }
         }
         return NotificationResponse(
             id = requireNotNull(notification.id),

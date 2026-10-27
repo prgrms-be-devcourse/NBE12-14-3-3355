@@ -11,7 +11,7 @@ data class NotificationResponse(
     val kind: NotificationKind,
     @field:Schema(description = "알림 행위자의 닉네임. 탈퇴·미존재 사용자는 탈퇴한 사용자, 행위자가 없으면 null", example = "게임친구", nullable = true)
     val actorName: String?,
-    @field:Schema(description = "알림에 연결된 게임 제목. 게임 정보가 없으면 null", example = "알림 게임", nullable = true)
+    @field:Schema(description = "알림에 연결된 게임 제목. 자유게시판 알림은 게시글 제목. 정보가 없으면 null", example = "알림 게임", nullable = true)
     val gameTitle: String?,
     @field:Schema(description = "알림 생성 시각", example = "2026-10-27T09:00:00")
     val createdAt: LocalDateTime,
