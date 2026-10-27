@@ -61,7 +61,7 @@ data class ReviewReportGroupResponse(
                 sorted.size,
                 sorted.count { it.status == ReportStatus.PENDING },
                 representative.id,
-                representative.createdDate,
+                sorted.first().createdDate,
                 sorted.map { ReviewReportItemResponse.from(it) },
             )
         }

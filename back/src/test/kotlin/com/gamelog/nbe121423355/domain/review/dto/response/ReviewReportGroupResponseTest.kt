@@ -55,6 +55,7 @@ class ReviewReportGroupResponseTest {
         assertThat(result.status).isEqualTo(ReportStatus.PENDING)
         assertThat(result.pendingReportCount).isEqualTo(2)
         assertThat(result.reportCount).isEqualTo(3)
+        assertThat(result.latestReportedAt).isEqualTo(approved.createdDate)
     }
 
     @Test
@@ -105,5 +106,31 @@ class ReviewReportGroupResponseTest {
         assertThat(requireNotNull(result.reports).map { it.reportId }).containsExactly(3L, 2L, 1L)
         assertThat(result.representativeReportId).isEqualTo(2L)
         assertThat(result.status).isEqualTo(ReportStatus.PENDING)
+    }
+
+    @Test
+    @DisplayName("대표 대기 신고의 날짜가 없어도 최근 신고 시각은 날짜가 있는 최신 신고에서 가져온다")
+    fun undatedPendingReportDoesNotHideLatestDate() {
+        val pending = report(1L, ReportStatus.PENDING, null)
+        val handled = report(2L, ReportStatus.REJECTED, LocalDateTime.of(2026, 10, 21, 10, 0))
+
+        val result = ReviewReportGroupResponse.from(listOf(pending, handled))
+
+        assertThat(result.representativeReportId).isEqualTo(1L)
+        assertThat(result.status).isEqualTo(ReportStatus.PENDING)
+        assertThat(result.latestReportedAt).isEqualTo(handled.createdDate)
+    }
+
+    @Test
+    @DisplayName("모든 신고의 날짜가 없으면 최근 신고 시각도 null로 유지한다")
+    fun keepsLatestDateNullWhenAllDatesAreMissing() {
+        val pending = report(1L, ReportStatus.PENDING, null)
+        val handled = report(2L, ReportStatus.REJECTED, null)
+
+        val result = ReviewReportGroupResponse.from(listOf(pending, handled))
+
+        assertThat(result.representativeReportId).isEqualTo(1L)
+        assertThat(result.status).isEqualTo(ReportStatus.PENDING)
+        assertThat(result.latestReportedAt).isNull()
     }
 }
