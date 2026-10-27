@@ -88,7 +88,7 @@ IGDB에서 받은 게임·장르·플랫폼·시리즈 정보를 관계형 데�
 
 ### 실행 환경 분리와 자동 빌드
 
-프론트엔드는 **Vercel**, 백엔드와 MySQL은 **Railway**에 배포합니다. 로컬은 Docker MySQL, 테스트는 H2 인메모리 DB를 사용합니다. GitHub Actions는 push와 pull request 이벤트마다 Java 25 환경에서 백엔드 빌드와 테스트를 실행합니다.
+프론트엔드는 **Vercel**, 백엔드와 MySQL은 **Railway**에 배포합니다. 로컬은 Docker MySQL, 테스트는 Testcontainers MySQL 8.4를 사용합니다. GitHub Actions는 push와 pull request 이벤트마다 Java 25 환경에서 백엔드 빌드와 테스트를 실행합니다.
 
 ---
 
@@ -122,7 +122,7 @@ Next.js App Router와 React Context를 사용하며, 화면 스타일은 CSS Mod
 ![JUnit](https://img.shields.io/badge/JUnit-25A162?style=flat-square&logo=junit5&logoColor=white)
 ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat-square&logo=cloudinary&logoColor=white)
 
-- **H2**: 테스트용 인메모리 데이터베이스
+- **Testcontainers**: 테스트용 MySQL 컨테이너
 - **IGDB**: 게임 메타데이터 수집
 - **DeepL**: 게임 설명 한국어 번역
 - **Gradle**: 백엔드 빌드 및 테스트
@@ -232,7 +232,7 @@ npm run dev
 
 ### 5. 테스트 및 빌드
 
-백엔드는 `back` 디렉터리에서 실행합니다. `test` 프로파일의 기본 DB는 H2이며, `@MySqlIntegrationTest`를 적용한 테스트는 Testcontainers의 실제 MySQL 8.4로 연결을 대체합니다. MySQL 테스트 실행에는 Docker가 필요합니다.
+백엔드는 `back` 디렉터리에서 실행합니다. DB를 사용하는 테스트는 `@MySqlIntegrationTest`로 Testcontainers의 MySQL 8.4에 연결합니다. 테스트 실행에는 Docker가 필요합니다.
 
 게임 수집·검색 테스트의 보완 내용, Mockito 사용 경계 및 실행 결과는 [게임 수집·검색 테스트 보완 기록](docs/game-data-search-testing.md)을 참고하세요.
 
