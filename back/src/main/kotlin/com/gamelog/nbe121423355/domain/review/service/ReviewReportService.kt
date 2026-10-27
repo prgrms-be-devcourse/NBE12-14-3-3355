@@ -45,7 +45,7 @@ constructor(
         reviewId: Long,
         request: ReviewReportCreateRequest,
     ): ReviewReportResponse {
-        val review = getReview(reviewId)
+        val review = getReviewForReport(reviewId)
         val reporter = getUser(reporterId)
         // 본인이 작성한 리뷰는 신고할 수 없음.
         val reviewWriterId = review.userGame.user.id
@@ -122,8 +122,9 @@ constructor(
         return ReviewReportResponse.from(pendingReports.first())
     }
 
-    private fun getReview(reviewId: Long): Review =
-        reviewRepository.findActiveById(reviewId).getOrNull()
+    // 관리자 처리와 같은 리뷰 행을 먼저 잠그고 현재 공개 상태를 확인한다.
+    private fun getReviewForReport(reviewId: Long): Review =
+        reviewRepository.findActiveForUpdate(reviewId).getOrNull()
             ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
     private fun getUser(userId: Long): User =

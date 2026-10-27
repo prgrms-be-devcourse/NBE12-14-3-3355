@@ -70,7 +70,7 @@ class ReviewReportServiceTest {
     @DisplayName("다른 사용자의 활성 리뷰를 신고한다")
     @Test
     fun createReport() {
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(Optional.of(review))
         `when`(userRepository.findById(2L)).thenReturn(Optional.of(reporter))
         `when`(reviewReportRepository.existsByReview_IdAndReporter_Id(10L, 2L)).thenReturn(false)
         val reportMatcher = any(ReviewReport::class.java) ?: ReviewReport(review, reporter, "매처용 신고")

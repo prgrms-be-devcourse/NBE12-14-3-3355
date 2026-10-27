@@ -4,6 +4,7 @@ import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
+import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport
@@ -28,9 +29,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.EnumSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
@@ -76,7 +79,7 @@ class ReviewReportConcurrencyTest {
         fixture?.let { f ->
             inTransaction {
                 jdbc.update("DELETE FROM notifications WHERE recipient_id = ?", f.writerId)
-                reports.deleteAllById(f.reportIds)
+                reports.deleteAll(reports.findAllByReviewIdsAndStatus(listOf(f.reviewId), null))
                 reviews.deleteById(f.reviewId)
                 records.deleteById(f.recordId)
                 games.deleteById(f.gameId)
@@ -192,6 +195,133 @@ class ReviewReportConcurrencyTest {
         assertSavedDecision(f, requireNotNull(successful.single().status))
     }
 
+    @ParameterizedTest
+    @EnumSource(value = ReportStatus::class, names = ["APPROVED", "REJECTED"])
+    @DisplayName("공개 리뷰를 미리 읽었어도 관리자 처리 후 숨김 상태면 신규 신고를 거절하고 반려 후에는 허용한다")
+    fun staleIntakeRechecksReviewAfterModeration(decision: ReportStatus) {
+        val f = requireNotNull(fixture)
+        val reporterId = newReporter()
+        val reviewRead = CountDownLatch(1)
+        val moderationFinished = CountDownLatch(1)
+        val executor = Executors.newSingleThreadExecutor()
+        val outcome = try {
+            val intake = executor.submit(Callable {
+                try {
+                    val reportId = inTransaction {
+                        assertThat(reviews.findActiveById(f.reviewId)).isPresent()
+                        reviewRead.countDown()
+                        check(moderationFinished.await(15, TimeUnit.SECONDS))
+                        requireNotNull(service.createReport(reporterId, f.reviewId,
+                            ReviewReportCreateRequest("동시 접수")).reportId)
+                    }
+                    IntakeOutcome(reportId, null)
+                } catch (failure: Exception) {
+                    IntakeOutcome(null, failure)
+                }
+            })
+            try {
+                check(reviewRead.await(10, TimeUnit.SECONDS))
+                service.updateStatus(f.reportIds.first(), ReviewReportStatusUpdateRequest(decision))
+            } finally {
+                moderationFinished.countDown()
+            }
+            intake.get(30, TimeUnit.SECONDS)
+        } finally {
+            moderationFinished.countDown()
+            executor.shutdownNow()
+            check(executor.awaitTermination(10, TimeUnit.SECONDS))
+        }
+
+        if (decision == ReportStatus.APPROVED) {
+            assertThat(outcome.failure).isInstanceOfSatisfying(ServiceException::class.java) {
+                assertThat(it.resultCode).isEqualTo("404-3")
+            }
+            inTransaction {
+                assertThat(reports.existsByReview_IdAndReporter_Id(f.reviewId, reporterId)).isFalse()
+            }
+        } else {
+            assertThat(outcome.failure).isNull()
+            inTransaction {
+                assertThat(reports.findById(requireNotNull(outcome.reportId)).orElseThrow().status)
+                    .isEqualTo(ReportStatus.PENDING)
+            }
+        }
+        assertSavedDecision(f, decision)
+    }
+
+    @Test
+    @DisplayName("관리자 처리 전에 접수된 신고는 기존 대기 신고와 함께 승인된다")
+    fun intakeCommittedFirstIsIncludedInModeration() {
+        val f = requireNotNull(fixture)
+        val report = service.createReport(newReporter(), f.reviewId, ReviewReportCreateRequest("먼저 접수"))
+
+        service.updateStatus(f.reportIds.first(), ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
+
+        inTransaction {
+            assertThat(reports.findById(requireNotNull(report.reportId)).orElseThrow().status)
+                .isEqualTo(ReportStatus.APPROVED)
+        }
+        assertSavedDecision(f, ReportStatus.APPROVED)
+    }
+
+    @Test
+    @DisplayName("신고 접수와 승인이 동시에 시작되어도 숨긴 리뷰에 미처리 신고가 남지 않는다")
+    fun simultaneousIntakeAndApprovalLeaveNoPendingReportOnHiddenReview() {
+        val f = requireNotNull(fixture)
+        val reporterId = newReporter()
+        val bothStarted = CyclicBarrier(2)
+        val executor = Executors.newFixedThreadPool(2)
+        val intakeOutcome = try {
+            val intake = executor.submit(Callable {
+                try {
+                    val reportId = inTransaction {
+                        bothStarted.await(10, TimeUnit.SECONDS)
+                        requireNotNull(service.createReport(reporterId, f.reviewId,
+                            ReviewReportCreateRequest("동시 접수")).reportId)
+                    }
+                    IntakeOutcome(reportId, null)
+                } catch (failure: Exception) {
+                    IntakeOutcome(null, failure)
+                }
+            })
+            val moderation = executor.submit(Callable {
+                inTransaction {
+                    bothStarted.await(10, TimeUnit.SECONDS)
+                    service.updateStatus(f.reportIds.first(), ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
+                }
+            })
+            moderation.get(30, TimeUnit.SECONDS)
+            intake.get(30, TimeUnit.SECONDS)
+        } finally {
+            executor.shutdownNow()
+            check(executor.awaitTermination(10, TimeUnit.SECONDS))
+        }
+
+        if (intakeOutcome.failure != null) {
+            assertThat(intakeOutcome.failure).isInstanceOfSatisfying(ServiceException::class.java) {
+                assertThat(it.resultCode).isEqualTo("404-3")
+            }
+        } else {
+            inTransaction {
+                assertThat(reports.findById(requireNotNull(intakeOutcome.reportId)).orElseThrow().status)
+                    .isEqualTo(ReportStatus.APPROVED)
+            }
+        }
+        inTransaction {
+            assertThat(reports.findAllByReviewIdsAndStatus(listOf(f.reviewId), ReportStatus.PENDING)).isEmpty()
+        }
+        assertSavedDecision(f, ReportStatus.APPROVED)
+    }
+
+    private fun newReporter(): Long {
+        val f = requireNotNull(fixture)
+        val id = inTransaction {
+            requireNotNull(users.save(User("new-reporter", "${UUID.randomUUID()}@test.com", "password")).id)
+        }
+        fixture = f.copy(reporterIds = f.reporterIds + id)
+        return id
+    }
+
     private fun assertSavedDecision(f: Fixture, expected: ReportStatus) = inTransaction {
         assertThat(reports.findAllById(f.reportIds).map { it.status }).containsOnly(expected)
         val hidden = expected == ReportStatus.APPROVED
@@ -209,6 +339,7 @@ class ReviewReportConcurrencyTest {
     private data class Fixture(val writerId: Long, val reporterIds: List<Long>, val gameId: Long,
         val recordId: Long, val reviewId: Long, val reportIds: List<Long>)
     private data class Outcome(val status: ReportStatus?, val failure: Exception?)
+    private data class IntakeOutcome(val reportId: Long?, val failure: Exception?)
 
     companion object {
         private val igdbIds = AtomicLong(1_981_000)

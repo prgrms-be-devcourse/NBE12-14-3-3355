@@ -45,6 +45,7 @@ class ReviewReportController constructor(private val reviewReportService: Review
             로그인한 사용자가 공개 중인 다른 사용자의 리뷰를 신고합니다. 사유는 공백이 아닌 1~255자입니다.
             본인의 리뷰는 신고할 수 없으며(400-3), 같은 사용자의 동일 리뷰 중복 신고는 409-1입니다.
             존재하지 않거나 삭제·관리자 숨김 상태인 리뷰는 신고할 수 없습니다(404-3).
+            관리자 처리와 겹치면 같은 리뷰의 잠금을 기다린 뒤 공개 상태를 확인합니다. 먼저 숨김 처리되었다면 404-3입니다.
             신고는 PENDING으로 접수되고 당시 별점·내용·스포일러 여부를 보존합니다. 이후 리뷰가 수정되어도 신고 당시 값이 우선 표시됩니다.
         """,
         security = [SecurityRequirement(name = "bearerAuth")],
