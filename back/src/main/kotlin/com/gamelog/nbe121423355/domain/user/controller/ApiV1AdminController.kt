@@ -33,7 +33,7 @@ class ApiV1AdminController(private val userService: UserService) {
         val result = userService.promoteToAdmin(userId)
         // 권한 변경 이력 추적용 (누가 누구를 승격했는지)
         log.info("관리자 승격: adminId={}, targetUserId={}", adminUser.id, userId)
-        return RsData("200-13", "관리자로 승격 성공", result)
+        return RsData("200-20", "관리자로 승격 성공", result)
     }
 
     companion object {
