@@ -6,6 +6,10 @@ import com.gamelog.nbe121423355.global.dto.RsData
 import com.gamelog.nbe121423355.global.security.SecurityUser
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.Logger
@@ -26,6 +30,12 @@ class ApiV1AdminController(private val userService: UserService) {
         description = "ADMIN 권한으로 일반 사용자를 관리자로 승격합니다.",
         security = [SecurityRequirement(name = "bearerAuth")],
     )
+    @ApiResponses(value = [
+        ApiResponse(responseCode = "200", description = "관리자 승격 성공", useReturnTypeSchema = true),
+        ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "403", description = "403-1: ADMIN 권한 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
+        ApiResponse(responseCode = "404", description = "404-1: 활성 대상 사용자 없음", content = [Content(schema = Schema(implementation = RsData::class))]),
+    ])
     fun promoteToAdmin(
         @Parameter(description = "관리자로 승격할 사용자 ID", example = "2") @PathVariable userId: Long,
         @Parameter(hidden = true) @AuthenticationPrincipal adminUser: SecurityUser,
