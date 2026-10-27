@@ -35,6 +35,7 @@ data class ReviewReportGroupResponse(
 
             val representative =
                 sorted.firstOrNull { it.status == ReportStatus.PENDING } ?: sorted.first()
+            val hasSnapshot = representative.hasReviewSnapshot()
 
             val groupStatus =
                 if (sorted.any { it.status == ReportStatus.PENDING })
@@ -50,8 +51,8 @@ data class ReviewReportGroupResponse(
                 representative.review.userGame.game.coverImageUrl,
                 representative.review.userGame.user.id,
                 representative.review.userGame.user.nickname,
-                representative.reviewRatingSnapshot ?: representative.review.rating,
-                representative.reviewContentSnapshot ?: representative.review.content,
+                if (hasSnapshot) representative.reviewRatingSnapshot else representative.review.rating,
+                if (hasSnapshot) representative.reviewContentSnapshot else representative.review.content,
                 representative.reviewSpoilerSnapshot ?: representative.review.isSpoiler,
                 representative.review.status ?: ReviewStatus.ACTIVE,
                 groupStatus,

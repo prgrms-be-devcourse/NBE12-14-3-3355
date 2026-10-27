@@ -33,8 +33,8 @@ class ReviewResponseNullFallbackTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
-    @DisplayName("신고 응답은 스냅샷이 있으면 보존하고 null일 때만 현재 리뷰 값으로 대체한다")
-    fun preservesSnapshotAndFallsBackOnlyForNull(hasSnapshot: Boolean) {
+    @DisplayName("신고 응답은 스냅샷을 보존하고 스냅샷 전체가 없는 과거 데이터만 현재 리뷰 값으로 대체한다")
+    fun preservesSnapshotAndFallsBackOnlyForLegacyReport(hasSnapshot: Boolean) {
         val report = ReviewReport(review, reporter, "신고 사유")
         if (!hasSnapshot) {
             for (field in listOf("reviewRatingSnapshot", "reviewContentSnapshot", "reviewSpoilerSnapshot")) {
@@ -52,6 +52,52 @@ class ReviewResponseNullFallbackTest {
         assertThat(group.reviewContent).isEqualTo(expectedContent)
         assertThat(single.reviewSpoiler).isEqualTo(!hasSnapshot)
         assertThat(group.reviewSpoiler).isEqualTo(!hasSnapshot)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    @DisplayName("신고 당시 없던 별점은 리뷰 수정·삭제 후 재작성해도 null로 보존한다")
+    fun preservesNullRatingSnapshot(spoiler: Boolean) {
+        val review = Review(record, null, "신고 당시 본문", spoiler)
+        val report = ReviewReport(review, reporter, "신고 사유")
+
+        review.edit(BigDecimal("4.5"), "수정한 본문", !spoiler)
+        assertSnapshot(report, null, "신고 당시 본문", spoiler)
+
+        review.deleteByUser()
+        review.restore(BigDecimal("5.0"), "재작성한 본문", !spoiler)
+        assertSnapshot(report, null, "신고 당시 본문", spoiler)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    @DisplayName("신고 당시 없던 본문은 리뷰 수정·삭제 후 재작성해도 null로 보존한다")
+    fun preservesNullContentSnapshot(spoiler: Boolean) {
+        val review = Review(record, BigDecimal("4.0"), null, spoiler)
+        val report = ReviewReport(review, reporter, "신고 사유")
+
+        review.edit(BigDecimal("4.5"), "추가한 본문", !spoiler)
+        assertSnapshot(report, "4.0", null, spoiler)
+
+        review.deleteByUser()
+        review.restore(BigDecimal("5.0"), "재작성한 본문", !spoiler)
+        assertSnapshot(report, "4.0", null, spoiler)
+    }
+
+    private fun assertSnapshot(report: ReviewReport, rating: String?, content: String?, spoiler: Boolean) {
+        val single = ReviewReportResponse.from(report)
+        val group = ReviewReportGroupResponse.from(listOf(report))
+        if (rating == null) {
+            assertThat(single.reviewRating).isNull()
+            assertThat(group.reviewRating).isNull()
+        } else {
+            assertThat(single.reviewRating).isEqualByComparingTo(rating)
+            assertThat(group.reviewRating).isEqualByComparingTo(rating)
+        }
+        assertThat(single.reviewContent).isEqualTo(content)
+        assertThat(group.reviewContent).isEqualTo(content)
+        assertThat(single.reviewSpoiler).isEqualTo(spoiler)
+        assertThat(group.reviewSpoiler).isEqualTo(spoiler)
     }
 
     @ParameterizedTest
