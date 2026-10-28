@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.board.service
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.board.dto.BoardAuthorResponse
 import com.gamelog.nbe121423355.domain.board.dto.BoardGameResponse
 import com.gamelog.nbe121423355.domain.board.dto.BoardPostPageResponse
@@ -13,12 +14,10 @@ import com.gamelog.nbe121423355.domain.board.repository.BoardPostLikeRepository
 import com.gamelog.nbe121423355.domain.board.repository.BoardPostRepository
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.game.repository.GameRepository
-import com.gamelog.nbe121423355.domain.notification.entity.BoardPostNotificationsCancelled
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserFollowRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -27,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class BoardPostService(
-    private val events: ApplicationEventPublisher,
+    private val notificationService: NotificationService,
     private val posts: BoardPostRepository,
     private val comments: BoardCommentRepository,
     private val likes: BoardPostLikeRepository,
@@ -84,7 +83,7 @@ class BoardPostService(
         val post = lockVisible(postId)
         requireOwner(post.user, viewerId)
         post.deleteByUser()
-        events.publishEvent(BoardPostNotificationsCancelled(postId))
+        notificationService.cancelBoardPost(postId)
     }
 
     // 게시글 행을 잠가 같은 글의 좋아요 요청을 줄 세우므로 PK 충돌이 나지 않는다

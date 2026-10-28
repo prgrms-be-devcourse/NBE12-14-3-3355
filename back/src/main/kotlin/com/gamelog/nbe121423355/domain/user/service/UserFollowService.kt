@@ -1,8 +1,7 @@
 package com.gamelog.nbe121423355.domain.user.service
 
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.user.dto.FollowPageResponseDto
 import com.gamelog.nbe121423355.domain.user.dto.FollowStatusResponseDto
@@ -18,14 +17,13 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.domain.Sort.Order
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
 class UserFollowService(
-    private val events: ApplicationEventPublisher,
+    private val notificationService: NotificationService,
     private val userFollowRepository: UserFollowRepository,
     private val userRepository: UserRepository,
 ) {
@@ -87,15 +85,13 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (!userFollowRepository.existsById(followId)) {
             userFollowRepository.save(UserFollow(follower, followee))
-            events.publishEvent(
-                NotificationRequested(
-                    recipients = setOf(requireNotNull(targetUserId)),
-                    actorId = followerId,
-                    kind = NotificationKind.FOLLOW,
-                    targetType = NotificationTarget.USER,
-                    targetId = followerId,
-                    sourceKey = "follow:$followerId:$targetUserId",
-                )
+            notificationService.create(
+                recipients = setOf(requireNotNull(targetUserId)),
+                actorId = followerId,
+                kind = NotificationKind.FOLLOW,
+                targetType = NotificationTarget.USER,
+                targetId = followerId,
+                sourceKey = "follow:$followerId:$targetUserId",
             )
         }
         return FollowStatusResponseDto(targetUserId, true)
@@ -108,7 +104,7 @@ class UserFollowService(
         val followId = UserFollowId(followerId, targetUserId)
         if (userFollowRepository.existsById(followId)) {
             userFollowRepository.deleteById(followId)
-            events.publishEvent(NotificationCancelled("follow:$followerId:$targetUserId"))
+            notificationService.cancel("follow:$followerId:$targetUserId")
         }
         return FollowStatusResponseDto(targetUserId, false)
     }

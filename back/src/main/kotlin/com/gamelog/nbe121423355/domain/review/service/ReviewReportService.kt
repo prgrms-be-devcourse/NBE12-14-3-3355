@@ -1,9 +1,9 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.game.entity.RelatedGameChangeReason
 import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportStatusUpdateRequest
@@ -24,7 +24,6 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -32,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewReportService
 constructor(
-    private val events: ApplicationEventPublisher,
+    private val notificationService: NotificationService,
     private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewReportRepository: ReviewReportRepository,
     private val reviewRepository: ReviewRepository,
@@ -102,17 +101,15 @@ constructor(
             val wasActive = review.isActive
             review.hideByAdmin()
             if (wasActive) {
-                events.publishEvent(
-                    NotificationRequested(
-                        recipients = setOf(requireNotNull(review.userGame.user.id)),
-                        actorId = null,
-                        kind = NotificationKind.REVIEW_HIDDEN,
-                        targetType = NotificationTarget.REVIEW,
-                        targetId = requireNotNull(review.id),
-                        sourceKey = "review-hidden:${review.id}:${review.version}",
-                        reviewId = review.id,
-                        gameTitle = review.userGame.game.title,
-                    )
+                notificationService.create(
+                    recipients = setOf(requireNotNull(review.userGame.user.id)),
+                    actorId = null,
+                    kind = NotificationKind.REVIEW_HIDDEN,
+                    targetType = NotificationTarget.REVIEW,
+                    targetId = requireNotNull(review.id),
+                    sourceKey = "review-hidden:${review.id}:${review.version}",
+                    reviewId = review.id,
+                    gameTitle = review.userGame.game.title,
                 )
             }
             changeRecorder.record(requireNotNull(review.userGame.game.id), RelatedGameChangeReason.REVIEW)
