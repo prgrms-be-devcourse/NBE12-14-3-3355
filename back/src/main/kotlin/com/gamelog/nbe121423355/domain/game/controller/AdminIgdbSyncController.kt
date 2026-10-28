@@ -38,6 +38,7 @@ constructor(private val service: IgdbSyncService, private val store: IgdbSyncSto
 
     @DeleteMapping
     @Operation(summary = "IGDB 동기화 중단", description = "ADMIN 전용입니다. 저장 중인 페이지가 완료되면 중단하며, 저장된 지점부터 이어서 실행할 수 있습니다.")
+    @ApiResponse(responseCode = "200", description = "200-1: 동기화 중단 요청 처리", useReturnTypeSchema = true)
     fun cancel(): RsData<IgdbSyncState> {
         return RsData("200-1", "동기화 중단 요청을 처리했습니다.", store.cancel())
     }
