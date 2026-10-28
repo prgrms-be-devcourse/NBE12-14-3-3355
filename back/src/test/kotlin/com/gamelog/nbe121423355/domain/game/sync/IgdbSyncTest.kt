@@ -82,6 +82,32 @@ class IgdbSyncTest {
     }
 
     @Test
+    fun stoppedSyncPreservesProgressAndRejectsLatePagesEvenAfterResume() {
+        val state = store.claim(1)
+        val runId = requireNotNull(state.runId)
+        val cutoff = state.cutoff
+        store.savePage(runId, mutableListOf(game(10, 0L)))
+
+        assertThat(store.cancel().status).isEqualTo("STOPPED")
+        assertThat(store.cancel().status).isEqualTo("STOPPED")
+        store.fail(runId)
+        assertThat(store.status().status).isEqualTo("STOPPED")
+        assertThat(store.savePage(runId, mutableListOf(game(11, 0L)))).isFalse()
+        assertThat(store.savePage(runId, mutableListOf())).isFalse()
+        assertThat(store.status().watermark).isNull()
+
+        val resumed = store.claim(2)
+        assertThat(resumed.cursorId).isEqualTo(10)
+        assertThat(resumed.processed).isEqualTo(1)
+        assertThat(resumed.cutoff).isEqualTo(cutoff)
+        assertThat(resumed.runId).isNotEqualTo(runId)
+        assertThat(store.savePage(runId, mutableListOf(game(11, 0L)))).isFalse()
+        store.savePage(requireNotNull(resumed.runId), mutableListOf())
+        assertThat(store.cancel().status).isEqualTo("SUCCEEDED")
+        assertThat(store.status().watermark).isEqualTo(cutoff)
+    }
+
+    @Test
     fun expiredLeaseCanBeResumedAfterServerRestart() {
         val state = store.claim(1)
         store.savePage(requireNotNull(state.runId), mutableListOf(game(10, 0L)))

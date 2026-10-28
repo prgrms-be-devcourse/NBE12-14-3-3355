@@ -36,6 +36,12 @@ constructor(private val service: IgdbSyncService, private val store: IgdbSyncSto
         return RsData<IgdbSyncState>("200-1", "동기화 상태", store.status())
     }
 
+    @DeleteMapping
+    @Operation(summary = "IGDB 동기화 중단", description = "ADMIN 전용입니다. 저장 중인 페이지가 완료되면 중단하며, 저장된 지점부터 이어서 실행할 수 있습니다.")
+    fun cancel(): RsData<IgdbSyncState> {
+        return RsData("200-1", "동기화 중단 요청을 처리했습니다.", store.cancel())
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(summary = "IGDB 동기화 실행 접수", description = "ADMIN 전용 비동기 작업입니다. 202는 접수 성공이며 데이터 수집 완료를 의미하지 않습니다. GET 상태 조회로 결과를 확인하세요.")

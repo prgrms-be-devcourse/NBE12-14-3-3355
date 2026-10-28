@@ -25,6 +25,8 @@ constructor(private val store: IgdbSyncStore, private val client: IgdbClient) {
         try {
             var cursor = state.cursorId
             while (!Thread.currentThread().isInterrupted()) {
+                val current = store.status()
+                if (current.runId != state.runId || current.status != "RUNNING") return
                 val page = client.fetchPage(cursor, state.sinceEpoch, state.cutoff)
                 if (!store.savePage(requireNotNull(state.runId), page)) return
                 cursor = requireNotNull(page.last().id)

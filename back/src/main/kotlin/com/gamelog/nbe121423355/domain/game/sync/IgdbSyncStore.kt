@@ -24,7 +24,7 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
                 "409-1",
                 "이미 동기화가 실행 중입니다.",
             )
-        val resume = "FAILED".equals(state.status) || "RUNNING".equals(state.status)
+        val resume = state.status in setOf("FAILED", "RUNNING", "STOPPED")
         if (!resume) {
             state.mode = if (state.watermark == null) "FULL" else "INCREMENTAL"
             state.sinceEpoch =
@@ -44,6 +44,18 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
         state.error = null
         state.finishedAt = null
         state.leaseUntil = now + 600
+        return state
+    }
+
+    @Transactional
+    fun cancel(): IgdbSyncState {
+        val state = repository.lockState().orElseGet { IgdbSyncState() }
+        if (state.status == "RUNNING") {
+            state.status = "STOPPED"
+            state.error = null
+            state.leaseUntil = 0
+            state.finishedAt = Instant.now().epochSecond
+        }
         return state
     }
 
