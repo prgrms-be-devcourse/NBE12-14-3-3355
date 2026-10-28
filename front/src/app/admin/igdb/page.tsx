@@ -7,7 +7,7 @@ import { acceptRefreshedToken } from "@/features/auth/api";
 import styles from "./page.module.css";
 
 type SyncState = {
-  status: "IDLE" | "RUNNING" | "FAILED" | "SUCCEEDED";
+  status: "IDLE" | "RUNNING" | "FAILED" | "SUCCEEDED" | "STOPPED";
   mode: "FULL" | "INCREMENTAL" | null;
   watermark: number | null;
   cutoff: number;
@@ -41,6 +41,7 @@ export default function IgdbAdminPage() {
   const [state, setState] = useState<SyncState | null>(null);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [now, setNow] = useState(0);
 
   useEffect(() => {
@@ -62,11 +63,11 @@ export default function IgdbAdminPage() {
   }, [isAdmin, token]);
 
   const running = state?.status === "RUNNING" && state.leaseUntil > now;
-  const resume = state?.status === "FAILED" || (state?.status === "RUNNING" && !running);
+  const resume = state?.status === "STOPPED" || state?.status === "FAILED" || (state?.status === "RUNNING" && !running);
   const label = running ? "동기화 실행 중…" : resume ? "중단된 동기화 이어서 실행" : state?.watermark ? "변경분 업데이트" : "최초 전체 동기화 시작";
 
   async function start() {
-    if (!token || sending || running) return;
+    if (!token || sending || stopping || running) return;
     setSending(true);
     setError("");
     try { setState(await request(token, "POST")); setNow(Date.now() / 1000); }
@@ -76,13 +77,26 @@ export default function IgdbAdminPage() {
 
   if (!isAdmin) return <main className={styles.main}><h1>게임 데이터 관리</h1><p>{auth.status === "loading" ? "로그인 확인 중…" : "관리자만 접근할 수 있습니다."}</p><Link href="/login?next=/admin/igdb">로그인</Link></main>;
 
+  async function stop() {
+    if (!token || sending || stopping || !running) return;
+    setStopping(true);
+    setError("");
+    try { setState(await request(token, "DELETE")); setNow(Date.now() / 1000); }
+    catch (e) { setError(e instanceof Error ? e.message : "중단 실패"); }
+    finally { setStopping(false); }
+  }
+
   return <main className={styles.main}>
     <header><span>ADMIN CONSOLE</span><h1>게임 데이터 업데이트</h1><p>1970년 1월 1일부터 실행 시점까지 출시된 게임을 관리합니다.</p></header>
     <section className={styles.panel}>
       <h2>{state?.watermark ? "변경된 게임과 새로 출시된 게임을 반영합니다" : "최초 전체 동기화로 최신 정보를 맞춥니다"}</h2>
       <p>출시일이 없거나 범위 밖으로 변경된 게임은 연결된 플레이 기록·리뷰와 함께 삭제됩니다. 설명 번역은 별도 작업입니다.</p>
-      <button onClick={start} disabled={!state || sending || running}>{sending ? "실행 요청 중…" : label}</button>
-      <p>창을 닫아도 서버에서 계속 실행됩니다. 실패하면 저장된 지점부터 이어서 실행할 수 있습니다.</p>
+      <div className={styles.actions}>
+        <button onClick={start} disabled={!state || sending || stopping || running}>{sending ? "실행 요청 중…" : label}</button>
+        {(running || stopping) && <button className={styles.stop} onClick={stop} disabled={sending || stopping}>{stopping ? "중단 요청 중…" : "동기화 중단"}</button>}
+      </div>
+      <p>창을 닫아도 서버에서 계속 실행됩니다. 중단하면 저장 중인 묶음을 마무리한 뒤 멈추며, 저장된 지점부터 이어서 실행할 수 있습니다.</p>
+      {state?.status === "STOPPED" && <p role="status">동기화가 중단되었습니다. 이어서 실행할 수 있습니다.</p>}
       {error && <p role="alert" className={styles.error}>{error}</p>}
       {state?.error && <p role="alert" className={styles.error}>{state.error}</p>}
     </section>

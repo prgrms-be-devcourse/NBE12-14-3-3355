@@ -4,21 +4,21 @@ import com.gamelog.nbe121423355.domain.board.repository.BoardPostRepository
 import com.gamelog.nbe121423355.domain.notification.dto.NotificationPageResponse
 import com.gamelog.nbe121423355.domain.notification.dto.NotificationResponse
 import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
-import com.gamelog.nbe121423355.domain.notification.entity.BoardPostNotificationsCancelled
-import com.gamelog.nbe121423355.domain.notification.entity.CommentNotificationsCancelled
 import com.gamelog.nbe121423355.domain.notification.entity.Notification
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.review.repository.ReviewCommentRepository
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
-import org.springframework.context.event.EventListener
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
+import org.slf4j.LoggerFactory
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionSynchronization
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -31,48 +31,79 @@ class NotificationService(
     private val reviews: ReviewRepository,
     private val comments: ReviewCommentRepository,
     private val boardPosts: BoardPostRepository,
+    transactionManager: PlatformTransactionManager,
 ) {
-    // Synchronous listeners participate in the source transaction; never persist after commit.
-    @EventListener
+    private val writeTransaction = TransactionTemplate(transactionManager).apply {
+        propagationBehavior = Propagation.REQUIRES_NEW.value()
+    }
+
+    // 원본이 커밋된 경우에만 실행하며, 알림 실패는 원본 요청에 전파하지 않는다.
     @Transactional(propagation = Propagation.MANDATORY)
-    fun receive(event: NotificationRequested) {
-        event.recipients.filter { it != event.actorId }.forEach { recipient ->
-            if (
-                users.findByIdAndDeletedAtIsNull(recipient) != null &&
-                !notifications.existsBySourceKeyAndRecipientId(event.sourceKey, recipient)
-            ) {
-                notifications.save(
-                    Notification(
-                        recipientId = recipient,
-                        actorId = event.actorId,
-                        kind = event.kind,
-                        targetType = event.targetType,
-                        targetId = event.targetId,
-                        reviewId = event.reviewId,
-                        gameTitle = event.gameTitle,
-                        sourceKey = event.sourceKey,
+    fun create(
+        recipients: Set<Long>,
+        actorId: Long?,
+        kind: NotificationKind,
+        targetType: NotificationTarget,
+        targetId: Long,
+        sourceKey: String,
+        reviewId: Long? = null,
+        gameTitle: String? = null,
+    ) {
+        val recipientsToNotify = recipients.filter { it != actorId }
+        afterCommit("create:$sourceKey") {
+            recipientsToNotify.forEach { recipient ->
+                if (
+                    users.findByIdAndDeletedAtIsNull(recipient) != null &&
+                    !notifications.existsBySourceKeyAndRecipientId(sourceKey, recipient)
+                ) {
+                    notifications.save(
+                        Notification(
+                            recipientId = recipient,
+                            actorId = actorId,
+                            kind = kind,
+                            targetType = targetType,
+                            targetId = targetId,
+                            reviewId = reviewId,
+                            gameTitle = gameTitle,
+                            sourceKey = sourceKey,
+                        )
                     )
-                )
+                }
             }
         }
     }
 
-    @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
-    fun cancel(event: NotificationCancelled) {
-        notifications.deleteBySourceKey(event.sourceKey)
+    fun cancel(sourceKey: String) {
+        afterCommit("cancel:$sourceKey") {
+            notifications.deleteBySourceKey(sourceKey)
+        }
     }
 
-    @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
-    fun cancelComment(event: CommentNotificationsCancelled) {
-        notifications.deleteByTargetTypeAndTargetId(NotificationTarget.REVIEW_COMMENT, event.commentId)
+    fun cancelComment(commentId: Long) {
+        afterCommit("cancel-comment:$commentId") {
+            notifications.deleteByTargetTypeAndTargetId(NotificationTarget.REVIEW_COMMENT, commentId)
+        }
     }
 
-    @EventListener
     @Transactional(propagation = Propagation.MANDATORY)
-    fun cancelBoardPost(event: BoardPostNotificationsCancelled) {
-        notifications.deleteByTargetTypeAndTargetId(NotificationTarget.BOARD_POST, event.postId)
+    fun cancelBoardPost(postId: Long) {
+        afterCommit("cancel-board-post:$postId") {
+            notifications.deleteByTargetTypeAndTargetId(NotificationTarget.BOARD_POST, postId)
+        }
+    }
+
+    private fun afterCommit(operation: String, action: () -> Unit) {
+        TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+            override fun afterCommit() {
+                try {
+                    writeTransaction.executeWithoutResult { action() }
+                } catch (exception: Exception) {
+                    log.error("커밋 후 알림 처리 실패 - operation={}", operation, exception)
+                }
+            }
+        })
     }
 
     fun unread(userId: Long): Long = notifications.countByRecipientIdAndReadAtIsNull(userId)
@@ -142,5 +173,9 @@ class NotificationService(
             url = if (notification.kind == NotificationKind.REVIEW_HIDDEN) null else url,
             unavailable = notification.kind != NotificationKind.REVIEW_HIDDEN && url == null,
         )
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(NotificationService::class.java)
     }
 }

@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.board.service
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.board.dto.BoardAuthorResponse
 import com.gamelog.nbe121423355.domain.board.dto.BoardCommentPageResponse
 import com.gamelog.nbe121423355.domain.board.dto.BoardCommentRequest
@@ -7,12 +8,10 @@ import com.gamelog.nbe121423355.domain.board.dto.BoardCommentResponse
 import com.gamelog.nbe121423355.domain.board.dto.BoardCommentUpdateRequest
 import com.gamelog.nbe121423355.domain.board.entity.BoardComment
 import com.gamelog.nbe121423355.domain.board.repository.BoardCommentRepository
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import org.springframework.context.ApplicationEventPublisher
+import java.time.ZoneId
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -21,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class BoardCommentService(
-    private val events: ApplicationEventPublisher,
+    private val notificationService: NotificationService,
     private val postService: BoardPostService,
     private val comments: BoardCommentRepository,
 ) {
@@ -61,16 +60,14 @@ class BoardCommentService(
                     spoiler = request.spoiler,
                 )
             )
-        events.publishEvent(
-            NotificationRequested(
-                recipients = setOfNotNull(post.user.id, parent?.user?.id),
-                actorId = viewerId,
-                kind = if (parent == null) NotificationKind.BOARD_COMMENT else NotificationKind.BOARD_REPLY,
-                targetType = NotificationTarget.BOARD_POST,
-                targetId = postId,
-                sourceKey = sourceKey(checkNotNull(saved.id)),
-                gameTitle = post.title,
-            )
+        notificationService.create(
+            recipients = setOfNotNull(post.user.id, parent?.user?.id),
+            actorId = viewerId,
+            kind = if (parent == null) NotificationKind.BOARD_COMMENT else NotificationKind.BOARD_REPLY,
+            targetType = NotificationTarget.BOARD_POST,
+            targetId = postId,
+            sourceKey = sourceKey(checkNotNull(saved.id)),
+            gameTitle = post.title,
         )
         return responses(listOf(saved), viewerId).first()
     }
@@ -90,7 +87,7 @@ class BoardCommentService(
         val comment = activeComment(postId, commentId)
         postService.requireOwner(comment.user, viewerId)
         comment.delete()
-        events.publishEvent(NotificationCancelled(sourceKey(commentId)))
+        notificationService.cancel(sourceKey(commentId))
     }
 
     fun comment(postId: Long, commentId: Long): BoardComment =
@@ -118,7 +115,8 @@ class BoardCommentService(
                 edited = !removed && comment.edited,
                 mine = !removed && comment.user.id == viewerId,
                 replyCount = replyCounts[comment.id] ?: 0,
-                createdDate = comment.createdDate,
+                // JPA auditing이 사용하는 서버 기본 시간대를 붙여 브라우저의 로컬 시간 해석을 방지한다.
+                createdDate = comment.createdDate?.atZone(ZoneId.systemDefault())?.toOffsetDateTime(),
             )
         }
     }

@@ -2,7 +2,7 @@
   "uid": "gamelog-k6-personalized-fixed",
   "title": "k6 맞춤 추천 · 고정 10 VU",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "k6",
@@ -43,9 +43,24 @@
   },
   "panels": [
     {
-      "id": 1,
-      "title": "Virtual Users · 선택 실행 전체 구간",
-      "description": "워밍업 포함. 본측정 시작 전에도 10 VU가 유지됩니다.",
+      "id": 100,
+      "type": "text",
+      "title": "추천 테스트 · 측정 범위",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**고정 10 VU** · 응답 시간은 본측정의 HTTP 200 응답만 집계한 누적 p95·p99입니다. 실패율을 함께 확인하세요.\n\n사용자 수는 예열을 포함하며, CPU·메모리는 선택 실행만의 사용량이 아닌 **동일 시간대 서버 전체 지표**입니다."
+      }
+    },
+    {
+      "id": 3,
+      "title": "응답 시간 · 본측정 / HTTP 200 / 누적 p95·p99",
+      "description": "본측정에서 성공한 HTTP 200 응답의 누적 백분위수. 짧은 구간별 통계가 아닙니다. 서로 다른 시계열의 백분위수를 평균내지 않습니다.",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -53,29 +68,38 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 3,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "k6_vus{profile=\"fixed-10vu\",run_id=\"$run_id\"}",
-          "legendFormat": "VUs",
+          "expr": "(k6_http_req_duration_p95{profile=\"fixed-10vu\",run_id=\"$run_id\",phase=\"measurement\",scenario=~\"onboarding|record\",status=\"200\"}) * 1000",
+          "legendFormat": "{{scenario}} P95",
+          "range": true
+        },
+        {
+          "refId": "B",
+          "expr": "(k6_http_req_duration_p99{profile=\"fixed-10vu\",run_id=\"$run_id\",phase=\"measurement\",scenario=~\"onboarding|record\",status=\"200\"}) * 1000",
+          "legendFormat": "{{scenario}} P99",
           "range": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "ms",
           "min": 0,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—",
+          "decimals": 2
         },
         "overrides": []
       },
@@ -91,7 +115,7 @@
     },
     {
       "id": 2,
-      "title": "Request Rate · 본측정 / 최근 20초",
+      "title": "처리량 · 본측정 / 최근 20초",
       "description": "선택한 추천 API의 k6 완료 요청률. setup·워밍업 제외. 최초 20초는 표본 부족으로 비어 있을 수 있습니다.",
       "type": "timeseries",
       "datasource": {
@@ -100,9 +124,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 3,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
@@ -119,10 +143,12 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -137,9 +163,9 @@
       }
     },
     {
-      "id": 3,
-      "title": "P95 / P99 · 본측정 / HTTP 200",
-      "description": "본측정에서 성공한 HTTP 200 응답의 누적 백분위수. 짧은 구간별 통계가 아닙니다. 서로 다른 시계열의 백분위수를 평균내지 않습니다.",
+      "id": 1,
+      "title": "활성 사용자 · 예열 포함",
+      "description": "워밍업 포함. 본측정 시작 전에도 10 VU가 유지됩니다.",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -147,35 +173,31 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 9,
+        "y": 11,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "k6_http_req_duration_p95{profile=\"fixed-10vu\",run_id=\"$run_id\",phase=\"measurement\",scenario=~\"onboarding|record\",status=\"200\"}",
-          "legendFormat": "{{scenario}} P95",
-          "range": true
-        },
-        {
-          "refId": "B",
-          "expr": "k6_http_req_duration_p99{profile=\"fixed-10vu\",run_id=\"$run_id\",phase=\"measurement\",scenario=~\"onboarding|record\",status=\"200\"}",
-          "legendFormat": "{{scenario}} P99",
+          "expr": "k6_vus{profile=\"fixed-10vu\",run_id=\"$run_id\"}",
+          "legendFormat": "VUs",
           "range": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
           "min": 0,
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -191,7 +213,7 @@
     },
     {
       "id": 4,
-      "title": "HTTP Error Rate · 본측정 / 최근 20초",
+      "title": "HTTP 실패율 · 본측정 / 최근 20초",
       "description": "k6 HTTP 실패 건수 / 전체 요청 수. 응답 본문 check 실패율과 별개이며 요청이 없으면 비어 있습니다.",
       "type": "timeseries",
       "datasource": {
@@ -200,9 +222,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 9,
+        "y": 11,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
@@ -219,10 +241,12 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -238,7 +262,7 @@
     },
     {
       "id": 5,
-      "title": "Application CPU · 서버 전체",
+      "title": "백엔드 CPU · 서버 전체",
       "description": "서버 지표에는 run_id가 없습니다. 선택한 시간 범위의 서버 전체 활동입니다.",
       "type": "timeseries",
       "datasource": {
@@ -247,9 +271,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 18,
+        "y": 19,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
@@ -266,10 +290,12 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—"
         },
         "overrides": []
       },
@@ -285,7 +311,7 @@
     },
     {
       "id": 6,
-      "title": "JVM Memory · 서버 전체",
+      "title": "JVM 메모리 · 서버 전체",
       "description": "서버 지표에는 run_id가 없습니다. 추천 외 작업도 포함하므로 실행 시간대를 맞추세요.",
       "type": "timeseries",
       "datasource": {
@@ -294,9 +320,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 18,
+        "y": 19,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
@@ -313,10 +339,12 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 0,
-            "showPoints": "auto",
-            "spanNulls": false
-          }
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "noValue": "—"
         },
         "overrides": []
       },

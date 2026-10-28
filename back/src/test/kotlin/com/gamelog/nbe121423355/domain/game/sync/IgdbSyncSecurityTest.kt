@@ -20,10 +20,13 @@ class IgdbSyncSecurityTest {
     fun anonymousCannotReadOrStart() {
         mvc.perform(get("/api/v1/admin/igdb-sync")).andExpect(status().isUnauthorized())
         mvc.perform(post("/api/v1/admin/igdb-sync")).andExpect(status().isUnauthorized())
+        mvc.perform(delete("/api/v1/admin/igdb-sync")).andExpect(status().isUnauthorized())
     }
 
     @Test
     fun ordinaryUsersCannotReadOrStart() {
+        mvc.perform(delete("/api/v1/admin/igdb-sync").with(user("user").roles("USER")))
+            .andExpect(status().isForbidden())
         mvc.perform(get("/api/v1/admin/igdb-sync").with(user("user").roles("USER")))
             .andExpect(status().isForbidden())
         mvc.perform(post("/api/v1/admin/igdb-sync").with(user("user").roles("USER")))
@@ -32,6 +35,8 @@ class IgdbSyncSecurityTest {
 
     @Test
     fun administratorCanReadStatus() {
+        mvc.perform(delete("/api/v1/admin/igdb-sync").with(user("admin").roles("ADMIN")))
+            .andExpect(status().isOk())
         mvc.perform(get("/api/v1/admin/igdb-sync").with(user("admin").roles("ADMIN")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.status").value("IDLE"))
