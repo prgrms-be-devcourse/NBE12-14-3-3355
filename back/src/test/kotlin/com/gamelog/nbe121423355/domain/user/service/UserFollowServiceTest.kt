@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.user.service
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.entity.UserFollow
 import com.gamelog.nbe121423355.domain.user.entity.UserFollowId
@@ -25,7 +26,6 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -40,7 +40,7 @@ class UserFollowServiceTest {
     private lateinit var userRepository: UserRepository
 
     @Mock
-    private lateinit var events: ApplicationEventPublisher
+    private lateinit var notificationService: NotificationService
 
     @InjectMocks
     private lateinit var userFollowService: UserFollowService

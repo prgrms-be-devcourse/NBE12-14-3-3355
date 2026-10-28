@@ -61,20 +61,3 @@ class Notification(
         }
     }
 }
-
-data class NotificationRequested(
-    val recipients: Set<Long>,
-    val actorId: Long?,
-    val kind: NotificationKind,
-    val targetType: NotificationTarget,
-    val targetId: Long,
-    val sourceKey: String,
-    val reviewId: Long? = null,
-    val gameTitle: String? = null,
-)
-
-data class NotificationCancelled(val sourceKey: String)
-
-data class CommentNotificationsCancelled(val commentId: Long)
-
-data class BoardPostNotificationsCancelled(val postId: Long)

@@ -1,8 +1,7 @@
 package com.gamelog.nbe121423355.domain.review.service
 
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationCancelled
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.review.dto.response.ReviewLikeResponse
 import com.gamelog.nbe121423355.domain.review.entity.Review
@@ -12,7 +11,6 @@ import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -20,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class ReviewLikeService
 constructor(
-    private val events: ApplicationEventPublisher,
+    private val notificationService: NotificationService,
     private val reviewLikeRepository: ReviewLikeRepository,
     private val reviewRepository: ReviewRepository,
     private val userRepository: UserRepository,
@@ -34,17 +32,15 @@ constructor(
             throw ServiceException("409-2", "이미 좋아요를 누른 리뷰입니다.")
         }
         reviewLikeRepository.save(ReviewLike(review, user))
-        events.publishEvent(
-            NotificationRequested(
-                recipients = setOf(requireNotNull(review.userGame.user.id)),
-                actorId = userId,
-                kind = NotificationKind.REVIEW_LIKE,
-                targetType = NotificationTarget.REVIEW,
-                targetId = reviewId,
-                sourceKey = "review-like:$reviewId:$userId",
-                reviewId = reviewId,
-                gameTitle = review.userGame.game.title,
-            )
+        notificationService.create(
+            recipients = setOf(requireNotNull(review.userGame.user.id)),
+            actorId = userId,
+            kind = NotificationKind.REVIEW_LIKE,
+            targetType = NotificationTarget.REVIEW,
+            targetId = reviewId,
+            sourceKey = "review-like:$reviewId:$userId",
+            reviewId = reviewId,
+            gameTitle = review.userGame.game.title,
         )
         return createResponse(reviewId, true)
     }
@@ -56,7 +52,7 @@ constructor(
             throw ServiceException("404-6", "좋아요 기록을 찾을 수 없습니다.")
         }
         reviewLikeRepository.deleteByReview_IdAndUser_Id(reviewId, userId)
-        events.publishEvent(NotificationCancelled("review-like:$reviewId:$userId"))
+        notificationService.cancel("review-like:$reviewId:$userId")
         return createResponse(reviewId, false)
     }
 

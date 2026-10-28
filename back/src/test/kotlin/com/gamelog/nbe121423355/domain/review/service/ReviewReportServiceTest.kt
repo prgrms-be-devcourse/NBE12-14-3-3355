@@ -1,5 +1,6 @@
 package com.gamelog.nbe121423355.domain.review.service
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.game.service.RelatedGameChangeRecorder
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
@@ -30,7 +31,6 @@ import org.mockito.Mockito.`when`
 import org.mockito.Mockito.lenient
 import org.mockito.Mockito.mock
 import org.mockito.junit.jupiter.MockitoExtension
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.test.util.ReflectionTestUtils
@@ -42,7 +42,7 @@ class ReviewReportServiceTest {
     @Mock private lateinit var userRepository: UserRepository
     @Mock private lateinit var userGameService: UserGameService
     @Mock private lateinit var changeRecorder: RelatedGameChangeRecorder
-    @Mock private lateinit var events: ApplicationEventPublisher
+    @Mock private lateinit var notificationService: NotificationService
     @InjectMocks private lateinit var reviewReportService: ReviewReportService
 
     private lateinit var writer: User

@@ -15,6 +15,10 @@ import java.math.BigDecimal
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.nullValue
+import org.junit.jupiter.api.AfterEach
+import org.springframework.test.context.transaction.TestTransaction
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -43,6 +47,8 @@ class BoardControllerTest {
     @Autowired private lateinit var jwt: JwtProvider
     @Autowired private lateinit var reports: BoardReportRepository
     @Autowired private lateinit var notifications: NotificationRepository
+    @Autowired private lateinit var transactionManager: PlatformTransactionManager
+    private var fixtureCommitted = false
 
     private lateinit var writer: User
     private lateinit var reader: User
@@ -352,6 +358,7 @@ class BoardControllerTest {
         val commentId = createComment(postId, reader, "댓글")
         createComment(postId, admin, "답글", parentId = commentId)
 
+        commitNotificationActions()
         val received = notifications.findAll()
         assertThat(received.filter { it.recipientId == writer.id }.map { it.kind })
             .containsExactlyInAnyOrder(NotificationKind.BOARD_COMMENT, NotificationKind.BOARD_REPLY)
@@ -361,9 +368,40 @@ class BoardControllerTest {
             .andExpect(jsonPath("$.data.items[0].url").value("/community?board=free&post=$postId"))
 
         mvc.perform(delete("${comments(postId)}/$commentId").auth(reader))
+        commitNotificationActions()
         assertThat(notifications.findAll().map { it.kind }).containsOnly(NotificationKind.BOARD_REPLY)
         mvc.perform(delete("$POSTS/$postId").auth(writer))
+        commitNotificationActions()
         assertThat(notifications.findAll()).isEmpty()
+    }
+
+    private fun commitNotificationActions() {
+        fixtureCommitted = true
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+        TestTransaction.start()
+    }
+
+    @AfterEach
+    fun cleanupCommittedNotificationScenario() {
+        if (!fixtureCommitted) return
+        val ids = listOf(checkNotNull(writer.id), checkNotNull(reader.id), checkNotNull(admin.id))
+        val gameId = checkNotNull(game.id)
+        if (TestTransaction.isActive()) {
+            TestTransaction.flagForRollback()
+            TestTransaction.end()
+        }
+        TransactionTemplate(transactionManager).executeWithoutResult {
+            em.createQuery("delete from Notification n where n.recipientId in :ids or n.actorId in :ids")
+                .setParameter("ids", ids).executeUpdate()
+            for (query in listOf(
+                "delete from BoardComment c where c.post.user.id in :ids and c.parent is not null",
+                "delete from BoardComment c where c.post.user.id in :ids",
+                "delete from BoardPost p where p.user.id in :ids",
+                "delete from User u where u.id in :ids",
+            )) em.createQuery(query).setParameter("ids", ids).executeUpdate()
+            em.createQuery("delete from Game g where g.id = :gid").setParameter("gid", gameId).executeUpdate()
+        }
     }
 
     private fun createPost(

@@ -1,12 +1,11 @@
 package com.gamelog.nbe121423355.domain.notification
 
+import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import com.gamelog.nbe121423355.domain.notification.service.NotificationRetentionService
-import com.gamelog.nbe121423355.domain.notification.service.NotificationService
 import com.gamelog.nbe121423355.domain.notification.entity.Notification
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
-import com.gamelog.nbe121423355.domain.notification.entity.NotificationRequested
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.domain.notification.repository.NotificationRepository
 import com.gamelog.nbe121423355.domain.review.dto.request.ReviewReportCreateRequest
@@ -28,12 +27,13 @@ import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.AfterEach
+import org.springframework.test.context.transaction.TestTransaction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.test.web.servlet.MockMvc
@@ -41,6 +41,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.transaction.IllegalTransactionStateException
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.annotation.Transactional
@@ -60,11 +61,12 @@ class NotificationIntegrationTest {
     @Autowired private lateinit var comments: ReviewCommentService
     @Autowired private lateinit var reports: ReviewReportService
     @Autowired private lateinit var follows: UserFollowService
-    @Autowired private lateinit var events: ApplicationEventPublisher
     @Autowired private lateinit var transactions: PlatformTransactionManager
     @Autowired private lateinit var mvc: MockMvc
     @Autowired private lateinit var jwt: JwtProvider
 
+    private var fixtureCommitted = false
+    private var fixtureGameId = 0L
     private lateinit var author: User
     private lateinit var reader: User
     private lateinit var third: User
@@ -100,23 +102,24 @@ class NotificationIntegrationTest {
         review = Review(record, BigDecimal.ONE, "리뷰", false)
         em.persist(review)
         em.flush()
+        fixtureGameId = checkNotNull(game.id)
     }
 
     @Test
     @DisplayName("본인 좋아요는 알림을 만들지 않고 취소 후 다시 좋아요하면 새 미읽음 알림을 만든다")
     fun likesExcludeSelfCancelAndRecreateUnread() {
-        reviewLikes.addLike(authorId, reviewId)
+        committed { reviewLikes.addLike(authorId, reviewId) }
 
         assertThat(notifications.unread(authorId)).isZero()
 
-        reviewLikes.addLike(readerId, reviewId)
+        committed { reviewLikes.addLike(readerId, reviewId) }
         val first = notifications.list(authorId, null).items.first()
         notifications.read(authorId, first.id)
-        reviewLikes.removeLike(readerId, reviewId)
+        committed { reviewLikes.removeLike(readerId, reviewId) }
 
         assertThat(notifications.list(authorId, null).items).isEmpty()
 
-        reviewLikes.addLike(readerId, reviewId)
+        committed { reviewLikes.addLike(readerId, reviewId) }
 
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
         assertThat(notifications.list(authorId, null).items.first().id).isNotEqualTo(first.id)
@@ -125,16 +128,16 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("중복 팔로우는 알림을 중복 생성하지 않고 언팔로우 후 재팔로우하면 다시 알린다")
     fun followIsIdempotentAndCancelRemovesNotice() {
-        follows.follow(readerId, authorId)
-        follows.follow(readerId, authorId)
+        committed { follows.follow(readerId, authorId) }
+        committed { follows.follow(readerId, authorId) }
 
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
 
-        follows.unfollow(readerId, authorId)
+        committed { follows.unfollow(readerId, authorId) }
 
         assertThat(notifications.unread(authorId)).isZero()
 
-        follows.follow(readerId, authorId)
+        committed { follows.follow(readerId, authorId) }
 
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
     }
@@ -142,33 +145,33 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("답글은 리뷰·원댓글 작성자에게 중복 없이 알리고 삭제 시 관련 댓글·좋아요 알림을 취소한다")
     fun repliesReachBothAuthorsOnceAndDeletionCancelsCommentAndLikeNotices() {
-        val root = comments.create(reviewId, readerId, body("원댓글"))
+        val root = committed { comments.create(reviewId, readerId, body("원댓글")) }
         notifications.readAll(authorId)
-        val reply = comments.create(reviewId, thirdId, body("답글", root.id))
+        val reply = committed { comments.create(reviewId, thirdId, body("답글", root.id)) }
         val replyId = checkNotNull(reply.id)
 
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
         assertThat(notifications.unread(readerId)).isEqualTo(1L)
         assertThat(notifications.unread(thirdId)).isZero()
 
-        comments.like(reviewId, replyId, readerId, true)
-        comments.like(reviewId, replyId, readerId, true)
+        committed { comments.like(reviewId, replyId, readerId, true) }
+        committed { comments.like(reviewId, replyId, readerId, true) }
 
         assertThat(notifications.unread(thirdId)).isEqualTo(1L)
 
-        comments.like(reviewId, replyId, readerId, false)
+        committed { comments.like(reviewId, replyId, readerId, false) }
 
         assertThat(notifications.unread(thirdId)).isZero()
 
-        comments.like(reviewId, replyId, readerId, true)
-        comments.delete(reviewId, replyId, thirdId)
+        committed { comments.like(reviewId, replyId, readerId, true) }
+        committed { comments.delete(reviewId, replyId, thirdId) }
 
         assertThat(notifications.unread(readerId)).isZero()
         assertThat(notifications.unread(authorId)).isZero()
         assertThat(notifications.unread(thirdId)).isZero()
 
-        val ownRoot = comments.create(reviewId, authorId, body("작성자 댓글"))
-        comments.create(reviewId, thirdId, body("작성자에게 답글", ownRoot.id))
+        val ownRoot = committed { comments.create(reviewId, authorId, body("작성자 댓글")) }
+        committed { comments.create(reviewId, thirdId, body("작성자에게 답글", ownRoot.id)) }
 
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
     }
@@ -182,7 +185,7 @@ class NotificationIntegrationTest {
         assertThat(notifications.unread(authorId)).isZero()
 
         val reportId = checkNotNull(first.reportId)
-        reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
+        committed { reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED)) }
         val item = notifications.list(authorId, null).items.first()
 
         assertThat(item.kind).isEqualTo(NotificationKind.REVIEW_HIDDEN)
@@ -193,14 +196,14 @@ class NotificationIntegrationTest {
         assertThat(notifications.unread(authorId)).isEqualTo(1L)
 
         assertThatThrownBy {
-            reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED))
+            committed { reports.updateStatus(reportId, ReviewReportStatusUpdateRequest(ReportStatus.APPROVED)) }
         }.hasMessageContaining("이미 처리")
     }
 
     @Test
     @DisplayName("알림 API는 인증과 소유권을 확인하고 목록 조회만으로 읽음 처리하지 않는다")
     fun apiScopesOwnershipAndOpeningListDoesNotRead() {
-        follows.follow(readerId, authorId)
+        committed { follows.follow(readerId, authorId) }
         val id = notifications.list(authorId, null).items.first().id
 
         mvc.perform(get("/api/v1/notifications"))
@@ -227,7 +230,7 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("작성자가 탈퇴하고 대상 리뷰가 삭제되면 대체 이름을 표시하고 링크를 제공하지 않는다")
     fun deletedTargetsAndWithdrawnActorsAreSafe() {
-        reviewLikes.addLike(readerId, reviewId)
+        committed { reviewLikes.addLike(readerId, reviewId) }
         reader.withdraw("random")
         review.deleteByUser()
         em.flush()
@@ -242,18 +245,16 @@ class NotificationIntegrationTest {
     @DisplayName("알림 23개를 커서로 20개·3개씩 중복 없이 조회하고 전체 읽음 처리한다")
     fun cursorPaginationAndReadAllKeepTheirBoundaries() {
         repeat(23) { index ->
-            events.publishEvent(
-                NotificationRequested(
-                    recipients = setOf(authorId),
-                    actorId = readerId,
-                    kind = NotificationKind.REVIEW_LIKE,
-                    targetType = NotificationTarget.REVIEW,
-                    targetId = reviewId,
-                    sourceKey = "page:$index",
-                    reviewId = reviewId,
-                    gameTitle = "알림 게임",
-                )
-            )
+            committed { notifications.create(
+                recipients = setOf(authorId),
+                actorId = readerId,
+                kind = NotificationKind.REVIEW_LIKE,
+                targetType = NotificationTarget.REVIEW,
+                targetId = reviewId,
+                sourceKey = "page:$index",
+                reviewId = reviewId,
+                gameTitle = "알림 게임",
+            ) }
         }
 
         val first = notifications.list(authorId, null)
@@ -273,25 +274,24 @@ class NotificationIntegrationTest {
     }
 
     @Test
-    @DisplayName("원본 동작의 트랜잭션이 롤백되면 함께 생성된 알림도 롤백된다")
-    fun rollbackRemovesNotificationWithSourceAction() {
-        val template = TransactionTemplate(transactions).apply {
-            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+    @DisplayName("알림 생성은 기존 트랜잭션 없이 단독 호출할 수 없다")
+    fun creationRequiresExistingTransaction() {
+        val withoutTransaction = TransactionTemplate(transactions).apply {
+            propagationBehavior = TransactionDefinition.PROPAGATION_NOT_SUPPORTED
         }
 
-        val recipientId = checkNotNull(template.execute { transaction ->
-            val recipient = User("롤백수신자", "rollback-recipient@test.com", "password")
-            val actor = User("롤백행위자", "rollback-actor@test.com", "password")
-            listOf(recipient, actor).forEach(em::persist)
-            em.flush()
-            val id = checkNotNull(recipient.id)
-            follows.follow(checkNotNull(actor.id), id)
-            assertThat(notifications.unread(id)).isEqualTo(1L)
-            transaction.setRollbackOnly()
-            id
-        })
-
-        assertThat(notifications.unread(recipientId)).isZero()
+        assertThatThrownBy {
+            withoutTransaction.executeWithoutResult {
+                notifications.create(
+                    recipients = emptySet(),
+                    actorId = null,
+                    kind = NotificationKind.FOLLOW,
+                    targetType = NotificationTarget.USER,
+                    targetId = authorId,
+                    sourceKey = "without-transaction",
+                )
+            }
+        }.isInstanceOf(IllegalTransactionStateException::class.java)
     }
 
     @Test
@@ -306,7 +306,7 @@ class NotificationIntegrationTest {
         }
 
         repository.save(notice(kind = NotificationKind.REVIEW_HIDDEN, key = "filter:hidden"))
-        follows.follow(authorId, thirdId)
+        committed { follows.follow(authorId, thirdId) }
         em.flush()
         val first = notifications.list(authorId, null, unreadOnly = true)
 
@@ -410,7 +410,7 @@ class NotificationIntegrationTest {
     @Test
     @DisplayName("댓글이 삭제되어 알림만 남으면 기존 알림을 유지하고 링크를 제공하지 않는다")
     fun commentLinkBecomesUnavailableWhenCommentIsDeletedButNoticeRemains() {
-        val comment = comments.create(reviewId, readerId, body("알림 링크 댓글"))
+        val comment = committed { comments.create(reviewId, readerId, body("알림 링크 댓글")) }
         val commentId = checkNotNull(comment.id)
         val item = notifications.list(authorId, null).items.single()
 
@@ -449,6 +449,51 @@ class NotificationIntegrationTest {
         em.clear()
 
         assertThat(repository.findById(id).orElseThrow().readAt).isEqualTo(originalReadAt)
+    }
+
+    private fun <T> committed(action: () -> T): T {
+        val result = action()
+        val ids = listOf(authorId, readerId, thirdId)
+        val savedReviewId = reviewId
+        fixtureCommitted = true
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+        TestTransaction.start()
+        author = em.find(User::class.java, ids[0])
+        reader = em.find(User::class.java, ids[1])
+        third = em.find(User::class.java, ids[2])
+        review = em.find(Review::class.java, savedReviewId)
+        return result
+    }
+
+    @AfterEach
+    fun cleanupCommittedFixtures() {
+        if (!fixtureCommitted) return
+        val ids = listOf(authorId, readerId, thirdId)
+        val savedReviewId = reviewId
+        if (TestTransaction.isActive()) {
+            TestTransaction.flagForRollback()
+            TestTransaction.end()
+        }
+        TransactionTemplate(transactions).executeWithoutResult {
+            em.createQuery("delete from Notification n where n.recipientId in :ids or n.actorId in :ids")
+                .setParameter("ids", ids).executeUpdate()
+            for (query in listOf(
+                "delete from ReviewReport r where r.review.id = :rid",
+                "delete from ReviewCommentLike l where l.reviewComment.review.id = :rid",
+                "delete from ReviewComment c where c.review.id = :rid and c.parent is not null",
+                "delete from ReviewComment c where c.review.id = :rid",
+                "delete from ReviewLike l where l.review.id = :rid",
+                "delete from Review r where r.id = :rid",
+            )) em.createQuery(query).setParameter("rid", savedReviewId).executeUpdate()
+            em.createQuery("delete from UserFollow f where f.follower.id in :ids or f.followee.id in :ids")
+                .setParameter("ids", ids).executeUpdate()
+            em.createQuery("delete from UserGame ug where ug.user.id in :ids")
+                .setParameter("ids", ids).executeUpdate()
+            em.createQuery("delete from Game g where g.id = :gid")
+                .setParameter("gid", fixtureGameId).executeUpdate()
+            em.createQuery("delete from User u where u.id in :ids").setParameter("ids", ids).executeUpdate()
+        }
     }
 
     private fun token(user: User) = "Bearer ${jwt.generateAccessToken(checkNotNull(user.id), "USER")}"
