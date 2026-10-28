@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import org.springframework.data.domain.Page
 
 data class BoardAuthorResponse(
@@ -72,7 +73,8 @@ data class BoardCommentResponse(
     val edited: Boolean,
     val mine: Boolean,
     val replyCount: Long,
-    val createdDate: LocalDateTime?,
+    @field:Schema(description = "작성 일시. 서버 시간대의 UTC 오프셋을 포함한 ISO 8601 형식")
+    val createdDate: OffsetDateTime?,
 )
 
 data class BoardCommentPageResponse(

@@ -11,6 +11,7 @@ import com.gamelog.nbe121423355.domain.board.repository.BoardCommentRepository
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationKind
 import com.gamelog.nbe121423355.domain.notification.entity.NotificationTarget
 import com.gamelog.nbe121423355.global.exception.ServiceException
+import java.time.ZoneId
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
@@ -114,7 +115,8 @@ class BoardCommentService(
                 edited = !removed && comment.edited,
                 mine = !removed && comment.user.id == viewerId,
                 replyCount = replyCounts[comment.id] ?: 0,
-                createdDate = comment.createdDate,
+                // JPA auditing이 사용하는 서버 기본 시간대를 붙여 브라우저의 로컬 시간 해석을 방지한다.
+                createdDate = comment.createdDate?.atZone(ZoneId.systemDefault())?.toOffsetDateTime(),
             )
         }
     }
