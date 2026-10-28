@@ -2,7 +2,7 @@
   "uid": "gamelog-search-arrival",
   "title": "게임 검색 · 단계별 RPS 시험",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "k6",
@@ -83,6 +83,21 @@
   },
   "panels": [
     {
+      "id": 100,
+      "type": "text",
+      "title": "단계별 RPS · 결과 읽기",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**목표 요청량과 실제 처리량을 함께 비교**하세요. 응답 시간·실패율·검사 통과율은 누적 값입니다.\n\n중단되거나 미전송이 발생한 실행은 정상 완료 결과와 구분합니다. 아래 서버·DB 지표는 동일 시간대 서버 전체 상태입니다."
+      }
+    },
+    {
       "id": 1,
       "title": "누적 p95 응답 시간",
       "description": "실행별 누적 p95. 중단 판단의 최근 30초 p95는 results의 rolling_windows에 별도 저장하며 이 값과 다릅니다.",
@@ -93,20 +108,143 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 3,
         "w": 12,
         "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "k6_http_req_duration_p95{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "expr": "(k6_http_req_duration_p95{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}) * 1000",
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "ms",
+          "noValue": "—",
+          "min": 0,
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "실제 처리량 · 최근 20초",
+      "description": "전체 실행 평균과 다릅니다.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(k6_http_reqs_total{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}[20s])",
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "목표 요청량",
+      "description": "",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "k6_search_target_rps{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -131,7 +269,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 11,
         "w": 12,
         "h": 8
       },
@@ -139,88 +277,35 @@
         {
           "refId": "A",
           "expr": "k6_http_req_failed_rate{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 3,
-      "title": "실제 처리량 · 최근 20초",
-      "description": "전체 실행 평균과 다릅니다.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gamelog-k6-prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(k6_http_reqs_total{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}[20s])",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 4,
-      "title": "목표 요청량",
-      "description": "",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gamelog-k6-prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 8,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "k6_search_target_rps{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps"
+          "unit": "percentunit",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -245,7 +330,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 16,
+        "y": 19,
         "w": 12,
         "h": 8
       },
@@ -253,12 +338,22 @@
         {
           "refId": "A",
           "expr": "k6_dropped_iterations_total{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -283,7 +378,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 16,
+        "y": 19,
         "w": 12,
         "h": 8
       },
@@ -291,12 +386,22 @@
         {
           "refId": "A",
           "expr": "k6_checks_rate{suite=~\"$suite\",case=~\"$case\",phase=~\"$phase\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "{{case}} · {{target_rps}} RPS · {{phase}} · {{testid}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -311,6 +416,19 @@
       }
     },
     {
+      "id": 101,
+      "type": "row",
+      "title": "서버와 DB 상태 · 동일 시간대 전체 지표",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
       "id": 7,
       "title": "백엔드 CPU 사용률",
       "description": "",
@@ -321,7 +439,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 24,
+        "y": 28,
         "w": 12,
         "h": 8
       },
@@ -329,12 +447,22 @@
         {
           "refId": "A",
           "expr": "process_cpu_usage{job=\"gamelog\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "{{instance}} CPU"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -359,7 +487,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 28,
         "w": 12,
         "h": 8
       },
@@ -367,12 +495,118 @@
         {
           "refId": "A",
           "expr": "sum(jvm_memory_used_bytes{job=\"gamelog\",area=\"heap\"})",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "힙 사용량"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "DB 풀 사용 중 연결",
+      "description": "",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections_active{job=\"gamelog\"}",
+          "legendFormat": "{{pool}} 사용 중"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "DB 연결 대기 스레드",
+      "description": "",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 36,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "hikaricp_connections_pending{job=\"gamelog\"}",
+          "legendFormat": "{{pool}} 대기"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -397,7 +631,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 44,
         "w": 12,
         "h": 8
       },
@@ -405,88 +639,22 @@
         {
           "refId": "A",
           "expr": "sum(rate(jvm_gc_pause_seconds_sum{job=\"gamelog\"}[30s]))",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "legendFormat": "GC 정지 시간 (초/초)"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "title": "DB 풀 사용 중 연결",
-      "description": "",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gamelog-k6-prometheus"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 32,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "hikaricp_connections_active{job=\"gamelog\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 11,
-      "title": "DB 연결 대기 스레드",
-      "description": "",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gamelog-k6-prometheus"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 40,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "hikaricp_connections_pending{job=\"gamelog\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
+          "unit": "s",
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -511,20 +679,31 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 40,
+        "y": 44,
         "w": 12,
         "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "hikaricp_connections_acquire_seconds_max{job=\"gamelog\"}",
-          "legendFormat": "{{case}} {{target_rps}} RPS {{phase}} {{testid}} {{pool}}"
+          "expr": "(hikaricp_connections_acquire_seconds_max{job=\"gamelog\"}) * 1000",
+          "legendFormat": "{{pool}} 연결 획득"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s"
+          "unit": "ms",
+          "noValue": "—",
+          "min": 0,
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },

@@ -21,3 +21,4 @@ async function proxy(request: NextRequest) {
 
 export const GET = proxy;
 export const POST = proxy;
+export const DELETE = proxy;
