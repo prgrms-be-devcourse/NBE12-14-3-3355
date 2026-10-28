@@ -2,7 +2,7 @@
   "uid": "gamelog-k6-search",
   "title": "k6 검색 부하 테스트",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "k6",
@@ -42,47 +42,18 @@
   },
   "panels": [
     {
-      "id": 1,
-      "title": "평균 응답 시간",
-      "description": "누적 평균. 종료 시 마지막 값으로 해당 실행 결과를 확인합니다.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "gamelog-k6-prometheus"
-      },
+      "id": 100,
+      "type": "text",
+      "title": "검색 테스트 · 결과 읽기",
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 6,
-        "h": 5
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_avg{testid=~\"$testid\",name=\"game-search\"}[$__range])",
-          "legendFormat": "{{testid}}",
-          "range": false,
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "decimals": 2
-        },
-        "overrides": []
+        "w": 24,
+        "h": 3
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none"
+        "mode": "markdown",
+        "content": "**실행별 결과** · 평균과 p95는 실행 시작부터 누적된 값입니다. 완료된 실행을 포함하는 시간 범위를 선택하세요.\n\n목표 **p95 < 500ms · HTTP 실패율 < 1%** · RPS 그래프는 최근 20초 평균입니다."
       }
     },
     {
@@ -95,15 +66,15 @@
         "uid": "gamelog-k6-prometheus"
       },
       "gridPos": {
-        "x": 6,
-        "y": 0,
+        "x": 0,
+        "y": 3,
         "w": 6,
         "h": 5
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_p95{testid=~\"$testid\",name=\"game-search\"}[$__range])",
+          "expr": "(last_over_time(k6_http_req_duration_p95{testid=~\"$testid\",name=\"game-search\"}[$__range])) * 1000",
           "legendFormat": "{{testid}}",
           "range": false,
           "instant": true
@@ -111,8 +82,26 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
@@ -126,7 +115,55 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 1,
+      "title": "평균 응답 시간",
+      "description": "누적 평균. 종료 시 마지막 값으로 해당 실행 결과를 확인합니다.",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(last_over_time(k6_http_req_duration_avg{testid=~\"$testid\",name=\"game-search\"}[$__range])) * 1000",
+          "legendFormat": "{{testid}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -140,7 +177,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 3,
         "w": 6,
         "h": 5
       },
@@ -156,7 +193,25 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
@@ -170,7 +225,8 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -184,7 +240,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 0,
+        "y": 3,
         "w": 6,
         "h": 5
       },
@@ -200,7 +256,9 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "decimals": 0
+          "decimals": 0,
+          "noValue": "—",
+          "min": 0
         },
         "overrides": []
       },
@@ -214,7 +272,8 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -228,7 +287,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 8,
         "w": 12,
         "h": 9
       },
@@ -243,7 +302,17 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -268,7 +337,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 8,
         "w": 12,
         "h": 9
       },
@@ -283,7 +352,17 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },

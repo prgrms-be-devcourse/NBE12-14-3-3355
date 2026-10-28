@@ -2,7 +2,7 @@
   "uid": "gamelog-k6-offset",
   "title": "검색 OFFSET 개선 전후 비교",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "k6",
@@ -142,16 +142,16 @@
       "type": "text",
       "id": 7,
       "gridPos": {
-        "w": 24,
-        "h": 3,
+        "x": 0,
         "y": 0,
-        "x": 0
+        "w": 24,
+        "h": 3
       }
     },
     {
-      "id": 1,
-      "title": "평균 응답 시간",
-      "description": "누적 평균. 종료 시 마지막 값으로 해당 실행 결과를 확인합니다.",
+      "id": 2,
+      "title": "p95 응답 시간",
+      "description": "누적 p95. 실행별 값을 따로 표시하며 여러 실행의 p95를 평균내지 않습니다.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -166,7 +166,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_avg{testid=~\"$testid\",benchmark=~\"$benchmark\",phase=~\"$phase\",keyword=~\"$keyword\",page=~\"$page\",name=\"game-search\"}[$__range])",
+          "expr": "(last_over_time(k6_http_req_duration_p95{testid=~\"$testid\",benchmark=~\"$benchmark\",phase=~\"$phase\",keyword=~\"$keyword\",page=~\"$page\",name=\"game-search\"}[$__range])) * 1000",
           "legendFormat": "{{phase}} · {{keyword}} · page={{page}} · {{testid}}",
           "range": false,
           "instant": true
@@ -174,8 +174,26 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
@@ -189,13 +207,14 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
-      "id": 2,
-      "title": "p95 응답 시간",
-      "description": "누적 p95. 실행별 값을 따로 표시하며 여러 실행의 p95를 평균내지 않습니다.",
+      "id": 1,
+      "title": "평균 응답 시간",
+      "description": "누적 평균. 종료 시 마지막 값으로 해당 실행 결과를 확인합니다.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -210,7 +229,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_p95{testid=~\"$testid\",benchmark=~\"$benchmark\",phase=~\"$phase\",keyword=~\"$keyword\",page=~\"$page\",name=\"game-search\"}[$__range])",
+          "expr": "(last_over_time(k6_http_req_duration_avg{testid=~\"$testid\",benchmark=~\"$benchmark\",phase=~\"$phase\",keyword=~\"$keyword\",page=~\"$page\",name=\"game-search\"}[$__range])) * 1000",
           "legendFormat": "{{phase}} · {{keyword}} · page={{page}} · {{testid}}",
           "range": false,
           "instant": true
@@ -218,8 +237,10 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0
         },
         "overrides": []
       },
@@ -233,7 +254,8 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -263,7 +285,25 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
         },
         "overrides": []
       },
@@ -277,7 +317,8 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -307,7 +348,9 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "decimals": 0
+          "decimals": 0,
+          "noValue": "—",
+          "min": 0
         },
         "overrides": []
       },
@@ -321,7 +364,8 @@
         },
         "textMode": "auto",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
@@ -350,7 +394,17 @@
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -390,7 +444,17 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 6,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },

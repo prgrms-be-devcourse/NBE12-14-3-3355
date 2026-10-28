@@ -7,6 +7,8 @@
 .panel { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
 .panel button { background: var(--lime); color: #172014; padding: 12px 20px; border-radius: 8px; font-weight: 700; margin: 16px 0; cursor: pointer; }
 .panel button:disabled { opacity: .5; cursor: default; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.panel button.stop { background: #ffabab; color: #401818; }
 .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; }
 .metrics dt { color: var(--muted); font-size: 12px; }
 .metrics dd { font-size: 22px; margin: 8px 0; }

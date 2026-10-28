@@ -2,17 +2,17 @@
   "uid": "gamelog-k6-concurrency",
   "title": "k6 검색 동시 사용자 테스트",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "editable": true,
   "tags": [
     "k6",
     "gamelog"
   ],
   "timezone": "browser",
-  "refresh": "5s",
+  "refresh": "",
   "time": {
-    "from": "now-30m",
-    "to": "now"
+    "from": "2026-10-27T03:30:00.000Z",
+    "to": "2026-10-27T03:33:00.000Z"
   },
   "templating": {
     "list": [
@@ -30,21 +30,34 @@
         },
         "refresh": 1,
         "sort": 2,
-        "multi": true,
-        "includeAll": true,
-        "allValue": ".*",
+        "multi": false,
+        "includeAll": false,
         "current": {
-          "text": "All",
-          "value": "$__all"
+          "text": "concurrency-20261027T033014184Z-335983",
+          "value": "concurrency-20261027T033014184Z-335983"
         }
       }
     ]
   },
   "panels": [
     {
-      "id": 1,
-      "title": "평균 응답 시간",
-      "description": "누적 평균. 종료 시 마지막 값으로 해당 실행 결과를 확인합니다.",
+      "id": 10,
+      "type": "text",
+      "title": "검색 부하 테스트 · 실행 결과",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**고정 동시 사용자 방식** · 각 사용자는 응답을 받은 뒤 다음 요청을 보냅니다.\n\n목표 **p95 < 500ms · HTTP 실패율 < 1% · 응답 검사 100%**  |  실행을 선택하고 해당 실행의 시작~종료 시간이 포함되도록 시간 범위를 맞춰 주세요."
+      }
+    },
+    {
+      "id": 2,
+      "title": "p95 응답 시간 · 목표 < 500ms",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -52,23 +65,40 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
-        "w": 6,
-        "h": 5
+        "y": 3,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_avg{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range])",
-          "legendFormat": "{{testid}}",
+          "expr": "last_over_time(k6_http_req_duration_p95{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range]) * 1000",
+          "legendFormat": "p95",
           "range": false,
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -80,39 +110,45 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto",
+        "textMode": "value",
         "colorMode": "value",
-        "graphMode": "none"
-      }
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "description": "선택 시간 범위의 마지막 누적 p95. 실행이 완료된 구간을 선택해야 최종 결과입니다."
     },
     {
-      "id": 2,
-      "title": "p95 응답 시간",
-      "description": "누적 p95. 실행별 값을 따로 표시하며 여러 실행의 p95를 평균내지 않습니다.",
+      "id": 1,
+      "title": "평균 응답 시간",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "gamelog-k6-prometheus"
       },
       "gridPos": {
-        "x": 6,
-        "y": 0,
-        "w": 6,
-        "h": 5
+        "x": 4,
+        "y": 3,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(k6_http_req_duration_p95{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range])",
-          "legendFormat": "{{testid}}",
+          "expr": "last_over_time(k6_http_req_duration_avg{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range]) * 1000",
+          "legendFormat": "평균",
           "range": false,
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "decimals": 2
+          "unit": "ms",
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
         },
         "overrides": []
       },
@@ -124,31 +160,31 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto",
+        "textMode": "value",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "id": 3,
-      "title": "HTTP 실패율",
-      "description": "HTTP 요청 실패 비율. 응답 내용 검사의 실패율과는 별개입니다.",
+      "title": "HTTP 실패율 · 목표 < 1%",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "gamelog-k6-prometheus"
       },
       "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 6,
-        "h": 5
+        "x": 8,
+        "y": 3,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
           "expr": "last_over_time(k6_http_req_failed_rate{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range])",
-          "legendFormat": "{{testid}}",
+          "legendFormat": "실패율",
           "range": false,
           "instant": true
         }
@@ -156,7 +192,24 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -168,31 +221,31 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto",
+        "textMode": "value",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
       "id": 4,
       "title": "완료 요청 수",
-      "description": "해당 실행의 누적 HTTP 요청 수.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "gamelog-k6-prometheus"
       },
       "gridPos": {
-        "x": 18,
-        "y": 0,
-        "w": 6,
-        "h": 5
+        "x": 12,
+        "y": 3,
+        "w": 4,
+        "h": 4
       },
       "targets": [
         {
           "refId": "A",
           "expr": "last_over_time(k6_http_reqs_total{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[$__range])",
-          "legendFormat": "{{testid}}",
+          "legendFormat": "요청",
           "range": false,
           "instant": true
         }
@@ -200,7 +253,12 @@
       "fieldConfig": {
         "defaults": {
           "unit": "none",
-          "decimals": 0
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
         },
         "overrides": []
       },
@@ -212,15 +270,126 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto",
+        "textMode": "value",
         "colorMode": "value",
-        "graphMode": "none"
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "description": "실패 응답을 포함한 완료 HTTP 요청 수입니다."
+    },
+    {
+      "id": 8,
+      "title": "최대 활성 사용자",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time(k6_vus{mode=\"concurrency\",testid=~\"$testid\"}[$__range])",
+          "legendFormat": "VU",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
       }
     },
     {
-      "id": 5,
-      "title": "처리량 · 최근 20초",
-      "description": "최근 20초 평균 RPS. 터미널 전체 실행 평균과 집계 구간이 다릅니다.",
+      "id": 9,
+      "title": "응답 검사 통과율",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 3,
+        "w": 4,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time(k6_checks_rate{mode=\"concurrency\",testid=~\"$testid\"}[$__range])",
+          "legendFormat": "검사",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "noValue": "—",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 11,
+      "title": "응답 시간 추이 · 누적 통계",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -228,22 +397,57 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 5,
+        "y": 7,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (testid) (rate(k6_http_reqs_total{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[20s]))",
-          "legendFormat": "{{testid}}",
-          "range": true
+          "expr": "k6_http_req_duration_p95{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"} * 1000",
+          "legendFormat": "p95 (누적)",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "k6_http_req_duration_avg{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"} * 1000",
+          "legendFormat": "평균 (누적)",
+          "range": true,
+          "instant": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
-          "decimals": 2
+          "unit": "ms",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -255,12 +459,12 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "k6가 실행 시작부터 집계한 누적 평균과 p95입니다. 최근 구간 p95가 아닙니다. 점선은 500ms 목표입니다."
     },
     {
-      "id": 6,
-      "title": "응답 검사 통과율",
-      "description": "상태 코드 및 응답 구조 검사 통과 비율. 한 요청에 두 검사이므로 요청 성공률과 다릅니다.",
+      "id": 5,
+      "title": "처리량 · 최근 20초 평균",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -268,22 +472,34 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 5,
+        "y": 7,
         "w": 12,
-        "h": 9
+        "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "k6_checks_rate{mode=\"concurrency\",testid=~\"$testid\"}",
-          "legendFormat": "{{testid}}",
-          "range": true
+          "expr": "sum(rate(k6_http_reqs_total{mode=\"concurrency\",testid=~\"$testid\",name=\"game-search\"}[20s]))",
+          "legendFormat": "RPS",
+          "range": true,
+          "instant": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
-          "decimals": 2
+          "unit": "reqps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
         },
         "overrides": []
       },
@@ -298,44 +514,107 @@
       }
     },
     {
+      "id": 7,
+      "title": "활성 가상 사용자 수",
+      "type": "timeseries",
       "datasource": {
         "type": "prometheus",
         "uid": "gamelog-k6-prometheus"
       },
-      "id": 7,
-      "title": "활성 가상 사용자 수 (VU)",
-      "fieldConfig": {
-        "defaults": {
-          "min": 0,
-          "unit": "none",
-          "decimals": 0
-        },
-        "overrides": []
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 6
       },
       "targets": [
         {
           "refId": "A",
           "expr": "k6_vus{mode=\"concurrency\",testid=~\"$testid\"}",
-          "legendFormat": "{{testid}} (목표 {{target_vus}}명)",
-          "range": true
+          "legendFormat": "활성 VU",
+          "range": true,
+          "instant": false
         }
       ],
-      "type": "timeseries",
-      "description": "고정 VU가 응답을 기다린 뒤 다음 요청을 보냅니다. 대기 시간을 설정하면 쉬는 사용자도 포함하며, 서버 처리 중 요청 수와 같지는 않습니다.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          }
+        },
+        "overrides": []
+      },
       "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
         "tooltip": {
           "mode": "multi"
-        },
-        "legend": {
-          "placement": "bottom",
-          "displayMode": "list"
         }
       },
+      "description": "대기 중인 가상 사용자도 포함합니다. DB 연결 수나 서버 처리 중 요청 수가 아닙니다."
+    },
+    {
+      "id": 6,
+      "title": "응답 검사 통과율 · 누적",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "gamelog-k6-prometheus"
+      },
       "gridPos": {
-        "y": 14,
-        "h": 8,
-        "w": 24,
-        "x": 0
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "k6_checks_rate{mode=\"concurrency\",testid=~\"$testid\"}",
+          "legendFormat": "검사 통과율",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
       }
     }
   ]
