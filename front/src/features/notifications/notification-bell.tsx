@@ -105,7 +105,7 @@ export default function NotificationBell() {
       <label className="notification-filter"><input type="checkbox" checked={unreadOnly} disabled={busy || loading}
         onChange={event => { setUnreadOnly(event.target.checked); setLoaded(false); setDetail(null); setError(""); }} /> 미확인만 보기</label>
       {error && <p role="alert">{error}</p>}
-      {detail && <div className="notification-detail" role="status"><p>{notificationMessage(detail)}</p>{detail.gameTitle && <p>{detail.gameTitle}</p>}<time>{detail.createdAt.replace("T", " ").slice(0, 16)}</time>{detail.unavailable && <p>삭제되거나 숨겨진 대상이므로 열 수 없습니다.</p>}</div>}
+      {detail?.unavailable && <p role="status">삭제되거나 숨겨진 대상이므로 열 수 없습니다.</p>}
       {!loaded && !error && <p role="status">알림을 불러오는 중…</p>}
       {loaded && !page.items.length && !error && <p>{unreadOnly ? "미확인 알림이 없습니다." : "알림이 없습니다."}</p>}
       <ul>{(loaded ? page.items : []).map(n => <li key={n.id}><button className={`notification-item${n.read ? "" : " unread"}`} disabled={busy || loading} onClick={() => read(n)}>
