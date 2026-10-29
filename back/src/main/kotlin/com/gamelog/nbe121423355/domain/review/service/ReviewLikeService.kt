@@ -11,6 +11,7 @@ import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -75,7 +76,7 @@ class ReviewLikeService(
 
     private fun getUser(userId: Long): User {
         return userRepository
-            .findById(userId)
-            .orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
+            .findByIdOrNull(userId)
+            ?: throw ServiceException("404-4", "사용자를 찾을 수 없습니다.")
     }
 }

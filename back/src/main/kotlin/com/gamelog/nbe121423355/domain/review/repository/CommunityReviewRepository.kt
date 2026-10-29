@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param
 
 interface CommunityReviewRepository : Repository<Review, Long> {
     @Query(
-        CommunityReviewRepository.SELECT.toString() +
+        CommunityReviewRepository.SELECT +
             """
             AND EXISTS (SELECT f FROM UserFollow f WHERE f.follower.id = :viewerId AND f.followee = u)
 
@@ -24,7 +24,7 @@ interface CommunityReviewRepository : Repository<Review, Long> {
     ): Slice<CommunityReviewProjection>
 
     @Query(
-        CommunityReviewRepository.SELECT.toString() +
+        CommunityReviewRepository.SELECT +
             """
             AND r.createdDate >= :since AND r.createdDate <= :now
 

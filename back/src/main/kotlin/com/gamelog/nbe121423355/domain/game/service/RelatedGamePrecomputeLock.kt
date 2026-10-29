@@ -1,6 +1,7 @@
 package com.gamelog.nbe121423355.domain.game.service
 
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
+import com.gamelog.nbe121423355.global.interop.javaNonNull
 import com.zaxxer.hikari.HikariDataSource
 import java.nio.charset.StandardCharsets.UTF_8
 import java.sql.Connection
@@ -42,7 +43,7 @@ class RelatedGamePrecomputeLock(private val dataSource: DataSource) {
                 var workFailure: Throwable? = null
                 try {
                     // null은 잠금 획득 실패를 뜻하므로 작업 결과로는 허용하지 않는다.
-                    return java.util.Objects.requireNonNull(action { verifyOwnership(connection, name) })
+                    return javaNonNull(action { verifyOwnership(connection, name) })
                 } catch (failure: RuntimeException) {
                     workFailure = failure
                     throw failure

@@ -62,12 +62,12 @@ class IgdbClient(
             field = response.access_token
 
             // 실제 만료보다 60초 일찍 새 토큰을 받도록 합니다.
-            tokenExpiresAt = requestedAt.plusSeconds(Math.max(0, response.expires_in - 60))
+            tokenExpiresAt = requestedAt.plusSeconds((response.expires_in - 60).coerceAtLeast(0))
 
             return field
         }
 
-    private var tokenExpiresAt: Instant? = Instant.EPOCH
+    private var tokenExpiresAt: Instant = Instant.EPOCH
 
     init {
 

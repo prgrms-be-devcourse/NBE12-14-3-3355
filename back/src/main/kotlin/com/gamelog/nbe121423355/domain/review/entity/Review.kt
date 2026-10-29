@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.review.entity
 
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
-import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import com.gamelog.nbe121423355.global.interop.javaNonNull
 import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*

@@ -35,7 +35,7 @@ class ReviewComment : BaseEntity {
         protected set
 
     @jakarta.persistence.Column(nullable = false, columnDefinition = "TEXT")
-    var content: String?? = null
+    var content: String? = null
         protected set
 
     @jakarta.persistence.ManyToOne(fetch = FetchType.LAZY)

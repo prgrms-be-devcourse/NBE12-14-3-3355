@@ -5,7 +5,6 @@ import com.gamelog.nbe121423355.domain.game.entity.Game
 import jakarta.persistence.EntityManager
 import jakarta.persistence.Query
 import java.time.LocalDate
-import java.util.LinkedHashMap
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.support.PageableExecutionUtils
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Repository
 class GameFilteredQueryRepository(
     private val entityManager: EntityManager,
 ) {
-    @SuppressWarnings("unchecked")
     fun findPage(
         keyword: String?,
         genreIds: List<Long>?,
@@ -26,9 +24,9 @@ class GameFilteredQueryRepository(
         maxDate: LocalDate?,
         pageable: Pageable,
     ): Page<Game> {
-        val parameters: MutableMap<String, Any?> = LinkedHashMap()
-        parameters.put("minDate", minDate)
-        parameters.put("maxDate", maxDate)
+        val parameters = linkedMapOf<String, Any?>()
+        parameters["minDate"] = minDate
+        parameters["maxDate"] = maxDate
         val where: StringBuilder =
             StringBuilder(
                 """
@@ -38,10 +36,10 @@ class GameFilteredQueryRepository(
             )
         if (keyword != null) {
             where.append(" AND LOWER(g.title) LIKE LOWER(:keyword) ESCAPE \'!\'\n")
-            parameters.put("keyword", keyword)
+            parameters["keyword"] = keyword
         }
-        val filterGenres = genreIds != null && !genreIds.isEmpty()
-        val filterPlatforms = platformIds != null && !platformIds.isEmpty()
+        val filterGenres = !genreIds.isNullOrEmpty()
+        val filterPlatforms = !platformIds.isNullOrEmpty()
         if (filterGenres) {
             where.append(
                 """
@@ -50,7 +48,7 @@ class GameFilteredQueryRepository(
 
                 """
             )
-            parameters.put("genreIds", genreIds)
+            parameters["genreIds"] = genreIds
         }
         if (filterPlatforms) {
             where.append(
@@ -60,7 +58,7 @@ class GameFilteredQueryRepository(
 
                 """
             )
-            parameters.put("platformIds", platformIds)
+            parameters["platformIds"] = platformIds
         }
         // 필터 조인에서 PK 본문 조회 대신 커버링 인덱스를 사용합니다.
         // MySQL 8.4용 인덱스: monitoring/search-filter-index.sql. H2에서는 주석입니다.
@@ -86,9 +84,9 @@ class GameFilteredQueryRepository(
                 ", matched.id ASC"
         val contentQuery = entityManager.createNativeQuery(sql, Game::class.java)
         bind(contentQuery, parameters)
-        contentQuery.setParameter("pageSize", pageable.getPageSize())
+        contentQuery.setParameter("pageSize", pageable.pageSize)
         contentQuery.setParameter("pageOffset", pageable.offset)
-        val content = contentQuery.getResultList().map { it as Game }
+        val content = contentQuery.resultList.map { it as Game }
         // COUNT는 같은 필터를 사용하되 정렬용 사용자 통계는 계산하지 않습니다.
         return PageableExecutionUtils.getPage(content, pageable) {
             val countQuery =
@@ -96,11 +94,11 @@ class GameFilteredQueryRepository(
                     "SELECT " + hint + "COUNT(*) FROM games g " + where
                 )
             bind(countQuery, parameters)
-            (countQuery.getSingleResult() as Number).toLong()
+            (countQuery.singleResult as Number).toLong()
         }
     }
 
-    private fun bind(query: Query, parameters: MutableMap<String, Any?>) {
+    private fun bind(query: Query, parameters: Map<String, Any?>) {
         parameters.forEach(query::setParameter)
     }
 
