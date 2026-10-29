@@ -20,7 +20,7 @@ class IgdbSyncCatalog(
     private val changeRecorder: RelatedGameChangeRecorder,
     private val recommendationRegistration: NewGameRecommendationRegistration,
 ) {
-    @JvmRecord
+
     data class Counts(val inserted: Long, val updated: Long, val deleted: Long, val skipped: Long)
 
     @Transactional(propagation = MANDATORY)
@@ -151,7 +151,7 @@ class IgdbSyncCatalog(
     }
 
     companion object {
-        @JvmStatic
+
         fun eligible(game: IgdbGameResponse, cutoff: Long): Boolean =
             game.first_release_date?.let { it in 0..cutoff } == true
 

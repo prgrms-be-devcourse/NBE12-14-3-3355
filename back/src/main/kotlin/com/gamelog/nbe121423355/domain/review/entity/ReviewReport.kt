@@ -77,7 +77,7 @@ class ReviewReport : BaseEntity {
     protected constructor()
 
     companion object {
-        @JvmStatic
+
         private fun validateReason(reason: String?): String {
             kotlin.require(!(reason == null || reason.javaIsBlank())) { "신고 사유는 필수입니다." }
             kotlin.require(!(reason.length > 255)) { "신고 사유는 255자를 초과할 수 없습니다." }

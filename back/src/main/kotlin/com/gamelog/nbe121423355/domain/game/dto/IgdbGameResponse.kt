@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.game.dto
 
 import java.math.BigDecimal
 
-@JvmRecord
 data class IgdbGameResponse(
     val id: Long?,
     val name: String?,
@@ -15,16 +14,15 @@ data class IgdbGameResponse(
     val platforms: List<NamedResource>?,
     val collections: List<NamedResource>?,
 ) {
-    @JvmRecord data class Cover(val id: Long?, val url: String?) {}
+    data class Cover(val id: Long?, val url: String?)
 
-    @JvmRecord
     data class InvolvedCompany(
         val id: Long?,
         val developer: Boolean?,
         val company: Company?,
-    ) {}
+    )
 
-    @JvmRecord data class Company(val id: Long?, val name: String?) {}
+    data class Company(val id: Long?, val name: String?)
 
-    @JvmRecord data class NamedResource(val id: Long?, val name: String?) {}
+    data class NamedResource(val id: Long?, val name: String?)
 }

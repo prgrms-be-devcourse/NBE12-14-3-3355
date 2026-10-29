@@ -8,7 +8,7 @@ enum class RelatedGamePrecomputeTargetType {
     CHANGED,
 }
 
-class RelatedGamePrecomputeTarget @JvmOverloads constructor(
+class RelatedGamePrecomputeTarget(
     val type: RelatedGamePrecomputeTargetType,
     gameIds: List<Long> = emptyList(),
     val initializeBaseline: Boolean = false,

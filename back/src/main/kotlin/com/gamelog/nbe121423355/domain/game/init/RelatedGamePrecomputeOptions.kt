@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeM
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import org.springframework.boot.ApplicationArguments
 
-@JvmRecord
 data class RelatedGamePrecomputeOptions(
     val all: Boolean,
     val gameIds: List<Long>,
@@ -13,7 +12,6 @@ data class RelatedGamePrecomputeOptions(
     companion object {
         private val SUPPORTED_OPTIONS = setOf("all", "game-ids", "mode")
 
-        @JvmStatic
         fun parse(arguments: ApplicationArguments): RelatedGamePrecomputeOptions {
             require(arguments.nonOptionArgs.isEmpty() && SUPPORTED_OPTIONS.containsAll(arguments.optionNames)) {
                 "지원 옵션: --all 또는 --game-ids=1,2 및 --mode=INITIAL_LOAD|REFRESH"

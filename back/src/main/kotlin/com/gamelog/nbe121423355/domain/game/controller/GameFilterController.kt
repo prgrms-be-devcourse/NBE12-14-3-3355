@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/games")
 @Tag(name = "game-filter-controller", description = "게임 검색 필터 API")
-class GameFilterController constructor(private val gameFilterService: GameFilterService) {
+class GameFilterController(private val gameFilterService: GameFilterService) {
     @GetMapping("/filters")
     @Operation(summary = "게임 필터 목록 조회", description = "검색 화면에서 사용할 전체 장르와 플랫폼 목록을 조회합니다.")
     fun filters(): RsData<GameFilterResponse> {

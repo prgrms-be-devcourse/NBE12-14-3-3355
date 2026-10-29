@@ -23,7 +23,6 @@ class ReviewCommentService(
     private val users: UserRepository,
 ) {
 
-    @JvmRecord
     data class Item(
         val id: Long?,
         val parentId: Long?,
@@ -42,14 +41,13 @@ class ReviewCommentService(
         val createdDate: LocalDateTime?,
     )
 
-    @JvmRecord
     data class Page(
         val comments: List<Item>,
         val nextCursor: Long?,
         val totalCount: Long,
     )
 
-    @JvmRecord data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?)
+    data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?)
 
     private fun review(id: Long, lock: Boolean): Review {
         return (if (lock) reviews.findActiveForUpdate(id) else reviews.findActiveById(id))

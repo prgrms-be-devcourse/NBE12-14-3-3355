@@ -55,9 +55,9 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
         return translated
     }
 
-    @JvmRecord data class Usage(val character_count: Long?, val character_limit: Long?)
+    data class Usage(val character_count: Long?, val character_limit: Long?)
 
-    @JvmRecord data class Result(val translations: MutableList<Translation>?)
+    data class Result(val translations: List<Translation>?)
 
-    @JvmRecord data class Translation(val text: String?)
+    data class Translation(val text: String?)
 }

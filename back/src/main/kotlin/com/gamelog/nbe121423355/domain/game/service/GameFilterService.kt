@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class GameFilterService
-constructor(
+class GameFilterService(
     private val genreRepository: GenreRepository,
     private val platformRepository: PlatformRepository,
 ) {

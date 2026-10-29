@@ -13,15 +13,14 @@ import org.springframework.stereotype.Repository
 
 /** 필터/정렬에 필요한 값으로 페이지를 먼저 선택하고 상세 행은 해당 페이지에만 조회합니다. */
 @Repository
-class GameFilteredQueryRepository
-constructor(
+class GameFilteredQueryRepository(
     private val entityManager: EntityManager,
 ) {
     @SuppressWarnings("unchecked")
     fun findPage(
         keyword: String?,
-        genreIds: MutableList<Long>?,
-        platformIds: MutableList<Long>?,
+        genreIds: List<Long>?,
+        platformIds: List<Long>?,
         sort: GameSort?,
         minDate: LocalDate?,
         maxDate: LocalDate?,
@@ -89,7 +88,7 @@ constructor(
         bind(contentQuery, parameters)
         contentQuery.setParameter("pageSize", pageable.getPageSize())
         contentQuery.setParameter("pageOffset", pageable.offset)
-        val content = contentQuery.getResultList().map { it as Game }.toMutableList()
+        val content = contentQuery.getResultList().map { it as Game }
         // COUNT는 같은 필터를 사용하되 정렬용 사용자 통계는 계산하지 않습니다.
         return PageableExecutionUtils.getPage(content, pageable) {
             val countQuery =
@@ -154,6 +153,5 @@ constructor(
         }
     }
 
-    @JvmRecord
     private data class OrderPlan(val join: String, val value: String, val direction: String)
 }

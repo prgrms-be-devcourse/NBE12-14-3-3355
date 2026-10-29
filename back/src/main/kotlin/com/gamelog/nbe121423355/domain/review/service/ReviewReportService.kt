@@ -28,8 +28,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class ReviewReportService
-constructor(
+class ReviewReportService(
     private val notificationService: NotificationService,
     private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewReportRepository: ReviewReportRepository,

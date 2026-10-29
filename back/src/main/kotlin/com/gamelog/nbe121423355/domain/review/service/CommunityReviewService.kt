@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class CommunityReviewService constructor(private val repository: CommunityReviewRepository) {
+class CommunityReviewService(private val repository: CommunityReviewRepository) {
     fun following(viewerId: Long, page: Int): CommunityFeedResponse {
         if (page < 0 || page > 100000) {
             throw ServiceException("400-10", "페이지는 0 이상 100000 이하여야 합니다.")

@@ -132,7 +132,7 @@ class Game protected constructor() : BaseEntity() {
 
     companion object {
         // IGDB 데이터로 새 게임 생성
-        @JvmStatic
+
         fun createFromIgdb(response: IgdbGameResponse): Game {
             val game = Game()
             game.igdbId = response.id

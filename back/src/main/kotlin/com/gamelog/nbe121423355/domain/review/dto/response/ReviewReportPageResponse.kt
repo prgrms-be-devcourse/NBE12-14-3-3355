@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.review.dto.response
 
 import org.springframework.data.domain.Page
 
-@JvmRecord
 data class ReviewReportPageResponse(
     val reports: List<ReviewReportGroupResponse>,
     val page: Int,
@@ -13,7 +12,7 @@ data class ReviewReportPageResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(
             reviewIdPage: Page<Long>,
             reports: List<ReviewReportGroupResponse>,

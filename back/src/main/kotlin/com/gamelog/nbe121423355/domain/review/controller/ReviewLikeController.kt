@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/reviews/{reviewId}/likes")
 @Tag(name = "review-like-controller", description = "리뷰 좋아요 등록·취소·조회 API")
-class ReviewLikeController constructor(private val reviewLikeService: ReviewLikeService) {
+class ReviewLikeController(private val reviewLikeService: ReviewLikeService) {
     @PostMapping
     @Operation(summary = "리뷰 좋아요 등록", security = [SecurityRequirement(name = "bearerAuth")])
     @ApiResponses(value = [

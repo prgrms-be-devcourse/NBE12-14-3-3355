@@ -120,7 +120,7 @@ class RelatedGamePrecomputeLock(private val dataSource: DataSource) {
     }
 
     companion object {
-        @JvmStatic
+
         fun lockName(database: String?): String {
             check(database != null && !database.javaIsBlank()) {
                 "추천 계산 대상 DB가 선택되지 않았습니다."

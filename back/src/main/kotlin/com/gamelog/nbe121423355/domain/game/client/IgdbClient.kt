@@ -130,7 +130,6 @@ class IgdbClient(
         return games
     }
 
-    @JvmRecord
     data class TokenResponse(
         val access_token: String?,
         val expires_in: Long?,
@@ -138,7 +137,7 @@ class IgdbClient(
     )
 
     companion object {
-        @JvmStatic
+
         fun buildQuery(afterId: Long, since: Long?, cutoff: Long): String {
             val window =
                 if (since == null) "updated_at <= " + cutoff

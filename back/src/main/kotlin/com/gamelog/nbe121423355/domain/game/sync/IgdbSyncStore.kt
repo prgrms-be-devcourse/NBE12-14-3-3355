@@ -8,8 +8,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class IgdbSyncStore
-constructor(private val repository: IgdbSyncRepository, private val catalog: IgdbSyncCatalog) {
+class IgdbSyncStore(private val repository: IgdbSyncRepository, private val catalog: IgdbSyncCatalog) {
     @Transactional(readOnly = true)
     fun status(): IgdbSyncState {
         return repository.findById(1L).orElseGet({ IgdbSyncState() })

@@ -108,7 +108,6 @@ class NotificationService(
 
     fun unread(userId: Long): Long = notifications.countByRecipientIdAndReadAtIsNull(userId)
 
-    @JvmOverloads
     fun list(userId: Long, before: Long?, unreadOnly: Boolean = false): NotificationPageResponse {
         if (before != null && before < 1) {
             throw ServiceException("400-30", "잘못된 알림 커서입니다.")

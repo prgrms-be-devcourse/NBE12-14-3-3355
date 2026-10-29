@@ -55,7 +55,7 @@ interface GameRepository : JpaRepository<Game, Long> {
         @Param("containsPattern") containsPattern: String?,
         @Param("minReleaseDate") minReleaseDate: LocalDate?,
         @Param("maxReleaseDateExclusive") maxReleaseDateExclusive: LocalDate?,
-    ): MutableList<Game>
+    ): List<Game>
 
     fun findByIgdbId(igdbId: Long?): Game?
 
@@ -85,7 +85,7 @@ interface GameRepository : JpaRepository<Game, Long> {
         @Param("maxReleaseDateExclusive") maxReleaseDateExclusive: LocalDate?,
         @Param("pageSize") pageSize: Int,
         @Param("pageOffset") pageOffset: Long,
-    ): MutableList<Game>
+    ): List<Game>
 
     @Query(
         value =

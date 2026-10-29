@@ -23,7 +23,7 @@ class GameSeries protected constructor() {
     }
 
     companion object {
-        @JvmStatic
+
         fun createFromIgdb(igdbId: Long?, name: String?): GameSeries {
             val series = GameSeries()
             series.igdbId = igdbId

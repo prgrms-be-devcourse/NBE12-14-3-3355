@@ -101,7 +101,6 @@ class GameTranslationService(
     companion object {
         private val log = LoggerFactory.getLogger(GameTranslationService::class.java)
 
-        @JvmStatic
         fun hash(source: String): String {
             try {
                 return HexFormat.of()

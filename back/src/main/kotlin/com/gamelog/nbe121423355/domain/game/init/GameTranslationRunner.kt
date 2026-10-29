@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 @Profile("local")
 @Order(20)
 @ConditionalOnProperty(name = ["game.translation.enabled"], havingValue = "true")
-class GameTranslationRunner constructor(private val translations: GameTranslationService) :
+class GameTranslationRunner(private val translations: GameTranslationService) :
     CommandLineRunner {
 
     override fun run(vararg args: String) {

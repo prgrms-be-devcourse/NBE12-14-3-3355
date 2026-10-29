@@ -16,8 +16,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class ReviewLikeService
-constructor(
+class ReviewLikeService(
     private val notificationService: NotificationService,
     private val reviewLikeRepository: ReviewLikeRepository,
     private val reviewRepository: ReviewRepository,

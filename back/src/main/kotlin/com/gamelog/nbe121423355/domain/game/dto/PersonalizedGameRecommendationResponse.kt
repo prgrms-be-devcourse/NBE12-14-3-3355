@@ -6,7 +6,6 @@ import java.math.BigDecimal
 
 // 사용자 맞춤 추천 게임의 기본 정보, 추천 점수, 장르를 반환
 @Schema(description = "사용자 맞춤 추천 게임")
-@JvmRecord
 data class PersonalizedGameRecommendationResponse(
     @field:Schema(description = "GameLog 게임 ID", example = "6") val id: Long,
     @field:Schema(description = "게임명", example = "Baldur's Gate II: Shadows of Amn")

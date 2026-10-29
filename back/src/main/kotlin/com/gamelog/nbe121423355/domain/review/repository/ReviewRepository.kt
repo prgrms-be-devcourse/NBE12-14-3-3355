@@ -155,7 +155,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findPlayedGameRatings(@Param("userId") userId: Long): MutableList<BigDecimal>
+    fun findPlayedGameRatings(@Param("userId") userId: Long): List<BigDecimal>
 
     @Query(
         """
@@ -184,7 +184,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
     fun findRecentReviews(
         @Param("userId") userId: Long,
         pageable: Pageable,
-    ): MutableList<Review>
+    ): List<Review>
 
     // 회원탈퇴: 활성 리뷰만 숨김 (UPDATE에는 JOIN을 못 써서 user_game은 서브쿼리)
     // 벌크 UPDATE는 @Version을 자동 갱신하지 않으므로 이전 버전의 진행 중인 수정도 막는다.

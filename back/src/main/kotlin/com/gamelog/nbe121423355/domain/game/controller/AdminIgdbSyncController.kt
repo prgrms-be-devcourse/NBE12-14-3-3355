@@ -27,8 +27,7 @@ import org.springframework.web.bind.annotation.*
     ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
     ApiResponse(responseCode = "403", description = "403-1: ADMIN 권한 필요", content = [Content(schema = Schema(implementation = RsData::class))]),
 ])
-class AdminIgdbSyncController
-constructor(private val service: IgdbSyncService, private val store: IgdbSyncStore) {
+class AdminIgdbSyncController(private val service: IgdbSyncService, private val store: IgdbSyncStore) {
     @GetMapping
     @Operation(summary = "IGDB 동기화 상태 조회", description = "ADMIN 전용입니다. 동기화 상태와 진행·성공 정보를 조회합니다. 실행 접수 후 이 API로 완료 여부를 확인합니다.")
     @ApiResponse(responseCode = "200", description = "200-1: 동기화 상태", useReturnTypeSchema = true)
