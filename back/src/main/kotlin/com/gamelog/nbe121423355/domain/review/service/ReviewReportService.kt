@@ -19,7 +19,6 @@ import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.domain.usergame.service.UserGameService
 import com.gamelog.nbe121423355.global.exception.ServiceException
-import kotlin.jvm.optionals.getOrNull
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -121,7 +120,7 @@ constructor(
 
     // 관리자 처리와 같은 리뷰 행을 먼저 잠그고 현재 공개 상태를 확인한다.
     private fun getReviewForReport(reviewId: Long): Review =
-        reviewRepository.findActiveForUpdate(reviewId).getOrNull()
+        reviewRepository.findActiveForUpdate(reviewId)
             ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
     private fun getUser(userId: Long): User =

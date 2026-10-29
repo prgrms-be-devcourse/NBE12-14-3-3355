@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.game.repository
 
 import com.gamelog.nbe121423355.domain.game.entity.Game
 import java.time.LocalDate
-import java.util.Optional
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -58,7 +57,7 @@ interface GameRepository : JpaRepository<Game, Long> {
         @Param("maxReleaseDateExclusive") maxReleaseDateExclusive: LocalDate?,
     ): MutableList<Game>
 
-    fun findByIgdbId(igdbId: Long?): Optional<Game>
+    fun findByIgdbId(igdbId: Long?): Game?
 
     // 정렬/페이지 선택을 먼저 수행하여 상세 행 조인을 페이지 크기로 제한합니다.
     @Query(

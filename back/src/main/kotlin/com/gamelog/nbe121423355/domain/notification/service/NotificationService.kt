@@ -145,7 +145,7 @@ class NotificationService(
                 users.findByIdAndDeletedAtIsNull(notification.targetId)
                     ?.let { "/profile/${it.id}" }
             NotificationTarget.REVIEW, NotificationTarget.REVIEW_COMMENT -> {
-                val review = notification.reviewId?.let { reviews.findActiveById(it).orElse(null) }
+                val review = notification.reviewId?.let { reviews.findActiveById(it) }
                 val validComment = notification.targetType != NotificationTarget.REVIEW_COMMENT ||
                     comments.findByIdOrNull(notification.targetId)?.isDeleted == false
                 if (review == null || !validComment || review.userGame.user.isDeleted) {

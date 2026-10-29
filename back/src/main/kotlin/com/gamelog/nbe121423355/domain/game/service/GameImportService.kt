@@ -24,7 +24,7 @@ class GameImportService(
         val newGames = mutableListOf<Game>()
         val changedGames = mutableListOf<Game>()
         for (response in responses) {
-            val existingGame = gameRepository.findByIgdbId(response.id).orElse(null)
+            val existingGame = gameRepository.findByIgdbId(response.id)
             val game = existingGame?.apply { updateFromIgdb(response) }
                 ?: gameRepository.save(Game.createFromIgdb(response)).also { newGames.add(it) }
             changedGames.add(game)
@@ -47,7 +47,7 @@ class GameImportService(
             val genre =
                 genreRepository
                     .findByIgdbGenreId(response.id)
-                    .orElseGet {
+                    ?: run {
                         genreRepository.save(Genre.createFromIgdb(response.id, response.name))
                     }
             val link = GameGenre(game, genre)
@@ -62,7 +62,7 @@ class GameImportService(
             val platform =
                 platformRepository
                     .findByIgdbPlatformsId(response.id)
-                    .orElseGet {
+                    ?: run {
                         platformRepository.save(
                             Platform.createFromIgdb(
                                 response.id,
@@ -82,7 +82,7 @@ class GameImportService(
             val series =
                 gameSeriesRepository
                     .findByIgdbId(response.id)
-                    .orElseGet {
+                    ?: run {
                         gameSeriesRepository.save(
                             GameSeries.createFromIgdb(
                                 response.id,

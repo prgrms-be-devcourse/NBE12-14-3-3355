@@ -75,7 +75,7 @@ class GamePublicationTest {
                     genres = mutableListOf(IgdbGameResponse.NamedResource(10L, "RPG")),
                     platforms = mutableListOf(), collections = mutableListOf(),
                 )))
-                val game = gameRepository.findByIgdbId(1700L).orElseThrow()
+                val game = checkNotNull(gameRepository.findByIgdbId(1700L))
                 val gameId = requireNotNull(game.id)
                 assertThat(calculations.findById(gameId).orElseThrow().isReady).isFalse()
                 gameId

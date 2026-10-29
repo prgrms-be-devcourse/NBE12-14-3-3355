@@ -205,8 +205,7 @@ class UserGameService(
         val hasActiveReview =
             userGame.id?.let { userGameId ->
                 reviewRepository.findByUserGame_Id(userGameId)
-                    .filter { it.hasVisibleContent() }
-                    .isPresent
+                    ?.hasVisibleContent()
             } == true
         userGame.updateLibraryStatus(hasActiveReview)
         changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.USER_GAME_RECORD)

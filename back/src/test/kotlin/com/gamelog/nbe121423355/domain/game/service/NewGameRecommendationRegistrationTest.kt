@@ -66,7 +66,7 @@ class NewGameRecommendationRegistrationTest {
         // when: import 또는 동기화로 신규 게임을 저장하고 트랜잭션을 커밋한다.
         val id = requireNotNull(tx.execute {
             add(useSync)
-            val game = games.findByIgdbId(9700L).orElseThrow()
+            val game = checkNotNull(games.findByIgdbId(9700L))
             val state = calculations.findById(requireNotNull(game.id)).orElseThrow()
             assertThat(state.lastAttemptStatus).isEqualTo(RelatedGameCalculationStatus.PENDING)
             verifyNoInteractions(batch)
@@ -99,7 +99,7 @@ class NewGameRecommendationRegistrationTest {
         }
 
         // then: 게임과 대기 상태를 남기지 않고 커밋 후 계산도 호출하지 않는다.
-        assertThat(games.findByIgdbId(9700L)).isEmpty()
+        assertThat(games.findByIgdbId(9700L)).isNull()
         assertThat(calculations.count()).isZero()
         verifyNoInteractions(batch)
     }

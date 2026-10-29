@@ -53,12 +53,10 @@ class ReviewCommentService(
 
     private fun review(id: Long, lock: Boolean): Review {
         return (if (lock) reviews.findActiveForUpdate(id) else reviews.findActiveById(id))
-            .orElseThrow({
-                ServiceException(
-                    "404-3",
-                    "리뷰를 찾을 수 없습니다.",
-                )
-            })
+            ?: throw ServiceException(
+                "404-3",
+                "리뷰를 찾을 수 없습니다.",
+            )
     }
 
     private fun comment(reviewId: Long, id: Long, active: Boolean): ReviewComment {

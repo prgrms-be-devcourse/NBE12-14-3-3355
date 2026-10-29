@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.review.repository
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.Optional
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
@@ -28,7 +27,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
         jakarta.persistence.LockModeType.PESSIMISTIC_WRITE
     )
     @Query("SELECT r FROM Review r WHERE r.id = :id AND " + ReviewRepository.ACTIVE_REVIEW)
-    fun findActiveForUpdate(@Param("id") id: Long): Optional<Review>
+    fun findActiveForUpdate(@Param("id") id: Long): Review?
 
     @Query(
         """
@@ -43,7 +42,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findByUserGame_Id(@Param("userGameId") userGameId: Long): Optional<Review>
+    fun findByUserGame_Id(@Param("userGameId") userGameId: Long): Review?
 
     @Query(
         """
@@ -53,7 +52,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findIncludingDeletedByUserGameId(@Param("userGameId") userGameId: Long): Optional<Review>
+    fun findIncludingDeletedByUserGameId(@Param("userGameId") userGameId: Long): Review?
 
     @Query(
         """
@@ -68,7 +67,7 @@ interface ReviewRepository : JpaRepository<Review, Long> {
 
             """
     )
-    fun findActiveById(@Param("reviewId") reviewId: Long): Optional<Review>
+    fun findActiveById(@Param("reviewId") reviewId: Long): Review?
 
     @EntityGraph(attributePaths = ["userGame.user", "userGame.game", "userGame.platform"])
     @Query(

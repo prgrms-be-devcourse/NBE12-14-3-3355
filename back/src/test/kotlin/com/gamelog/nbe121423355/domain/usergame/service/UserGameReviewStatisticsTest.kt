@@ -65,7 +65,7 @@ class UserGameReviewStatisticsTest {
         return checkNotNull(records.findByIdOrNull(checkNotNull(response.userGame).id))
     }
 
-    private fun review(game: UserGame): Review { return reviews.findByUserGame_Id(checkNotNull(game.id)).orElseThrow() }
+    private fun review(game: UserGame): Review { return checkNotNull(reviews.findByUserGame_Id(checkNotNull(game.id))) }
 
     @Test
     @DisplayName("요약 카운터: 플레이 상태 상관없이 별점이나 양수 시간이 있어도 집계하고 본문만 있는 게임과 0시간은 제외")

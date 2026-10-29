@@ -71,7 +71,7 @@ constructor(
     private fun getReview(reviewId: Long): Review {
         return reviewRepository
             .findActiveById(reviewId)
-            .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
+            ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
     }
 
     private fun getUser(userId: Long): User {
