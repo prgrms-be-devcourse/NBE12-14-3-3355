@@ -12,10 +12,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.annotation.Isolation.REPEATABLE_READ
 
-@JvmRecord
 data class RelatedGameChangeSummary(val unexpandedGames: Long, val pendingTargets: Long)
 
-@JvmRecord
 data class RelatedGamePendingTarget(
     val gameId: Long,
     val requiredVersion: Long,

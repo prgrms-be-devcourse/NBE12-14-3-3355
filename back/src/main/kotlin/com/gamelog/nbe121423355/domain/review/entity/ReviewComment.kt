@@ -35,7 +35,7 @@ class ReviewComment : BaseEntity {
         protected set
 
     @jakarta.persistence.Column(nullable = false, columnDefinition = "TEXT")
-    var content: String?? = null
+    var content: String? = null
         protected set
 
     @jakarta.persistence.ManyToOne(fetch = FetchType.LAZY)
@@ -97,7 +97,7 @@ class ReviewComment : BaseEntity {
     constructor()
 
     companion object {
-        @JvmStatic
+
         private fun validate(content: String?): String {
             kotlin.require(!(content == null || content.javaIsBlank() || content.length > 1000)) {
                 "댓글은 공백이 아닌 1~1000자여야 합니다."

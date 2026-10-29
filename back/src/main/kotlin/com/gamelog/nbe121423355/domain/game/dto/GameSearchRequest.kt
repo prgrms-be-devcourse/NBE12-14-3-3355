@@ -37,13 +37,13 @@ class GameSearchRequest(
         example = "[12, 31]",
         nullable = true,
     )
-    val genreIds: MutableList<Long>?,
+    val genreIds: List<Long>?,
     @Schema(
         description = "플랫폼 ID 목록",
         example = "[6, 48]",
         nullable = true,
     )
-    val platformIds: MutableList<Long>?,
+    val platformIds: List<Long>?,
 ) {
     fun toPageable(): Pageable {
         // 기본 IGDB 평점과 집계 정렬은 Repository에서 처리하며 동점은 ID순입니다.
@@ -66,18 +66,6 @@ class GameSearchRequest(
 
     @field:Min(0) val page: Int = page ?: 0
     @field:Min(1) @field:Max(100) val size: Int = size ?: 20
-
-    fun page() = page
-
-    fun size() = size
-
-    fun sort() = sort
-
-    fun keyword() = keyword
-
-    fun genreIds() = genreIds
-
-    fun platformIds() = platformIds
 
     override fun equals(other: Any?): Boolean =
         other is GameSearchRequest &&

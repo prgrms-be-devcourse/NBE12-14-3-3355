@@ -207,7 +207,6 @@ class RelatedGamePrecomputeBatchService(
         )
     }
 
-    @JvmRecord
     data class Result(
         val acquired: Boolean,
         val processed: Long,

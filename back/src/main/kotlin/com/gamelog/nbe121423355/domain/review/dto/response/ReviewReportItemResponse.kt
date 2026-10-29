@@ -4,7 +4,6 @@ import com.gamelog.nbe121423355.domain.review.entity.ReportStatus
 import com.gamelog.nbe121423355.domain.review.entity.ReviewReport
 import java.time.LocalDateTime
 
-@JvmRecord
 data class ReviewReportItemResponse(
     val reportId: Long?,
     val reporterId: Long?,
@@ -16,7 +15,7 @@ data class ReviewReportItemResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(report: ReviewReport): ReviewReportItemResponse {
             return ReviewReportItemResponse(
                 report.id,

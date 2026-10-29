@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/v1/reviews/{reviewId}/comments")
 @Tag(name = "review-comment-controller", description = "리뷰 댓글·답글·댓글 좋아요 API")
 @ApiResponse(responseCode = "404", description = "404-3: 공개 리뷰 없음 / 404-20: 해당 리뷰의 댓글 없음", content = [Content(schema = Schema(implementation = RsData::class))])
-class ReviewCommentController constructor(private val service: ReviewCommentService) {
+class ReviewCommentController(private val service: ReviewCommentService) {
     @GetMapping
     @Operation(summary = "리뷰 댓글·답글 목록", description = "비로그인 조회가 가능합니다. 원댓글은 최대 20개, parentId를 지정한 답글은 최대 10개씩 조회합니다. 다음 페이지는 nextCursor를 after에 전달하고, null이면 마지막입니다. 답글의 답글은 조회할 수 없습니다. 로그인하면 mine·liked 등 내 상태도 반영합니다.")
     @ApiResponse(responseCode = "400", description = "400-20: 잘못된 커서 또는 원댓글이 아닌 parentId", content = [Content(schema = Schema(implementation = RsData::class))])

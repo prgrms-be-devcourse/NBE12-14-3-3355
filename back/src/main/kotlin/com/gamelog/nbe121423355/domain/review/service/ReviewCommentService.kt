@@ -10,6 +10,7 @@ import com.gamelog.nbe121423355.global.exception.ServiceException
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import java.time.LocalDateTime
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -23,7 +24,6 @@ class ReviewCommentService(
     private val users: UserRepository,
 ) {
 
-    @JvmRecord
     data class Item(
         val id: Long?,
         val parentId: Long?,
@@ -42,30 +42,27 @@ class ReviewCommentService(
         val createdDate: LocalDateTime?,
     )
 
-    @JvmRecord
     data class Page(
         val comments: List<Item>,
         val nextCursor: Long?,
         val totalCount: Long,
     )
 
-    @JvmRecord data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?)
+    data class Body(val content: String?, val spoiler: Boolean, val parentId: Long?)
 
     private fun review(id: Long, lock: Boolean): Review {
         return (if (lock) reviews.findActiveForUpdate(id) else reviews.findActiveById(id))
-            .orElseThrow({
-                ServiceException(
-                    "404-3",
-                    "리뷰를 찾을 수 없습니다.",
-                )
-            })
+            ?: throw ServiceException(
+                "404-3",
+                "리뷰를 찾을 수 없습니다.",
+            )
     }
 
     private fun comment(reviewId: Long, id: Long, active: Boolean): ReviewComment {
         return comments
-            .findById(id)
-            .filter({ c -> c.review.id == reviewId && (!active || !c.isDeleted) })
-            .orElseThrow({ ServiceException("404-20", "댓글을 찾을 수 없습니다.") })
+            .findByIdOrNull(id)
+            ?.takeIf { c -> c.review.id == reviewId && (!active || !c.isDeleted) }
+            ?: throw ServiceException("404-20", "댓글을 찾을 수 없습니다.")
     }
 
     private fun owner(c: ReviewComment, userId: Long) {
@@ -143,7 +140,7 @@ class ReviewCommentService(
                 "답글에는 답글을 달 수 없습니다.",
             )
         val user =
-            users.findById(userId).orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
+            users.findByIdOrNull(userId) ?: throw ServiceException("404-4", "사용자를 찾을 수 없습니다.")
         val c: ReviewComment =
             comments.saveAndFlush(ReviewComment(review, user, body.content, body.spoiler, parent))
         val recipients = setOfNotNull(review.userGame.user.id, parent?.user?.id)
@@ -198,13 +195,11 @@ class ReviewCommentService(
         if (value && !likes.existsById(key)) {
             val user =
                 users
-                    .findById(userId)
-                    .orElseThrow({
-                        ServiceException(
-                            "404-4",
-                            "사용자를 찾을 수 없습니다.",
-                        )
-                    })
+                    .findByIdOrNull(userId)
+                    ?: throw ServiceException(
+                        "404-4",
+                        "사용자를 찾을 수 없습니다.",
+                    )
             likes.save(ReviewCommentLike(c, user))
             notificationService.create(
                 recipients = setOf(requireNotNull(c.user.id)),

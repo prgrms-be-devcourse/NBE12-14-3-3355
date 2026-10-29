@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 
 @Schema(description = "연관 추천 게임")
-@JvmRecord
+// JPQL의 5개 인자 생성자 조회에 필요합니다. genres는 조회 후 별도로 채웁니다.
 data class RelatedGameResponse @JvmOverloads constructor(
     @field:Schema(description = "GameLog 게임 ID", example = "9") val id: Long,
     @field:Schema(description = "게임명", example = "Baldur's Gate") val title: String,

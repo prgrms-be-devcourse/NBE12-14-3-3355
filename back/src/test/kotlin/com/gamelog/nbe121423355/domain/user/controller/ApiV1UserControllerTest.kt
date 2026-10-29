@@ -168,7 +168,7 @@ constructor(
 
         val refreshToken = result.response.getCookie("refreshToken")
         assertThat(refreshToken).isNotNull
-        assertThat(refreshToken!!.isHttpOnly).isTrue()
+        assertThat(checkNotNull(refreshToken).isHttpOnly).isTrue()
     }
 
     @Test
@@ -200,7 +200,7 @@ constructor(
         // Rotation: 교체된 refreshToken이 HttpOnly 쿠키로 다시 내려옴
         val rotatedCookie = result.response.getCookie("refreshToken")
         assertThat(rotatedCookie).isNotNull
-        assertThat(rotatedCookie!!.isHttpOnly).isTrue()
+        assertThat(checkNotNull(rotatedCookie).isHttpOnly).isTrue()
         assertThat(rotatedCookie.maxAge).isPositive()
         assertThat(rotatedCookie.value).isNotEqualTo(refreshTokenCookie.value)
     }
@@ -223,7 +223,7 @@ constructor(
 
         val clearedCookie = result.response.getCookie("refreshToken")
         assertThat(clearedCookie).isNotNull
-        assertThat(clearedCookie!!.maxAge).isZero()
+        assertThat(checkNotNull(clearedCookie).maxAge).isZero()
         mockMvc.perform(post("/api/v1/users/refresh").cookie(refreshTokenCookie))
             .andExpect(status().isUnauthorized)
     }
@@ -271,7 +271,7 @@ constructor(
 
         val newCookie = result.response.getCookie("refreshToken")
         assertThat(newCookie).isNotNull
-        assertThat(newCookie!!.maxAge).isPositive()
+        assertThat(checkNotNull(newCookie).maxAge).isPositive()
 
         mockMvc.perform(post("/api/v1/users/refresh").cookie(newCookie))
             .andExpect(status().isOk)
@@ -329,7 +329,7 @@ constructor(
 
         val clearedCookie = logoutResult.response.getCookie("refreshToken")
         assertThat(clearedCookie).isNotNull
-        assertThat(clearedCookie!!.maxAge).isZero()
+        assertThat(checkNotNull(clearedCookie).maxAge).isZero()
 
         mockMvc.perform(post("/api/v1/users/refresh").cookie(refreshTokenCookie))
             .andExpect(status().isUnauthorized)
@@ -354,7 +354,7 @@ constructor(
             .andReturn()
         val refreshTokenCookie = loginResult.response.getCookie("refreshToken")
         assertThat(refreshTokenCookie).isNotNull
-        return refreshTokenCookie!!
+        return checkNotNull(refreshTokenCookie)
     }
 
     @Test

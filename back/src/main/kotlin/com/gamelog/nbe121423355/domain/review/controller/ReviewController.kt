@@ -38,8 +38,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "review-controller", description = "게임 리뷰 작성·조회·수정·삭제 API")
-class ReviewController
-constructor(
+class ReviewController(
     private val reviewService: ReviewService,
     private val gameRecordReviewService: GameRecordReviewService,
 ) {

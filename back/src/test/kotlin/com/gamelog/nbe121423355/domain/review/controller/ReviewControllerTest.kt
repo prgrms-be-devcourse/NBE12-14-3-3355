@@ -99,7 +99,7 @@ class ReviewControllerTest {
         em.flush()
         em.clear()
         assertThat(records.findById(emptyRecordId).orElseThrow().isInLibrary).isTrue()
-        assertThat(reviews.findByUserGame_Id(emptyRecordId).orElseThrow().rating)
+        assertThat(checkNotNull(reviews.findByUserGame_Id(emptyRecordId)).rating)
             .isEqualByComparingTo("4.5")
     }
 
@@ -119,7 +119,7 @@ class ReviewControllerTest {
         em.clear()
         assertThat(records.findById(emptyRecordId).orElseThrow().playTimeHours)
             .isEqualByComparingTo("12.5")
-        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isPresent()
+        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isNotNull()
     }
 
     @Test
@@ -140,7 +140,7 @@ class ReviewControllerTest {
         em.clear()
         val created = checkNotNull(records.findByUser_IdAndGame_Id(ownerId, newGameId))
         assertThat(created.isInLibrary).isTrue()
-        assertThat(reviews.findByUserGame_Id(checkNotNull(created.id))).isPresent()
+        assertThat(reviews.findByUserGame_Id(checkNotNull(created.id))).isNotNull()
     }
 
     @Test
@@ -263,7 +263,7 @@ class ReviewControllerTest {
             .json(DetailedReviewSaveRequest(gameRecord(), ReviewSaveRequest(BigDecimal("5.5"), "내용", false))))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.resultCode").value("400-1"))
-        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isEmpty()
+        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isNull()
     }
 
     @ParameterizedTest
@@ -274,7 +274,7 @@ class ReviewControllerTest {
             .json(ReviewSaveRequest(BigDecimal(rating), "새 리뷰", false)))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.resultCode").value("400-1"))
-        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isEmpty()
+        assertThat(reviews.findByUserGame_Id(emptyRecordId)).isNull()
     }
 
     @Test

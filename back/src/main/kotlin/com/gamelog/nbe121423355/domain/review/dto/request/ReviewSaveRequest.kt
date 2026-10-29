@@ -8,7 +8,6 @@ import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.PositiveOrZero
 import java.math.BigDecimal
 
-@JvmRecord
 data class ReviewSaveRequest(
     @field:PositiveOrZero(message = "리뷰 버전은 0 이상이어야 합니다.")
     @field:Schema(

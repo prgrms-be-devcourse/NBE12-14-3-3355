@@ -108,7 +108,6 @@ class NotificationService(
 
     fun unread(userId: Long): Long = notifications.countByRecipientIdAndReadAtIsNull(userId)
 
-    @JvmOverloads
     fun list(userId: Long, before: Long?, unreadOnly: Boolean = false): NotificationPageResponse {
         if (before != null && before < 1) {
             throw ServiceException("400-30", "잘못된 알림 커서입니다.")
@@ -145,7 +144,7 @@ class NotificationService(
                 users.findByIdAndDeletedAtIsNull(notification.targetId)
                     ?.let { "/profile/${it.id}" }
             NotificationTarget.REVIEW, NotificationTarget.REVIEW_COMMENT -> {
-                val review = notification.reviewId?.let { reviews.findActiveById(it).orElse(null) }
+                val review = notification.reviewId?.let { reviews.findActiveById(it) }
                 val validComment = notification.targetType != NotificationTarget.REVIEW_COMMENT ||
                     comments.findByIdOrNull(notification.targetId)?.isDeleted == false
                 if (review == null || !validComment || review.userGame.user.isDeleted) {

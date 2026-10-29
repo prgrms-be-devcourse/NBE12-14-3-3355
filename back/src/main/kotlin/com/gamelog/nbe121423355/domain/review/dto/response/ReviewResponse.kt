@@ -7,7 +7,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-@JvmRecord
 data class ReviewResponse(
     val reviewId: Long?,
     @field:Schema(description = "이 리뷰의 현재 버전. 기존 리뷰 수정 시 요청 본문의 version, 삭제 시 쿼리 파라미터 version으로 전달합니다. 성공 응답의 새 버전을 사용하고, 409-6 충돌 시 최신 리뷰를 재조회합니다.", example = "0")
@@ -34,8 +33,7 @@ data class ReviewResponse(
 ) {
 
     companion object {
-        @JvmOverloads
-        @JvmStatic
+
         fun from(review: Review, likeCount: Long = 0L): ReviewResponse {
             return ReviewResponse(
                 review.id,

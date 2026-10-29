@@ -37,7 +37,7 @@ constructor(
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-18"))
             .andExpect(jsonPath("$.data.users", hasSize<Any>(1)))
-            .andExpect(jsonPath("$.data.users[0].userId").value(user.id!!))
+            .andExpect(jsonPath("$.data.users[0].userId").value(checkNotNull(user.id)))
             .andExpect(jsonPath("$.data.users[0].followedByMe").value(false))
             .andExpect(jsonPath("$.data.page").value(0))
             .andExpect(jsonPath("$.data.size").value(10))
@@ -56,7 +56,7 @@ constructor(
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.data.users", hasSize<Any>(1)))
-            .andExpect(jsonPath("$.data.users[0].userId").value(other.id!!))
+            .andExpect(jsonPath("$.data.users[0].userId").value(checkNotNull(other.id)))
     }
 
     @Test

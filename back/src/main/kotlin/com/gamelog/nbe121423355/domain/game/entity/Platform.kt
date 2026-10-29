@@ -25,7 +25,7 @@ class Platform protected constructor() {
     }
 
     companion object {
-        @JvmStatic
+
         fun createFromIgdb(igdbId: Long?, name: String?): Platform {
             val platform = Platform()
             platform.igdbPlatformsId = igdbId

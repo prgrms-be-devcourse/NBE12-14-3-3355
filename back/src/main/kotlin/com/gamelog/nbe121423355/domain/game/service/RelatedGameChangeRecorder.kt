@@ -14,7 +14,7 @@ class RelatedGameChangeRecorder(
     private val changes: RelatedGameInputChangeRepository,
     private val jdbc: JdbcTemplate,
 ) {
-    @JvmOverloads
+
     fun record(gameId: Long, reason: RelatedGameChangeReason, previousGenres: Collection<Long> = emptyList()) {
         val currentGenres = jdbc.queryForList(
             "SELECT genre_id FROM game_genres WHERE game_id = ? ORDER BY genre_id",

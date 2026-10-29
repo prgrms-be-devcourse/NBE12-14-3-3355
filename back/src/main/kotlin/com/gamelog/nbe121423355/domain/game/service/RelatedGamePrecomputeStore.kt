@@ -39,7 +39,6 @@ class RelatedGamePrecomputeStore(
         calculation.start(attemptedAt)
     }
 
-    @JvmOverloads
     fun replace(
         gameId: Long,
         candidates: List<RelatedGameCandidateProjection>,

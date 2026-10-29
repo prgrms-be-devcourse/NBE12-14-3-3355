@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
@@ -45,20 +46,13 @@ class GameTranslationService(
             for (game in games) {
                 if (translated >= maxGames) break
                 // 원문 백업은 번역 요청 전에 커밋합니다. 외부 HTTP 호출에는 DB 트랜잭션을 유지하지 않습니다.
-                val source =
-                    transaction.execute {
-                        repository
-                            .findById(requireNotNull(game.id))
-                            .orElseThrow()
-                            .let { current ->
-                                val source = current.prepareDescriptionTranslation()
-                                changeRecorder.record(
-                                    requireNotNull(current.id),
-                                    RelatedGameChangeReason.GAME_INFORMATION,
-                                )
-                                source
-                            }
-                    }
+                val source = transaction.execute {
+                    val current = repository.findByIdOrNull(requireNotNull(game.id))
+                        ?: throw NoSuchElementException("No value present")
+                    val source = current.prepareDescriptionTranslation()
+                    changeRecorder.record(requireNotNull(current.id), RelatedGameChangeReason.GAME_INFORMATION)
+                    source
+                }
                 if (source == null || source.javaIsBlank()) continue
                 val hash = hash(source)
                 if (hash == game.descriptionTranslatedHash) continue
@@ -74,16 +68,10 @@ class GameTranslationService(
                     return translated
                 }
                 transaction.executeWithoutResult {
-                    repository
-                        .findById(requireNotNull(game.id))
-                        .orElseThrow()
-                        .also { current ->
-                            current.applyDescriptionTranslation(source, korean, hash)
-                            changeRecorder.record(
-                                requireNotNull(current.id),
-                                RelatedGameChangeReason.GAME_INFORMATION,
-                            )
-                        }
+                    val current = repository.findByIdOrNull(requireNotNull(game.id))
+                        ?: throw NoSuchElementException("No value present")
+                    current.applyDescriptionTranslation(source, korean, hash)
+                    changeRecorder.record(requireNotNull(current.id), RelatedGameChangeReason.GAME_INFORMATION)
                 }
                 translated++
                 log.info(
@@ -101,7 +89,6 @@ class GameTranslationService(
     companion object {
         private val log = LoggerFactory.getLogger(GameTranslationService::class.java)
 
-        @JvmStatic
         fun hash(source: String): String {
             try {
                 return HexFormat.of()

@@ -47,7 +47,7 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
                 .post()
                 .uri("/v2/translate")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(java.util.Map.of("text", java.util.List.of(source), "target_lang", "KO"))
+                .body(mapOf("text" to listOf(source), "target_lang" to "KO"))
                 .retrieve()
                 .body<Result>(Result::class.java)
         val translated = result?.translations?.singleOrNull()?.text
@@ -55,9 +55,9 @@ class DeepLClient(@Value("\${DEEPL_API_KEY:}") key: String) {
         return translated
     }
 
-    @JvmRecord data class Usage(val character_count: Long?, val character_limit: Long?)
+    data class Usage(val character_count: Long?, val character_limit: Long?)
 
-    @JvmRecord data class Result(val translations: MutableList<Translation>?)
+    data class Result(val translations: List<Translation>?)
 
-    @JvmRecord data class Translation(val text: String?)
+    data class Translation(val text: String?)
 }

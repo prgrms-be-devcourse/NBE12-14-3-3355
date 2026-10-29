@@ -208,7 +208,7 @@ class ReviewReportConcurrencyTest {
             val intake = executor.submit(Callable {
                 try {
                     val reportId = inTransaction {
-                        assertThat(reviews.findActiveById(f.reviewId)).isPresent()
+                        assertThat(reviews.findActiveById(f.reviewId)).isNotNull()
                         reviewRead.countDown()
                         check(moderationFinished.await(15, TimeUnit.SECONDS))
                         requireNotNull(service.createReport(reporterId, f.reviewId,

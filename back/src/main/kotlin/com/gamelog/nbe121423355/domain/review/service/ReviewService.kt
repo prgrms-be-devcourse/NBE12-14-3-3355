@@ -14,7 +14,6 @@ import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.domain.usergame.repository.UserGameRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.LocalDateTime
-import kotlin.jvm.optionals.getOrNull
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.repository.findByIdOrNull
@@ -24,8 +23,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class ReviewService
-constructor(
+class ReviewService(
     private val changeRecorder: RelatedGameChangeRecorder,
     private val reviewRepository: ReviewRepository,
     private val reviewLikeRepository: ReviewLikeRepository,
@@ -38,7 +36,6 @@ constructor(
         val review =
             reviewRepository
                 .findByUserGame_Id(checkNotNull(userGame.id))
-                .getOrNull()
                 ?.let(::toReviewResponse)
         return DetailedReviewResponse(UserGameDto(userGame), review)
     }
@@ -50,7 +47,7 @@ constructor(
         validateOwner(userId, userGame)
         changeRecorder.record(requireNotNull(userGame.game.id), RelatedGameChangeReason.REVIEW)
         // 리뷰가 있으면 수정하고 없으면 새로 작성.
-        val review = reviewRepository.findIncludingDeletedByUserGameId(userGameId).getOrNull()
+        val review = reviewRepository.findIncludingDeletedByUserGameId(userGameId)
         if (review != null) {
             if (review.isDeletedByUser) {
                 validateVersionWhenProvided(review, request.version)
@@ -106,7 +103,6 @@ constructor(
         val review =
             reviewRepository
                 .findActiveForUpdate(reviewId)
-                .getOrNull()
                 ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
         validateOwner(userId, review.userGame)
         validateVersion(review, version)
@@ -129,13 +125,12 @@ constructor(
             ?: throw ServiceException("404-2", "게임 기록을 찾을 수 없습니다.")
 
     private fun getReviewEntity(reviewId: Long): Review =
-        reviewRepository.findActiveById(reviewId).getOrNull()
+        reviewRepository.findActiveById(reviewId)
             ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
 
     fun getReviewByUserGameId(userGameId: Long): ReviewResponse? =
         reviewRepository
             .findByUserGame_Id(userGameId)
-            .getOrNull()
             ?.let(::toReviewResponse)
 
     private fun toReviewResponse(review: Review): ReviewResponse {

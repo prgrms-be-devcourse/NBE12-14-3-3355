@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "review-report-controller", description = "리뷰 신고 접수 및 관리자 처리 API")
-class ReviewReportController constructor(private val reviewReportService: ReviewReportService) {
+class ReviewReportController(private val reviewReportService: ReviewReportService) {
     @PostMapping("/reviews/{reviewId}/reports")
     @Operation(
         summary = "리뷰 신고 접수",

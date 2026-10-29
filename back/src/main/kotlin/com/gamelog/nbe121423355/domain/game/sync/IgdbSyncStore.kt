@@ -4,22 +4,22 @@ import com.gamelog.nbe121423355.domain.game.dto.IgdbGameResponse
 import com.gamelog.nbe121423355.global.exception.ServiceException
 import java.time.Instant
 import java.util.UUID
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class IgdbSyncStore
-constructor(private val repository: IgdbSyncRepository, private val catalog: IgdbSyncCatalog) {
+class IgdbSyncStore(private val repository: IgdbSyncRepository, private val catalog: IgdbSyncCatalog) {
     @Transactional(readOnly = true)
     fun status(): IgdbSyncState {
-        return repository.findById(1L).orElseGet({ IgdbSyncState() })
+        return repository.findByIdOrNull(1L) ?: IgdbSyncState()
     }
 
     @Transactional
     fun claim(userId: Long): IgdbSyncState {
-        val state = repository.lockState().orElseGet({ repository.saveAndFlush(IgdbSyncState()) })
-        val now = Instant.now().getEpochSecond()
-        if ("RUNNING".equals(state.status) && state.leaseUntil > now)
+        val state = repository.lockState() ?: repository.saveAndFlush(IgdbSyncState())
+        val now = Instant.now().epochSecond
+        if (state.status == "RUNNING" && state.leaseUntil > now)
             throw ServiceException(
                 "409-1",
                 "이미 동기화가 실행 중입니다.",
@@ -29,7 +29,7 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
             state.mode = if (state.watermark == null) "FULL" else "INCREMENTAL"
             state.sinceEpoch =
                 if (state.watermark == null) null
-                else Math.max(0, requireNotNull(state.watermark) - 300)
+                else (requireNotNull(state.watermark) - 300).coerceAtLeast(0)
             state.cutoff = now
             state.skipped = 0
             state.deleted = state.skipped
@@ -49,7 +49,7 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
 
     @Transactional
     fun cancel(): IgdbSyncState {
-        val state = repository.lockState().orElseGet { IgdbSyncState() }
+        val state = repository.lockState() ?: IgdbSyncState()
         if (state.status == "RUNNING") {
             state.status = "STOPPED"
             state.error = null
@@ -61,13 +61,13 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
 
     // 카탈로그 변경과 커서 저장을 같은 트랜잭션으로 처리합니다.
     @Transactional(timeout = 180)
-    fun savePage(runId: String, page: MutableList<IgdbGameResponse>): Boolean {
-        val state = repository.lockState().orElseThrow()
-        if (!runId.equals(state.runId) || !"RUNNING".equals(state.status)) return false
+    fun savePage(runId: String, page: List<IgdbGameResponse>): Boolean {
+        val state = repository.lockState() ?: throw NoSuchElementException("No value present")
+        if (runId != state.runId || state.status != "RUNNING") return false
         if (page.isEmpty()) {
             state.status = "SUCCEEDED"
             state.watermark = state.cutoff
-            state.finishedAt = Instant.now().getEpochSecond()
+            state.finishedAt = Instant.now().epochSecond
             state.leaseUntil = 0
             return false
         }
@@ -83,7 +83,7 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
         state.deleted += counts.deleted
         state.skipped += counts.skipped
         state.cursorId = cursor
-        state.leaseUntil = Instant.now().getEpochSecond() + 600
+        state.leaseUntil = Instant.now().epochSecond + 600
         return true
     }
 
@@ -91,13 +91,13 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
     fun fail(runId: String) {
         repository
             .lockState()
-            .ifPresent({ state ->
-                if (runId.equals(state.runId) && "RUNNING".equals(state.status)) {
+            ?.let { state ->
+                if (runId == state.runId && state.status == "RUNNING") {
                     state.status = "FAILED"
                     state.error = "동기화가 중단되었습니다. 서버 로그를 확인한 후 이어서 실행하세요."
                     state.leaseUntil = 0
-                    state.finishedAt = Instant.now().getEpochSecond()
+                    state.finishedAt = Instant.now().epochSecond
                 }
-            })
+            }
     }
 }

@@ -92,7 +92,7 @@ class ReviewWithdrawalConcurrencyTest {
             val update = executor.submit(Callable {
                 try {
                     inTransaction {
-                        val loaded = reviews.findActiveById(f.reviewId).orElseThrow()
+                        val loaded = checkNotNull(reviews.findActiveById(f.reviewId))
                         check(loaded.version == f.version)
                         reviewLoaded.countDown()
                         check(withdrawalFinished.await(15, TimeUnit.SECONDS))
@@ -132,7 +132,7 @@ class ReviewWithdrawalConcurrencyTest {
             assertThat(saved.version).isEqualTo(f.version + 1)
             assertThat(saved.content).isEqualTo("탈퇴 전 원문")
             assertThat(saved.rating).isEqualByComparingTo("4.0")
-            assertThat(reviews.findActiveById(f.reviewId)).isEmpty()
+            assertThat(reviews.findActiveById(f.reviewId)).isNull()
             assertThat(reviewService.getGameReviews(f.gameId, PageRequest.of(0, 20)).reviews).isEmpty()
             val record = records.findById(f.recordId).orElseThrow()
             assertThat(record.playTimeHours).isEqualByComparingTo("10.0")
