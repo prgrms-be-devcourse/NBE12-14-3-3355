@@ -1,0 +1,20 @@
+package com.gamelog.nbe121423355.support
+
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection
+import org.springframework.context.annotation.Bean
+import org.testcontainers.mysql.MySQLContainer
+
+@TestConfiguration(proxyBeanMethods = false)
+class MySqlTestConfiguration {
+    // Spring 컨텍스트와 수명을 맞춰 캐시된 컨텍스트가 종료된 컨테이너를 재사용하지 않게 한다.
+    // ServiceConnection이 이 컨테이너의 접속 정보를 데이터소스로 등록한다.
+    @Bean
+    @ServiceConnection
+    fun mysqlContainer(): MySQLContainer =
+        MySQLContainer("mysql:8.4")
+            .withDatabaseName("gamelog_test")
+            .withUsername("test")
+            .withPassword("test")
+            .withUrlParam("serverTimezone", "UTC")
+}
