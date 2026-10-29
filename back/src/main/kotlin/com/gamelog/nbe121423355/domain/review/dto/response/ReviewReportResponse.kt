@@ -6,7 +6,6 @@ import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-@JvmRecord
 data class ReviewReportResponse(
     val reportId: Long?,
     val reviewId: Long?,
@@ -25,7 +24,7 @@ data class ReviewReportResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(report: ReviewReport): ReviewReportResponse {
             val hasSnapshot = report.hasReviewSnapshot()
             return ReviewReportResponse(

@@ -51,7 +51,7 @@ constructor(
             .andExpect(status().isForbidden)
             .andExpect(jsonPath("$.resultCode").value("403-1"))
 
-        assertThat(userRepository.findByIdOrNull(target.id!!)!!.role).isEqualTo("USER")
+        assertThat(checkNotNull(userRepository.findByIdOrNull(checkNotNull(target.id))).role).isEqualTo("USER")
     }
 
     @Test
@@ -66,10 +66,10 @@ constructor(
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultCode").value("200-20"))
-            .andExpect(jsonPath("$.data.id").value(target.id!!))
+            .andExpect(jsonPath("$.data.id").value(checkNotNull(target.id)))
             .andExpect(jsonPath("$.data.role").value("ADMIN"))
 
-        assertThat(userRepository.findByIdOrNull(target.id!!)!!.role).isEqualTo("ADMIN")
+        assertThat(checkNotNull(userRepository.findByIdOrNull(checkNotNull(target.id))).role).isEqualTo("ADMIN")
     }
 
     @Test

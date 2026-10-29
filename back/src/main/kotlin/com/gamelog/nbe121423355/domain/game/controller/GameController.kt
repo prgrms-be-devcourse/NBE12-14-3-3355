@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/api/v1/games")
 @Tag(name = "game-controller", description = "게임 검색 및 목록 조회 API")
-class GameController constructor(private val gameService: GameService) {
+class GameController(private val gameService: GameService) {
     @GetMapping("/suggestions")
     @Operation(summary = "게임 검색어 자동완성", description = "비로그인 조회가 가능합니다. 제목 검색 후보를 반환하며 keyword 생략·공백은 200과 빈 목록입니다.")
     fun suggestions(

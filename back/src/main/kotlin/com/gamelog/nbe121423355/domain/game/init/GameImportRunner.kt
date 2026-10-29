@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 @Component
 @Profile("local")
 @ConditionalOnProperty(name = ["igdb.import.enabled"], havingValue = "true")
-class GameImportRunner constructor(private val gameCollectionService: GameCollectionService) :
+class GameImportRunner(private val gameCollectionService: GameCollectionService) :
     CommandLineRunner {
 
     override fun run(vararg args: String) {

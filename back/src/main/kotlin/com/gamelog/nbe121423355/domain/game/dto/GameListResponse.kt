@@ -6,7 +6,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 @Schema(description = "게임 목록 항목")
-@JvmRecord
 data class GameListResponse(
     @field:Schema(description = "GameLog 게임 ID", example = "6") val id: Long?,
     @field:Schema(description = "게임명", example = "Baldur's Gate II: Shadows of Amn")

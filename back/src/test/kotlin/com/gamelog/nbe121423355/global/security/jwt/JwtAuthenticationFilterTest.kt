@@ -51,7 +51,7 @@ constructor(
                 .andReturn()
         val refreshTokenCookie = loginResult.response.getCookie("refreshToken")
         assertThat(refreshTokenCookie).isNotNull
-        return refreshTokenCookie!!
+        return checkNotNull(refreshTokenCookie)
     }
 
     // 시간이 지나 만료된(서명은 정상) accessToken을 직접 생성
@@ -111,7 +111,7 @@ constructor(
         // Rotation: 자동 재발급 시에도 교체된 refreshToken이 Set-Cookie로 내려옴
         val rotatedCookie = result.response.getCookie("refreshToken")
         assertThat(rotatedCookie).isNotNull
-        assertThat(rotatedCookie!!.value).isNotEqualTo(refreshTokenCookie.value)
+        assertThat(checkNotNull(rotatedCookie).value).isNotEqualTo(refreshTokenCookie.value)
     }
 
     @Test

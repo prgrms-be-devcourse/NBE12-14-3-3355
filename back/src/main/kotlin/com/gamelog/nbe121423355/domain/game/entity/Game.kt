@@ -12,7 +12,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZoneOffset.UTC
-import java.util.stream.Collectors
 
 @jakarta.persistence.Entity
 @jakarta.persistence.Table(name = "games")
@@ -101,7 +100,7 @@ class Game protected constructor() : BaseEntity() {
 
     // 기존 게임의 IGDB 정보 갱신
     fun updateFromIgdb(response: IgdbGameResponse) {
-        kotlin.require(!(response.id == null || !response.id.equals(this.igdbId))) {
+        kotlin.require(response.id != null && response.id == igdbId) {
             "IGDB 게임 ID가 일치하지 않습니다."
         }
         kotlin.require(!(response.name == null || response.name.javaIsBlank())) { "게임 이름은 필수입니다." }
@@ -111,7 +110,7 @@ class Game protected constructor() : BaseEntity() {
             // 번역 실패 시에도 기존 한국어 설명을 유지합니다.
             if (descriptionTranslatedHash == null) this.description = response.summary
         }
-        val coverUrl = if (response.cover == null) null else response.cover.url
+        val coverUrl = response.cover?.url
         this.coverImageUrl =
             if (coverUrl != null && coverUrl.startsWith("//")) "https:" + coverUrl else coverUrl
         this.releaseDate =
@@ -121,24 +120,19 @@ class Game protected constructor() : BaseEntity() {
                     .atZone(ZoneOffset.UTC)
                     .toLocalDate()
         this.igdbRating =
-            if (response.rating == null) null else response.rating.setScale(2, RoundingMode.HALF_UP)
-        val developers =
-            if (response.involved_companies == null) ""
-            else
-                response.involved_companies
-                    .stream()
-                    .filter({ item -> true.equals(item.developer) })
-                    .filter({ item -> item.company != null })
-                    .map({ item -> item.company?.name })
-                    .filter({ name -> name != null && !name.javaIsBlank() })
-                    .distinct()
-                    .collect(Collectors.joining(", "))
+            response.rating?.setScale(2, RoundingMode.HALF_UP)
+        val developers = response.involved_companies.orEmpty().asSequence()
+            .filter { it.developer == true }
+            .mapNotNull { it.company?.name }
+            .filterNot { it.javaIsBlank() }
+            .distinct()
+            .joinToString(", ")
         this.developer = if (developers.javaIsBlank()) null else developers
     }
 
     companion object {
         // IGDB 데이터로 새 게임 생성
-        @JvmStatic
+
         fun createFromIgdb(response: IgdbGameResponse): Game {
             val game = Game()
             game.igdbId = response.id

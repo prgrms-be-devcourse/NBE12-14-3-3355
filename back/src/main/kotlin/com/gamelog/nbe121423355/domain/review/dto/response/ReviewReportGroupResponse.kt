@@ -6,7 +6,6 @@ import com.gamelog.nbe121423355.domain.review.entity.ReviewStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-@JvmRecord
 data class ReviewReportGroupResponse(
     val reviewId: Long?,
     val gameId: Long?,
@@ -27,7 +26,7 @@ data class ReviewReportGroupResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(source: List<ReviewReport>): ReviewReportGroupResponse {
             require(source.isNotEmpty()) { "신고 묶음은 비어 있을 수 없습니다." }
 

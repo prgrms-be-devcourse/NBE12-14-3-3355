@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import java.math.BigDecimal
 
 @Schema(description = "게임 커뮤니티 기록 통계")
-@JvmRecord
 data class GameStatisticsResponse(
     @field:Schema(description = "플레이 완료 사용자 수", example = "120") val playedCount: Long,
     @field:Schema(description = "플레이 중 사용자 수", example = "15") val playingCount: Long,

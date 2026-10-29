@@ -88,7 +88,7 @@ class RecommendationLifecycleTest {
         doThrow(IllegalStateException("계산 오류"))
             .`when`(query).findCandidatesForPrecompute(anyLong(), eq(20), eq(true))
         imports.saveGames(mutableListOf(response(200L, "신규 게임")))
-        val sourceId = id(games.findByIgdbId(200L).orElseThrow())
+        val sourceId = id(checkNotNull(games.findByIgdbId(200L)))
         val failed = calculations.findById(sourceId).orElseThrow()
         assertThat(failed.lastAttemptStatus).isEqualTo(RelatedGameCalculationStatus.FAILED)
         assertThat(failed.lastSuccessAt).isNull()
@@ -147,7 +147,7 @@ class RecommendationLifecycleTest {
         // when: 잠금 경합 중 신규 게임을 등록하여 즉시 계산을 시도한다.
         val sourceId = requireNotNull(lock.tryRun { checkOwnership ->
             imports.saveGames(mutableListOf(response(200L, "대기 게임")))
-            val id = id(games.findByIgdbId(200L).orElseThrow())
+            val id = id(checkNotNull(games.findByIgdbId(200L)))
             val state = calculations.findById(id).orElseThrow()
             assertThat(state.lastAttemptStatus).isEqualTo(RelatedGameCalculationStatus.PENDING)
             assertThat(state.lastSuccessAt).isNull()

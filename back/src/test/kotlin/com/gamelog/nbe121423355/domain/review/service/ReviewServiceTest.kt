@@ -68,7 +68,7 @@ class ReviewServiceTest {
     fun saveNewReview() {
         prepareOwnedUserGame()
         `when`(userGameRepository.findById(USER_GAME_ID)).thenReturn(Optional.of(userGame))
-        `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID)).thenReturn(Optional.empty())
+        `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID)).thenReturn(null)
         `when`(reviewRepository.save(anyReview())).thenAnswer { invocation ->
             invocation.getArgument<Review>(0).also { ReflectionTestUtils.setField(it, "id", 10L) }
         }
@@ -92,7 +92,7 @@ class ReviewServiceTest {
         `when`(existingReview.version).thenReturn(2L)
         `when`(userGameRepository.findById(USER_GAME_ID)).thenReturn(Optional.of(userGame))
         `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID))
-            .thenReturn(Optional.of(existingReview))
+            .thenReturn(existingReview)
 
         reviewService.saveReview(
             USER_ID, USER_GAME_ID, ReviewSaveRequest(2L, BigDecimal("3.5"), "수정된 리뷰", true),
@@ -111,7 +111,7 @@ class ReviewServiceTest {
         `when`(deletedReview.isDeletedByUser).thenReturn(true)
         `when`(userGameRepository.findById(USER_GAME_ID)).thenReturn(Optional.of(userGame))
         `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID))
-            .thenReturn(Optional.of(deletedReview))
+            .thenReturn(deletedReview)
 
         reviewService.saveReview(
             USER_ID, USER_GAME_ID, ReviewSaveRequest(BigDecimal("4.0"), "다시 작성한 리뷰", false),
@@ -159,7 +159,7 @@ class ReviewServiceTest {
         val review = prepareReview()
         `when`(review.id).thenReturn(10L)
         `when`(review.content).thenReturn("조회할 리뷰")
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveById(10L)).thenReturn(review)
 
         val response = reviewService.getReview(10L)
 
@@ -170,7 +170,7 @@ class ReviewServiceTest {
     @DisplayName("존재하지 않는 리뷰를 조회하면 404 오류가 발생한다")
     @Test
     fun getMissingReview() {
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.empty())
+        `when`(reviewRepository.findActiveById(10L)).thenReturn(null)
 
         assertThatThrownBy { reviewService.getReview(10L) }
             .isInstanceOf(ServiceException::class.java)
@@ -185,7 +185,7 @@ class ReviewServiceTest {
         prepareOwnedUserGame()
         val review = prepareReview()
         `when`(review.version).thenReturn(4L)
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveById(10L)).thenReturn(review)
 
         reviewService.updateReview(USER_ID, 10L, ReviewSaveRequest(4L, null, "글만 남긴 리뷰", true))
 
@@ -199,7 +199,7 @@ class ReviewServiceTest {
         `when`(userGame.user).thenReturn(user)
         `when`(user.id).thenReturn(2L)
         val review = prepareReview()
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveById(10L)).thenReturn(review)
 
         assertThatThrownBy {
             reviewService.updateReview(USER_ID, 10L, ReviewSaveRequest(BigDecimal("3.0"), null, false))
@@ -222,7 +222,7 @@ class ReviewServiceTest {
         `when`(user.id).thenReturn(USER_ID)
         val review = prepareReview()
         `when`(review.version).thenReturn(1L)
-        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(review)
 
         reviewService.deleteReview(USER_ID, 10L, 1L)
 
@@ -266,7 +266,7 @@ class ReviewServiceTest {
         `when`(userGame.user).thenReturn(user)
         `when`(user.id).thenReturn(2L)
         val review = prepareReview()
-        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(review)
 
         assertThatThrownBy { reviewService.deleteReview(USER_ID, 10L, 0L) }
             .isInstanceOf(ServiceException::class.java)
@@ -284,7 +284,7 @@ class ReviewServiceTest {
         prepareOwnedUserGame()
         val review = prepareReview()
         `when`(review.version).thenReturn(5L)
-        `when`(reviewRepository.findActiveById(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveById(10L)).thenReturn(review)
 
         assertThatThrownBy {
             reviewService.updateReview(USER_ID, 10L, ReviewSaveRequest(4L, BigDecimal("3.0"), "오래된 내용", false))
@@ -303,7 +303,7 @@ class ReviewServiceTest {
         prepareOwnedUserGame()
         val review = mock(Review::class.java)
         `when`(review.isActive).thenReturn(true)
-        `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findIncludingDeletedByUserGameId(USER_GAME_ID)).thenReturn(review)
         `when`(userGameRepository.findById(USER_GAME_ID)).thenReturn(Optional.of(userGame))
 
         assertThatThrownBy {
@@ -322,7 +322,7 @@ class ReviewServiceTest {
         prepareOwnedUserGame()
         val review = prepareReview()
         `when`(review.version).thenReturn(3L)
-        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findActiveForUpdate(10L)).thenReturn(review)
 
         assertThatThrownBy { reviewService.deleteReview(USER_ID, 10L, 2L) }
             .isInstanceOf(ServiceException::class.java)
@@ -404,7 +404,7 @@ class ReviewServiceTest {
         `when`(userGame.game).thenReturn(game)
         `when`(game.id).thenReturn(GAME_ID)
         `when`(userGameRepository.findByUser_IdAndGame_Id(USER_ID, GAME_ID)).thenReturn(userGame)
-        `when`(reviewRepository.findByUserGame_Id(USER_GAME_ID)).thenReturn(Optional.empty())
+        `when`(reviewRepository.findByUserGame_Id(USER_GAME_ID)).thenReturn(null)
 
         val response = reviewService.getMyDetailedReview(USER_ID, GAME_ID)
 
@@ -423,7 +423,7 @@ class ReviewServiceTest {
         `when`(review.id).thenReturn(10L)
         `when`(review.content).thenReturn("내 상세 리뷰")
         `when`(userGameRepository.findByUser_IdAndGame_Id(USER_ID, GAME_ID)).thenReturn(userGame)
-        `when`(reviewRepository.findByUserGame_Id(USER_GAME_ID)).thenReturn(Optional.of(review))
+        `when`(reviewRepository.findByUserGame_Id(USER_GAME_ID)).thenReturn(review)
 
         val response = reviewService.getMyDetailedReview(USER_ID, GAME_ID)
 

@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.review.dto.response
 import com.gamelog.nbe121423355.domain.review.entity.Review
 import org.springframework.data.domain.Page
 
-@JvmRecord
 data class ReviewPageResponse(
     val reviews: List<ReviewResponse>,
     val page: Int,
@@ -15,7 +14,7 @@ data class ReviewPageResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(
             reviewPage: Page<Review>,
             likeCounts: Map<Long, Long>,
@@ -27,7 +26,7 @@ data class ReviewPageResponse(
 
             return ReviewPageResponse(
                 reviews,
-                reviewPage.getNumber(),
+                reviewPage.number,
                 reviewPage.size,
                 reviewPage.totalElements,
                 reviewPage.totalPages,

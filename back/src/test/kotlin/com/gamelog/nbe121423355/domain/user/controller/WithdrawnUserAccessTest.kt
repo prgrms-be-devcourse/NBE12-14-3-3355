@@ -75,7 +75,7 @@ constructor(
 
         mockMvc.perform(builder)
 
-        val saved = userRepository.findByIdOrNull(user.id!!)!!
+        val saved = checkNotNull(userRepository.findByIdOrNull(checkNotNull(user.id)))
         assertThat(saved.nickname).isEqualTo("탈퇴한사용자_${user.id}")
         assertThat(saved.email).isEqualTo("deleted_${user.id}@deleted.local")
         assertThat(saved.isOnboardingCompleted).isFalse()

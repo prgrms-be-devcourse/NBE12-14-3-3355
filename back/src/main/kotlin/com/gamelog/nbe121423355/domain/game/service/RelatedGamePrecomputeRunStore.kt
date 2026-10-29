@@ -18,7 +18,7 @@ class RelatedGamePrecomputeRunStore(
     private val runRepository: RelatedGamePrecomputeRunRepository,
     private val failureRepository: RelatedGamePrecomputeRunFailureRepository,
 ) {
-    @JvmOverloads
+
     fun create(
         requestedBy: Long,
         target: RelatedGamePrecomputeTarget,

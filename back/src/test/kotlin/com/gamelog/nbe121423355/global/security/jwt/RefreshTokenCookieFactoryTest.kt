@@ -73,7 +73,7 @@ class RefreshTokenCookieFactoryTest {
         // MockHttpServletResponse가 Expires 날짜 형식을 바꿔 저장하므로 문자열 대신 파싱된 쿠키로 비교
         val cookie = response.getCookie(RefreshTokenCookieFactory.COOKIE_NAME)
         assertThat(cookie).isNotNull
-        assertThat(cookie!!.value).isEqualTo("refresh-token")
+        assertThat(checkNotNull(cookie).value).isEqualTo("refresh-token")
         assertThat(cookie.isHttpOnly).isTrue()
     }
 

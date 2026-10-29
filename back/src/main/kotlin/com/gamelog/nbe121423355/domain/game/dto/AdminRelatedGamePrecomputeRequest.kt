@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 // gameIds는 관리자 입력창의 쉼표·공백·줄바꿈 구분 문자열을 받는다.
-data class AdminRelatedGamePrecomputeRequest @JvmOverloads constructor(
+data class AdminRelatedGamePrecomputeRequest(
     @field:NotNull
     @field:Schema(description = "실행 대상 종류. ALL·IDS·FAILED·UNREADY·CHANGED 중 선택합니다. IDS일 때만 gameIds를 입력합니다.", example = "IDS")
     val type: RelatedGamePrecomputeTargetType?,

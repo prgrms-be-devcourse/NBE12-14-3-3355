@@ -14,41 +14,16 @@ class GameSeriesGameId : Serializable {
     final var gameId: Long? = null
         private set
 
-    public override fun equals(o: Any?): Boolean {
-        if (o === this) return true
-        if (o !is GameSeriesGameId) return false
-        val other = o
-        if (!other.canEqual(this as Any)) return false
-        val `this$seriesId`: Any? = this.seriesId
-        val `other$seriesId`: Any? = other.seriesId
-        if (
-            if (`this$seriesId` == null) `other$seriesId` != null
-            else !`this$seriesId`.equals(`other$seriesId`)
-        )
-            return false
-        val `this$gameId`: Any? = this.gameId
-        val `other$gameId`: Any? = other.gameId
-        if (
-            if (`this$gameId` == null) `other$gameId` != null
-            else !`this$gameId`.equals(`other$gameId`)
-        )
-            return false
-        return true
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is GameSeriesGameId || !other.canEqual(this)) return false
+        return seriesId == other.seriesId && gameId == other.gameId
     }
 
-    protected fun canEqual(other: Any?): Boolean {
-        return other is GameSeriesGameId
-    }
+    protected fun canEqual(other: Any?): Boolean = other is GameSeriesGameId
 
-    public override fun hashCode(): Int {
-        val PRIME = 59
-        var result = 1
-        val `$seriesId`: Any? = this.seriesId
-        result = result * PRIME + (if (`$seriesId` == null) 43 else `$seriesId`.hashCode())
-        val `$gameId`: Any? = this.gameId
-        result = result * PRIME + (if (`$gameId` == null) 43 else `$gameId`.hashCode())
-        return result
-    }
+    override fun hashCode(): Int =
+        59 * (59 + (seriesId?.hashCode() ?: 43)) + (gameId?.hashCode() ?: 43)
 
     protected constructor()
 

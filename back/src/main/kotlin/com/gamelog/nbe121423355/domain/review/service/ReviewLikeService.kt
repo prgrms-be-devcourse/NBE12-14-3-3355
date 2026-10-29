@@ -11,13 +11,13 @@ import com.gamelog.nbe121423355.domain.review.repository.ReviewRepository
 import com.gamelog.nbe121423355.domain.user.entity.User
 import com.gamelog.nbe121423355.domain.user.repository.UserRepository
 import com.gamelog.nbe121423355.global.exception.ServiceException
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class ReviewLikeService
-constructor(
+class ReviewLikeService(
     private val notificationService: NotificationService,
     private val reviewLikeRepository: ReviewLikeRepository,
     private val reviewRepository: ReviewRepository,
@@ -71,12 +71,12 @@ constructor(
     private fun getReview(reviewId: Long): Review {
         return reviewRepository
             .findActiveById(reviewId)
-            .orElseThrow({ ServiceException("404-3", "리뷰를 찾을 수 없습니다.") })
+            ?: throw ServiceException("404-3", "리뷰를 찾을 수 없습니다.")
     }
 
     private fun getUser(userId: Long): User {
         return userRepository
-            .findById(userId)
-            .orElseThrow({ ServiceException("404-4", "사용자를 찾을 수 없습니다.") })
+            .findByIdOrNull(userId)
+            ?: throw ServiceException("404-4", "사용자를 찾을 수 없습니다.")
     }
 }

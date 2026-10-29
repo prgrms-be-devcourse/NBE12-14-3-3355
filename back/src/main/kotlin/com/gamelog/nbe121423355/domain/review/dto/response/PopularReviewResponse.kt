@@ -5,7 +5,6 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 
 @Schema(description = "인기 리뷰 정보")
-@JvmRecord
 data class PopularReviewResponse(
     @field:Schema(description = "리뷰 ID", example = "13") val reviewId: Long,
     @field:Schema(description = "작성자 ID", example = "4") val userId: Long,

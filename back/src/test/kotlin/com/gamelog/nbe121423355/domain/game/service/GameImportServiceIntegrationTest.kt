@@ -26,18 +26,18 @@ class GameImportServiceIntegrationTest {
         assertThat(imports.saveGames(mutableListOf(first, second))).isEqualTo(2)
         em.flush()
         em.clear()
-        val firstId = requireNotNull(games.findByIgdbId(81001L).orElseThrow().id)
-        val secondId = requireNotNull(games.findByIgdbId(81002L).orElseThrow().id)
+        val firstId = requireNotNull(checkNotNull(games.findByIgdbId(81001L)).id)
+        val secondId = requireNotNull(checkNotNull(games.findByIgdbId(81002L)).id)
 
         assertThat(imports.saveGames(mutableListOf(response(81001L, "Updated"), second)))
             .isEqualTo(2)
         em.flush()
         em.clear()
 
-        val updated = games.findByIgdbId(81001L).orElseThrow()
+        val updated = checkNotNull(games.findByIgdbId(81001L))
         assertThat(requireNotNull(updated.id)).isEqualTo(firstId)
         assertThat(updated.title).isEqualTo("Updated")
-        assertThat(games.findByIgdbId(81002L).orElseThrow().id).isEqualTo(secondId)
+        assertThat(checkNotNull(games.findByIgdbId(81002L)).id).isEqualTo(secondId)
         assertThat(games.count()).isEqualTo(2L)
         assertThat(count("Genre")).isEqualTo(1L)
         assertThat(count("Platform")).isEqualTo(1L)
@@ -52,7 +52,7 @@ class GameImportServiceIntegrationTest {
         imports.saveGames(mutableListOf(response(81001L, "First")))
         em.flush()
         em.clear()
-        val id = requireNotNull(games.findByIgdbId(81001L).orElseThrow().id)
+        val id = requireNotNull(checkNotNull(games.findByIgdbId(81001L)).id)
 
         imports.saveGames(
             mutableListOf(
@@ -73,7 +73,7 @@ class GameImportServiceIntegrationTest {
         em.flush()
         em.clear()
 
-        assertThat(games.findByIgdbId(81001L).orElseThrow().id).isEqualTo(id)
+        assertThat(checkNotNull(games.findByIgdbId(81001L)).id).isEqualTo(id)
         assertLinks(id)
     }
 

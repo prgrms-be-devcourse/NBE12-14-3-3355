@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/community/reviews")
 @Tag(name = "community-review-controller", description = "로그인 사용자 커뮤니티 리뷰 피드")
 @ApiResponse(responseCode = "401", description = "401-1: 로그인 필요", content = [Content(schema = Schema(implementation = RsData::class))])
-class CommunityReviewController constructor(private val service: CommunityReviewService) {
+class CommunityReviewController(private val service: CommunityReviewService) {
     @GetMapping("/following")
     @Operation(summary = "팔로잉 리뷰 피드", description = "로그인한 사용자가 팔로우하는 사용자의 공개 리뷰 피드를 조회합니다. page는 0부터 시작합니다.", security = [SecurityRequirement(name = "bearerAuth")])
     @ApiResponse(responseCode = "200", description = "200-1: 팔로잉 리뷰 피드", useReturnTypeSchema = true)

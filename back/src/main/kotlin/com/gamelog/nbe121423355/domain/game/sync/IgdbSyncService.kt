@@ -6,8 +6,7 @@ import java.util.concurrent.*
 import org.springframework.stereotype.Service
 
 @Service
-class IgdbSyncService
-constructor(private val store: IgdbSyncStore, private val client: IgdbClient) {
+class IgdbSyncService(private val store: IgdbSyncStore, private val client: IgdbClient) {
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
 
     fun start(userId: Long): IgdbSyncState {

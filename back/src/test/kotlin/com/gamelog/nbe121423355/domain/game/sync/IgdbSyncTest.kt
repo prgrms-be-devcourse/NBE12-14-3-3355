@@ -22,6 +22,29 @@ class IgdbSyncTest {
     @Autowired private lateinit var store: IgdbSyncStore
     @Autowired private lateinit var em: EntityManager
 
+    @Test
+    fun `동일 리소스 ID는 페이지의 마지막 이름을 사용하고 게임별 연결은 중복 저장하지 않는다`() {
+        // given: 한 게임 안과 게임 사이에 같은 장르 ID가 반복되는 페이지를 준비한다.
+        val state = store.claim(1)
+        val first = game(10, 0L).copy(genres = listOf(
+            IgdbGameResponse.NamedResource(20L, "First"),
+            IgdbGameResponse.NamedResource(20L, "Second"),
+        ))
+        val second = game(11, 0L).copy(genres = listOf(IgdbGameResponse.NamedResource(20L, "Last")))
+
+        // when: 두 게임을 같은 동기화 페이지로 저장한다.
+        store.savePage(requireNotNull(state.runId), listOf(first, second))
+        em.flush()
+        em.clear()
+
+        // then: 장르는 마지막 이름으로 한 건 저장되고 각 게임에는 연결이 한 개씩 생긴다.
+        val genres = em.createQuery("select g from Genre g where g.igdbGenreId = 20", Genre::class.java).resultList
+        assertThat(genres).hasSize(1)
+        assertThat(genres.single().name).isEqualTo("Last")
+        assertThat(em.createQuery("select count(g) from GameGenre g", Long::class.javaObjectType).singleResult)
+            .isEqualTo(2L)
+    }
+
     companion object {
         fun game(id: Long, release: Long?): IgdbGameResponse =
             IgdbGameResponse(

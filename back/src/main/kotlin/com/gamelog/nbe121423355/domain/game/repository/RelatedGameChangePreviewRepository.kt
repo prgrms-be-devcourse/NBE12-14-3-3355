@@ -3,7 +3,6 @@ package com.gamelog.nbe121423355.domain.game.repository
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 
-@JvmRecord
 data class RelatedGamePreviewTarget(val gameId: String, val title: String)
 
 /** 실행 준비와 같은 영향 범위를 조회하되 원천·대기 버전을 변경하지 않는다. */

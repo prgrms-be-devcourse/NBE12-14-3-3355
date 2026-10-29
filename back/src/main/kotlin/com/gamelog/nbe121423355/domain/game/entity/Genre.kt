@@ -24,7 +24,7 @@ class Genre protected constructor() {
     }
 
     companion object {
-        @JvmStatic
+
         fun createFromIgdb(igdbId: Long?, name: String?): Genre {
             val genre = Genre()
             genre.igdbGenreId = igdbId

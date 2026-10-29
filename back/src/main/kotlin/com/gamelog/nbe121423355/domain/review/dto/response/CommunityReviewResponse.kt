@@ -5,7 +5,6 @@ import com.gamelog.nbe121423355.domain.usergame.entity.PlayStatus
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
-@JvmRecord
 data class CommunityReviewResponse(
     val reviewId: Long?,
     val userId: Long?,
@@ -27,7 +26,7 @@ data class CommunityReviewResponse(
 ) {
 
     companion object {
-        @JvmStatic
+
         fun from(r: CommunityReviewProjection): CommunityReviewResponse {
             return CommunityReviewResponse(
                 r.reviewId,

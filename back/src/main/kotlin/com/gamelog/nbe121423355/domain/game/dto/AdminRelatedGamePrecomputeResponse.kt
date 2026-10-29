@@ -6,7 +6,6 @@ import com.gamelog.nbe121423355.domain.game.service.model.RelatedGamePrecomputeT
 import java.time.Duration
 import java.time.LocalDateTime
 
-@JvmRecord
 data class AdminRelatedGamePrecomputeRunResponse(
     val runId: String,
     val requestedBy: Long,
@@ -59,14 +58,12 @@ data class AdminRelatedGamePrecomputeRunResponse(
     }
 }
 
-@JvmRecord
 data class AdminRelatedGamePrecomputeFailureResponse(
     val gameId: Long,
     val error: String,
     val occurredAt: LocalDateTime,
 )
 
-@JvmRecord
 data class AdminRelatedGamePrecomputePage<T>(
     val content: List<T>,
     val page: Int,
@@ -75,7 +72,6 @@ data class AdminRelatedGamePrecomputePage<T>(
     val totalPages: Int,
 )
 
-@JvmRecord
 data class AdminRelatedGamePrecomputeStatusResponse(
     val databaseLocked: Boolean,
     val localRequestActive: Boolean,

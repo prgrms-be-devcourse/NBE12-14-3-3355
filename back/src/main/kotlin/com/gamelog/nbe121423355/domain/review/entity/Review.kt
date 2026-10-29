@@ -2,7 +2,6 @@ package com.gamelog.nbe121423355.domain.review.entity
 
 import com.gamelog.nbe121423355.domain.usergame.entity.UserGame
 import com.gamelog.nbe121423355.global.interop.javaIsBlank
-import com.gamelog.nbe121423355.global.interop.javaIsBlank
 import com.gamelog.nbe121423355.global.interop.javaNonNull
 import com.gamelog.nbe121423355.global.jpa.entity.BaseEntity
 import jakarta.persistence.*
@@ -96,7 +95,6 @@ class Review : BaseEntity {
         private val MAX_RATING: BigDecimal = BigDecimal("5.0")
         private val RATING_STEP: BigDecimal = BigDecimal("0.5")
 
-        @JvmStatic
         private fun validateRating(rating: BigDecimal?): BigDecimal? {
             if (rating == null) {
                 return null
@@ -108,7 +106,6 @@ class Review : BaseEntity {
             return rating
         }
 
-        @JvmStatic
         private fun validateContent(rating: BigDecimal?, content: String?): String? {
             kotlin.require(!(rating == null && (content == null || content.javaIsBlank()))) {
                 "별점 또는 리뷰 내용 중 하나는 입력해야 합니다."

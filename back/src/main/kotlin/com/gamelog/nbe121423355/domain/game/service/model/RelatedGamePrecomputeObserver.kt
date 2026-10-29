@@ -21,7 +21,6 @@ interface RelatedGamePrecomputeObserver {
 
     fun onFailed(failure: RuntimeException) {}
 
-    @JvmRecord
     data class Progress(val processed: Long, val succeeded: Long, val failed: Long) {
         init {
             require(processed >= 0 && succeeded >= 0 && failed >= 0)

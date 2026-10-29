@@ -5,7 +5,6 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 @Schema(description = "게임 상세 정보")
-@JvmRecord
 data class GameDetailResponse(
     @field:Schema(description = "GameLog 게임 ID", example = "6") val id: Long,
     @field:Schema(description = "IGDB 게임 ID", example = "3030") val igdbId: Long?,
@@ -25,21 +24,21 @@ data class GameDetailResponse(
     @field:Schema(description = "GameLog 사용자 기록 통계") val statistics: GameStatisticsResponse,
 ) {
     @Schema(description = "게임 장르")
-    @JvmRecord
+
     data class GenreResponse(
         @field:Schema(description = "장르 ID", example = "12") val id: Long,
         @field:Schema(description = "장르명", example = "Role-playing (RPG)") val name: String,
     )
 
     @Schema(description = "게임 플랫폼")
-    @JvmRecord
+
     data class PlatformResponse(
         @field:Schema(description = "플랫폼 ID", example = "6") val id: Long,
         @field:Schema(description = "플랫폼명", example = "PC (Microsoft Windows)") val name: String,
     )
 
     @Schema(description = "게임 시리즈")
-    @JvmRecord
+
     data class SeriesResponse(
         @field:Schema(description = "시리즈 ID", example = "1") val id: Long,
         @field:Schema(description = "시리즈명", example = "Baldur's Gate") val name: String,

@@ -11,8 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 
 /** 게임 기록과 리뷰 변경이 함께 만드는 유스케이스의 트랜잭션 경계를 담당한다. 리뷰 변경 뒤 라이브러리 포함 여부를 다시 계산하는 순서도 이 서비스가 관리한다. */
 @Service
-class GameRecordReviewService
-constructor(
+class GameRecordReviewService(
     private val userGameService: UserGameService,
     private val reviewService: ReviewService,
 ) {
