@@ -61,7 +61,7 @@ constructor(private val repository: IgdbSyncRepository, private val catalog: Igd
 
     // 카탈로그 변경과 커서 저장을 같은 트랜잭션으로 처리합니다.
     @Transactional(timeout = 180)
-    fun savePage(runId: String, page: MutableList<IgdbGameResponse>): Boolean {
+    fun savePage(runId: String, page: List<IgdbGameResponse>): Boolean {
         val state = repository.lockState() ?: throw NoSuchElementException("No value present")
         if (!runId.equals(state.runId) || !"RUNNING".equals(state.status)) return false
         if (page.isEmpty()) {

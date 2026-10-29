@@ -12,7 +12,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZoneOffset.UTC
-import java.util.stream.Collectors
 
 @jakarta.persistence.Entity
 @jakarta.persistence.Table(name = "games")
@@ -122,17 +121,12 @@ class Game protected constructor() : BaseEntity() {
                     .toLocalDate()
         this.igdbRating =
             if (response.rating == null) null else response.rating.setScale(2, RoundingMode.HALF_UP)
-        val developers =
-            if (response.involved_companies == null) ""
-            else
-                response.involved_companies
-                    .stream()
-                    .filter({ item -> true.equals(item.developer) })
-                    .filter({ item -> item.company != null })
-                    .map({ item -> item.company?.name })
-                    .filter({ name -> name != null && !name.javaIsBlank() })
-                    .distinct()
-                    .collect(Collectors.joining(", "))
+        val developers = response.involved_companies.orEmpty().asSequence()
+            .filter { it.developer == true }
+            .mapNotNull { it.company?.name }
+            .filterNot { it.javaIsBlank() }
+            .distinct()
+            .joinToString(", ")
         this.developer = if (developers.javaIsBlank()) null else developers
     }
 

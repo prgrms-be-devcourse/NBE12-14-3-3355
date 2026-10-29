@@ -81,7 +81,7 @@ class IgdbClient(
 
     // ID 커서로 페이지를 순회하여 수집 중 목록 변경에 따른 offset 누락을 피합니다.
     @Synchronized
-    fun fetchPage(afterId: Long, since: Long?, cutoff: Long): MutableList<IgdbGameResponse> {
+    fun fetchPage(afterId: Long, since: Long?, cutoff: Long): List<IgdbGameResponse> {
         val query = IgdbClient.buildQuery(afterId, since, cutoff)
         var attempt = 0
         while (true) {
@@ -108,7 +108,7 @@ class IgdbClient(
         }
     }
 
-    private fun requestGames(query: String): MutableList<IgdbGameResponse> {
+    private fun requestGames(query: String): List<IgdbGameResponse> {
         val token = this.accessToken
 
         val games =
@@ -116,17 +116,13 @@ class IgdbClient(
                 .post()
                 .uri("https://api.igdb.com/v4/games")
                 .header("Client-ID", clientId)
-                .headers(
-                    java.util.function.Consumer { headers ->
-                        headers.setBearerAuth(requireNotNull(token))
-                    }
-                )
+                .headers { it.setBearerAuth(requireNotNull(token)) }
                 .contentType(MediaType.TEXT_PLAIN)
                 .accept(MediaType.APPLICATION_JSON)
                 .body(query)
                 .retrieve()
-                .body<MutableList<IgdbGameResponse>>(
-                    object : ParameterizedTypeReference<MutableList<IgdbGameResponse>>() {}
+                .body<List<IgdbGameResponse>>(
+                    object : ParameterizedTypeReference<List<IgdbGameResponse>>() {}
                 )
 
         checkNotNull(games) { "IGDB 게임 목록 응답이 비어 있습니다." }
